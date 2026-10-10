@@ -1,0 +1,29 @@
+{
+    "schemaVersion": 1,
+    "id": "${mod_id}",
+    "version": "${mod_version}",
+    "name": "${mod_name}",
+    "description": "${mod_description}",
+    "authors": [
+        "Polyfrost"
+    ],
+    "environment": "client",
+    "entrypoints": {
+        "client": [
+            "org.polyfrost.polydium.client.PolydiumClient"
+        ],
+        "mixinsquared": [
+            "org.polyfrost.polydium.compat.SodiumMixinCanceller"
+        ]
+    },
+    "mixins": [
+        "mixins.${mod_id}.json"
+    ],
+    "depends": {
+        "minecraft": "${minor_mc_version}",
+        "fabric-api": "*",
+        "fabricloader": ">=0.16.0",
+        "java": ">=21",
+        "fabric-language-kotlin": ">=1.13.13"
+    }
+}

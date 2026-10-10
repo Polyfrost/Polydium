@@ -1,0 +1,11 @@
+build
+.gradle
+.kotlin
+.idea
+*.iml
+out
+run
+.devauth
+.DS_Store
+versions/*/*
+!versions/*/gradle.properties
