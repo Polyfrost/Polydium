@@ -114,7 +114,13 @@ public abstract class MixinMinecraftPresentThread {
 
     @WrapOperation(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/device/GpuSurface;isAcquired()Z", ordinal = 2))
     private boolean polydium$keepPresentCallSite(GpuSurface surface, Operation<Boolean> original) {
-        return !PresentThread.takeHandedOff() && original.call(surface);
+        return PresentThread.isHandedOff() || original.call(surface);
+    }
+
+    @WrapOperation(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/device/GpuSurface;present()V"))
+    private void polydium$skipHandedOffPresent(GpuSurface surface, Operation<Void> original) {
+        if (!PresentThread.takeHandedOff())
+            original.call(surface);
     }
 
     @Unique

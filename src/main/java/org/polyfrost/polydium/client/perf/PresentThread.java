@@ -35,6 +35,10 @@ public final class PresentThread {
         handedOff = false;
     }
 
+    public static boolean isHandedOff() {
+        return handedOff;
+    }
+
     public static boolean takeHandedOff() {
         boolean was = handedOff;
 
