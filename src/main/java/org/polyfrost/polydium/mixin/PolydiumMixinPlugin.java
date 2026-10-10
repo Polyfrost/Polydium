@@ -5,24 +5,28 @@ import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final String SODIUM_PERF_PACKAGE = "org.polyfrost.polydium.mixin.client.perf.sodium.";
-    //? if >= 26.1 {
-    private static final String SODIUM_PERF_VERSION = "0.9.2";
-    //?} else {
-    /*private static final String SODIUM_PERF_VERSION = "0.8.14";
+    //? if >= 26.3 {
+    private static final String[] SODIUM_PERF_VERSIONS = {"0.9.2", "0.9.3"};
+    //?} else if >= 26.1 {
+    /*private static final String[] SODIUM_PERF_VERSIONS = {"0.9.2"};
+    *///?} else {
+    /*private static final String[] SODIUM_PERF_VERSIONS = {"0.8.14", "0.8.15"};
     *///?}
 
-    private final boolean sodiumPerf = FabricLoader.getInstance().getModContainer("sodium")
-            .map(mod -> mod.getMetadata().getVersion().getFriendlyString().startsWith(SODIUM_PERF_VERSION))
+    public static final boolean SODIUM_PERF = FabricLoader.getInstance().getModContainer("sodium")
+            .map(mod -> mod.getMetadata().getVersion().getFriendlyString())
+            .map(version -> Arrays.stream(SODIUM_PERF_VERSIONS).anyMatch(version::startsWith))
             .orElse(false);
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        return sodiumPerf || !mixinClassName.startsWith(SODIUM_PERF_PACKAGE);
+        return SODIUM_PERF || !mixinClassName.startsWith(SODIUM_PERF_PACKAGE);
     }
 
     @Override
