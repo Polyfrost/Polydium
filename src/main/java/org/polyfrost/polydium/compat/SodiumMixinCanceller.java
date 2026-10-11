@@ -11,7 +11,8 @@ public final class SodiumMixinCanceller implements MixinCanceller {
     @Override
     public boolean shouldCancel(List<String> targetClassNames, String mixinClassName) {
         //? if >= 1.21.11 {
-        return PolydiumMixinPlugin.SODIUM_PERF && mixinClassName.equals(SODIUM_ENTITY_CULL);
+        return PolydiumMixinPlugin.SODIUM_PERF && mixinClassName.equals(SODIUM_ENTITY_CULL)
+                && !PolydiumMixinPlugin.isDisabled("MixinEntityCheckOrder");
         //?} else {
         /*return false;
         *///?}

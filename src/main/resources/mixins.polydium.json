@@ -14,6 +14,22 @@
   "client": [
     //? if < 26.1
     //"client.perf.MixinPreciseFrameLimiter",
+    //? if < 26.1
+    //"client.perf.MixinYieldSkip",
+    //? if < 26.1
+    //"client.perf.MixinAnimateTickRandom",
+    "client.perf.MixinBufferGrowth",
+    "client.perf.MixinCutoutTypeCache",
+    "client.perf.MixinCutoutTypeCacheClear",
+    "client.perf.MixinTaskWakeCoalesce",
+    //? if >= 1.21.10
+    "client.perf.MixinDebugEntryCache",
+    //? if >= 1.21.10 && < 26.2
+    //"client.perf.MixinBatchPipelineSortModels",
+    //? if >= 1.21.4
+    "client.perf.MixinFullCubeShape",
+    //? if >= 1.21.11
+    "client.perf.MixinPaneCapCull",
     //? if >= 1.21.11 {
     "client.perf.ItemBoundsLayerAccessor",
     "client.perf.MixinBareArmorStand",
@@ -32,6 +48,8 @@
     "client.perf.MixinFeatureRendererList",
     "client.perf.MixinFrustumBoxTest",
     "client.perf.MixinGlowSpectatorCache",
+    //? if >= 26.3
+    "client.perf.MixinWindowMinimizedPoll",
     "client.perf.MixinItemBoundsCache",
     "client.perf.MixinLtrTextFastPath",
     "client.perf.MixinMapColorTable",
@@ -56,12 +74,20 @@
     "client.perf.sodium.MixinAnimatedSpriteMarksAnimationState",
     "client.perf.sodium.MixinAnimatedSpriteMarksManager",
     "client.perf.sodium.MixinAnimatedSpriteMarksRegion",
+    "client.perf.sodium.MixinSpriteSetManager",
+    "client.perf.sodium.MixinSpriteSetRegion",
+    //? if < 26.1
+    //"client.perf.sodium.MixinSpriteSetSection",
     "client.perf.sodium.MixinCuboidNormals",
     "client.perf.sodium.MixinDirectVertexCuboid",
     "client.perf.sodium.MixinDirectVertexGlyph",
     "client.perf.sodium.MixinDirectVertexItemQuad",
+    "client.perf.sodium.MixinSkinLayersBatchWrite",
+    "client.perf.sodium.MixinTransitionVertexWrite",
     "client.perf.sodium.MixinEntityCheckOrder",
     "client.perf.sodium.MixinEntityCheckOrderSodium",
+    "client.perf.sodium.MixinParticleSectionCull",
+    "client.perf.sodium.MixinParticleSectionTick",
     //? if >= 26.2
     "client.perf.sodium.MixinIndirectTerrainDraws",
     "client.perf.sodium.MixinMatrixHelperSharedTrig",
@@ -95,6 +121,7 @@
     "client.perf.vulkan.MixinVulkanSemaphoreCounterRead",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanTexelViewCache",
+    "client.perf.MixinSodiumExtraFrameCounter",
     "client.perf.MixinAnimateTickFluid",
     "client.perf.MixinBlockEntityRenderDistance",
     "client.perf.MixinBrushableBlockSkip",
@@ -113,6 +140,8 @@
     "client.perf.MixinEmptyFeaturePhase",
     //? if >= 26.2
     "client.perf.MixinEmptyFeaturePhaseFrame",
+    //? if >= 26.2
+    "client.perf.MixinBatchPipelineSort",
     "client.perf.MixinGizmoCollectorCache",
     "client.perf.MixinGizmoCollectorCacheTemporary",
     //? if >= 26.2
@@ -151,8 +180,11 @@
     //? if >= 26.3
     "client.perf.sodium.MixinTerrainPushConstants",
     //? if >= 26.1
-    "client.perf.sodium.MixinVisibleRegionLookup",
     "client.perf.sodium.MixinSectionCopyCacheCleanup",
+    "client.perf.sodium.MixinSharedStateUnpack",
+    "client.perf.sodium.MixinSharedStateUnpackSection",
+    "client.perf.sodium.MixinSectionCacheSize",
+    "client.perf.sodium.MixinSectionCacheSizeBlockEntities",
     //? if >= 26.2
     "client.perf.sodium.MixinVanillaGraphSkip",
     "client.perf.vulkan.MixinFrontendRenderPassUniforms",
@@ -176,6 +208,10 @@
     "client.perf.vulkan.MixinVulkanBackgroundDestroy",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanBackgroundDestroyDrain",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanPipelineCache",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanPipelineCacheUse",
     //? if >= 26.2
     "client.perf.MixinSpirvCache",
     "client.perf.MixinShaderConfigsIncludesDigest",
@@ -226,6 +262,8 @@
     "client.perf.MixinOcclusionDepthCapture",
     //? if < 26.2
     //"client.perf.MixinGlSwapWaitMeter",
+    //? if >= 26.2
+    "client.perf.MixinGlPresentWaitMeter",
     //? if >= 26.3
     "client.perf.sodium.MixinOcclusionCull",
     "client.perf.sodium.MixinOcclusionListAccessor",
@@ -235,6 +273,26 @@
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanGpuWaitMeter",
     //?}
+    "client.perf.MixinBlockEntityLightCache",
+    "client.perf.MixinBlockEntityLightCacheChunks",
+    "client.perf.MixinBlockEntityLightCacheCombiner",
+    "client.perf.MixinBlockEntityLightCacheHolder",
+    "client.perf.MixinBlockEntityLightCacheLevel",
+    "client.perf.MixinFontGeneration",
+    "client.perf.MixinTextWidthCache",
+    "client.perf.MixinTextWidthCacheManager",
+    //? if >= 1.21.8
+    "client.perf.MixinPreparedTextCache",
+    //? if >= 1.21.8
+    "client.perf.MixinPreparedTextCacheManager",
+    //? if >= 1.21.8 {
+    "client.perf.MixinGuiItemBake",
+    "client.perf.MixinGuiItemBakeModel",
+    "client.perf.MixinGuiItemBakeState",
+    "client.perf.MixinGuiItemBakeTick",
+    //?}
+    //? if >= 26.1
+    "client.perf.MixinGuiItemBakeAtlas",
     "client.perf.MixinPerfClockFrame"
   ]
 }

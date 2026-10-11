@@ -2,6 +2,7 @@ package org.polyfrost.polydium.client.perf;
 
 //? if >= 1.21.11 {
 
+import org.polyfrost.polydium.mixin.PolydiumMixinPlugin;
 import org.polyfrost.polydium.mixin.client.perf.sodium.MixinOcclusionListAccessor;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import java.util.Arrays;
@@ -17,6 +18,7 @@ import org.joml.Matrix4f;
 
 public final class OcclusionCuller {
 
+    private static final boolean                            ENABLED         = PolydiumMixinPlugin.isEnabled("OcclusionCull");
     private static final int                                WIDTH           = OcclusionDepth.WIDTH;
     private static final int                                HEIGHT          = OcclusionDepth.HEIGHT;
     private static final int                                MASK_WORDS      = 4;
@@ -32,6 +34,7 @@ public final class OcclusionCuller {
     private static final int                                LEVEL_SPAN      = 4;
     private static final long                               MIN_INTERVAL    = 4_000_000L;
     private static final double                             TEST_BUDGET     = 0.5;
+    private static final double                             EYE_TOLERANCE   = 0.5;
     private static final float[][]                          PYRAMID         = createPyramid();
     private static final int[]                              LEVEL_WIDTHS    = levelWidths();
     private static final float[]                            MATRIX          = new float[16];
@@ -57,12 +60,6 @@ public final class OcclusionCuller {
     private OcclusionCuller() {
     }
 
-    public static boolean isHidden(RenderRegion region, int sectionIndex) {
-        long[] hidden = ((RegionOcclusion) region).polydium$getHiddenSections();
-
-        return (hidden[sectionIndex >>> 6] >>> sectionIndex & 1L) == 1L;
-    }
-
     public static ByteIterator filter(ChunkRenderList list, ByteIterator sections) {
         if (sections == null || !CULLED_REGIONS.contains(list.getRegion()))
             return sections;
@@ -83,6 +80,10 @@ public final class OcclusionCuller {
 
     public static void cull(ChunkRenderListIterable lists, ChunkRenderMatrices matrices, double cameraX, double cameraY, double cameraZ) {
         VIEW_PROJECTION.set(matrices.projection()).mul(matrices.modelView()).get(MATRIX);
+
+        if (!ENABLED)
+            return;
+
         //? if < 26.2 {
         /*for (int column = 0; column < 16; column += 4)
             MATRIX[column + 2] = (MATRIX[column + 3] - MATRIX[column + 2]) * 0.5F;
@@ -98,7 +99,16 @@ public final class OcclusionCuller {
 
         OcclusionDepth.describeFrame(MATRIX, cameraX, cameraY, cameraZ);
 
-        if (OcclusionDepth.latestVersion() == 0L || isUnchanged())
+        if (OcclusionDepth.latestVersion() == 0L)
+            return;
+
+        if (hasEyeMoved(cameraX, cameraY, cameraZ)) {
+            showAll();
+
+            return;
+        }
+
+        if (isUnchanged())
             return;
 
         long start = System.nanoTime();
@@ -119,12 +129,24 @@ public final class OcclusionCuller {
     }
 
     private static void stopCulling() {
+        showAll();
+        OcclusionDepth.reset();
+    }
+
+    private static void showAll() {
         for (RenderRegion region : CULLED_REGIONS)
             clearHidden(region);
 
         CULLED_REGIONS.clear();
-        OcclusionDepth.reset();
         culling = false;
+    }
+
+    private static boolean hasEyeMoved(double cameraX, double cameraY, double cameraZ) {
+        double moveX = cameraX - OcclusionDepth.latestX();
+        double moveY = cameraY - OcclusionDepth.latestY();
+        double moveZ = cameraZ - OcclusionDepth.latestZ();
+
+        return moveX * moveX + moveY * moveY + moveZ * moveZ > EYE_TOLERANCE * EYE_TOLERANCE;
     }
 
     private static void collectSections(ChunkRenderListIterable lists) {
@@ -230,9 +252,14 @@ public final class OcclusionCuller {
     }
 
     private static boolean isOccluded(RenderRegion region, int section) {
-        float   originX = (float) (SectionPos.sectionToBlockCoord(region.getChunkX() + LocalSectionIndex.unpackX(section)) - testedX);
-        float   originY = (float) (SectionPos.sectionToBlockCoord(region.getChunkY() + LocalSectionIndex.unpackY(section)) - testedY);
-        float   originZ = (float) (SectionPos.sectionToBlockCoord(region.getChunkZ() + LocalSectionIndex.unpackZ(section)) - testedZ);
+        double originX = SectionPos.sectionToBlockCoord(region.getChunkX() + LocalSectionIndex.unpackX(section)) - testedX;
+        double originY = SectionPos.sectionToBlockCoord(region.getChunkY() + LocalSectionIndex.unpackY(section)) - testedY;
+        double originZ = SectionPos.sectionToBlockCoord(region.getChunkZ() + LocalSectionIndex.unpackZ(section)) - testedZ;
+
+        return isCubeOccluded((float) originX, (float) originY, (float) originZ);
+    }
+
+    private static boolean isCubeOccluded(float originX, float originY, float originZ) {
         float[] matrix  = TESTED_MATRIX;
         float   baseX   = matrix[0] * originX + matrix[4] * originY + matrix[8] * originZ + matrix[12];
         float   baseY   = matrix[1] * originX + matrix[5] * originY + matrix[9] * originZ + matrix[13];
@@ -261,7 +288,11 @@ public final class OcclusionCuller {
             top     = Math.max(top, screenY);
         }
 
-        if (right + SCREEN_MARGIN < 0.0F || top + SCREEN_MARGIN < 0.0F || left - SCREEN_MARGIN >= WIDTH || bottom - SCREEN_MARGIN >= HEIGHT)
+        return isRectOccluded(nearest, left, bottom, right, top);
+    }
+
+    private static boolean isRectOccluded(float nearest, float left, float bottom, float right, float top) {
+        if (left - SCREEN_MARGIN < 0.0F || bottom - SCREEN_MARGIN < 0.0F || right + SCREEN_MARGIN >= WIDTH || top + SCREEN_MARGIN >= HEIGHT)
             return false;
 
         int pixelMinX = Math.max((int) (left - SCREEN_MARGIN), 0);

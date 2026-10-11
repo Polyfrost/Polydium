@@ -19,7 +19,7 @@ public class MixinPrecipitationCacheInvalidation {
     @Final
     private ClientLevel level;
 
-    @Inject(method = {"drop", "replaceBiomes", "updateViewRadius"}, at = @At("RETURN"))
+    @Inject(method = {"drop", "replaceBiomes", "updateViewRadius", "updateViewCenter"}, at = @At("RETURN"))
     private void polydium$clearPrecipitation(CallbackInfo ci) {
         ((PrecipitationCache.Access) this.level).polydium$precipitationCache().clear();
     }

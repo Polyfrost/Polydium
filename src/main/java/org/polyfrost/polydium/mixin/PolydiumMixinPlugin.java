@@ -5,8 +5,12 @@ import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
+import org.polyfrost.polydium.compat.Mods;
+import org.slf4j.LoggerFactory;
+
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class PolydiumMixinPlugin implements IMixinConfigPlugin {
@@ -24,8 +28,67 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             .map(version -> Arrays.stream(SODIUM_PERF_VERSIONS).anyMatch(version::startsWith))
             .orElse(false);
 
+    private static final String[] DISABLED = System.getProperty("polydium.disable", "").split(",");
+
+    private static final String[] ENABLED = System.getProperty("polydium.enable", "").split(",");
+
+    private static final Map<String, String[]> STAND_DOWN = Map.ofEntries(
+            Map.entry("DebugEntryCache", new String[]{"betterf3"}),
+            Map.entry("TextWidthCache", new String[]{"caxton", "modernui"}),
+            Map.entry("PreparedText", new String[]{"caxton", "modernui"}),
+            Map.entry("InstancedWeather", new String[]{"particlerain"}),
+            Map.entry("SpriteSet", new String[]{"nvidium"}),
+            Map.entry("SharedStateUnpack", new String[]{"nvidium"}),
+            Map.entry("SectionCacheSize", new String[]{"nvidium"}),
+            Map.entry("ShadowReceiverCull", new String[]{"nvidium"})
+    );
+
+    public static boolean isEnabled(String fragment) {
+        return contains(ENABLED, fragment) && !isDisabled(fragment);
+    }
+
+    private static boolean contains(String[] fragments, String name) {
+        for (String fragment : fragments) {
+            if (!fragment.isEmpty() && name.contains(fragment))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static boolean standsDown(String mixinClassName) {
+        for (Map.Entry<String, String[]> entry : STAND_DOWN.entrySet()) {
+            if (!mixinClassName.contains(entry.getKey()))
+                continue;
+
+            for (String mod : entry.getValue()) {
+                if (Mods.loaded(mod)) {
+                    LoggerFactory.getLogger("polydium/perf").debug("{} stands down: {} is loaded", mixinClassName, mod);
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public static boolean isDisabled(String mixinClassName) {
+        for (String disabled : DISABLED) {
+            if (!disabled.isEmpty() && mixinClassName.contains(disabled))
+                return true;
+        }
+
+        return false;
+    }
+
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (isDisabled(mixinClassName))
+            return false;
+
+        if (standsDown(mixinClassName))
+            return false;
+
         return SODIUM_PERF || !mixinClassName.startsWith(SODIUM_PERF_PACKAGE);
     }
 
