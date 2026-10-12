@@ -65,7 +65,7 @@ public abstract class MixinRenderTypeTextures {
     private List<PreparedRenderType.Texture> polydium$reuseTextures(TextureManager textureManager, SamplerCache samplerCache, GpuTextureView overlayTexture, GpuTextureView lightmapTexture, Operation<List<PreparedRenderType.Texture>> original) {
 
         if (this.textures.isEmpty() && !this.useOverlay && !this.useLightmap)
-            return List.of();
+            return original.call(textureManager, samplerCache, overlayTexture, lightmapTexture);
 
         if (this.polydium$names == null)
             this.polydium$readBindings();
@@ -75,25 +75,7 @@ public abstract class MixinRenderTypeTextures {
         if (prepared != null && this.polydium$matches(prepared, textureManager, samplerCache, overlayTexture, lightmapTexture))
             return prepared;
 
-        PreparedRenderType.Texture[] built = new PreparedRenderType.Texture[this.polydium$names.length + (this.useOverlay ? 1 : 0) + (this.useLightmap ? 1 : 0)];
-        int                          index = 0;
-
-        if (this.useOverlay)
-            built[index ++] = new PreparedRenderType.Texture("Sampler1", overlayTexture, samplerCache.getClampToEdge(FilterMode.LINEAR));
-
-        if (this.useLightmap)
-            built[index ++] = new PreparedRenderType.Texture("Sampler2", lightmapTexture, samplerCache.getClampToEdge(FilterMode.LINEAR));
-
-        AbstractTexture[] textures = this.polydium$resolve(textureManager);
-
-        for (int binding = 0; binding < this.polydium$names.length; binding ++) {
-            AbstractTexture texture         = textures[binding];
-            GpuSampler      samplerOverride = this.polydium$bindings[binding].polydium$sampler().get();
-
-            built[index ++] = new PreparedRenderType.Texture(this.polydium$names[binding], texture.getTextureView(), samplerOverride != null ? samplerOverride : texture.getSampler());
-        }
-
-        prepared                      = new TextureList(built);
+        prepared               = new TextureList(original.call(textureManager, samplerCache, overlayTexture, lightmapTexture).toArray(PreparedRenderType.Texture[]::new));
         this.polydium$prepared = prepared;
 
         return prepared;
@@ -140,6 +122,9 @@ public abstract class MixinRenderTypeTextures {
     //? if >= 26.2 {
     @Unique
     private boolean polydium$matches(TextureList prepared, TextureManager textureManager, SamplerCache samplerCache, GpuTextureView overlayTexture, GpuTextureView lightmapTexture) {
+        if (prepared.size() != this.polydium$names.length + (this.useOverlay ? 1 : 0) + (this.useLightmap ? 1 : 0))
+            return false;
+
         int index = 0;
 
         if (this.useOverlay && !polydium$same(prepared.get(index ++), "Sampler1", overlayTexture, samplerCache.getClampToEdge(FilterMode.LINEAR)))

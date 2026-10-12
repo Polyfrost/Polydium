@@ -2,7 +2,7 @@
 package org.polyfrost.polydium.client.perf;
 
 //? if >= 1.21.1 {
-import com.mojang.blaze3d.font.GlyphProvider;
+import net.minecraft.client.gui.font.providers.UnihexProvider;
 import net.minecraft.resources.Identifier;
 
 import java.security.MessageDigest;
@@ -19,12 +19,12 @@ public final class UnifontCache {
     private UnifontCache() {
     }
 
-    public static GlyphProvider find(Identifier hexFile, List<?> sizeOverrides, byte[] digest) {
+    public static UnihexProvider find(Identifier hexFile, List<?> sizeOverrides, byte[] digest) {
         Entry cached = CACHE.get(new Key(hexFile, sizeOverrides));
         return cached != null && Arrays.equals(cached.digest(), digest) ? cached.provider() : null;
     }
 
-    public static void remember(Identifier hexFile, List<?> sizeOverrides, byte[] digest, GlyphProvider provider) {
+    public static void remember(Identifier hexFile, List<?> sizeOverrides, byte[] digest, UnihexProvider provider) {
         Key key = new Key(hexFile, sizeOverrides);
         if (CACHE.size() >= MAX_ENTRIES && !CACHE.containsKey(key)) {
             CACHE.clear();
@@ -47,7 +47,7 @@ public final class UnifontCache {
     private record Key(Identifier hexFile, List<?> sizeOverrides) {
     }
 
-    private record Entry(byte[] digest, GlyphProvider provider) {
+    private record Entry(byte[] digest, UnihexProvider provider) {
     }
 }
 //?}

@@ -2,6 +2,8 @@ package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
 //? if >= 26.2 {
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
 import com.mojang.renderpearl.backend.vulkan.VulkanGpuBuffer;
 import com.mojang.renderpearl.backend.vulkan.VulkanRenderPass;
@@ -15,8 +17,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.nio.LongBuffer;
 
@@ -48,16 +48,16 @@ public abstract class MixinVulkanBindSkip {
         return VulkanDynamicState.changesPipeline(commandBuffer.address(), pipeline);
     }
 
-    @Inject(method = "setVertexBuffer", at = @At("HEAD"), cancellable = true)
-    private void polydium$bindVertexBufferDirectly(int slot, GpuBufferSlice vertexBuffer, CallbackInfo ci) {
+    @WrapMethod(method = "setVertexBuffer")
+    private void polydium$bindVertexBufferDirectly(int slot, GpuBufferSlice vertexBuffer, Operation<Void> original) {
         if (vertexBuffer == null) {
+            original.call(slot, vertexBuffer);
             return;
         }
         long buffer = ((VulkanGpuBuffer) vertexBuffer.buffer()).vkBuffer();
         long offset = vertexBuffer.offset();
         if (slot == 0) {
             if (buffer == this.polydium$boundVertexBuffer && offset == this.polydium$boundVertexOffset) {
-                ci.cancel();
                 return;
             } else {
                 this.polydium$boundVertexBuffer = buffer;
@@ -70,7 +70,6 @@ public abstract class MixinVulkanBindSkip {
             MemoryUtil.memPutLong(values + Long.BYTES, offset);
             VK10.nvkCmdBindVertexBuffers(this.commandBuffer, slot, 1, values, values + Long.BYTES);
         }
-        ci.cancel();
     }
 
     @WrapWithCondition(

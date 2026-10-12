@@ -1,5 +1,7 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import org.polyfrost.polydium.client.perf.FrameStats;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -7,7 +9,6 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Pseudo
@@ -30,12 +31,12 @@ public abstract class MixinSodiumExtraFrameCounter {
         this.polydium$readsSeen = true;
     }
 
-    @Inject(method = "onFrame", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
-    private void polydium$sample(CallbackInfo ci) {
-        if (!this.polydium$readsSeen)
+    @WrapMethod(method = "onFrame", remap = false, require = 0)
+    private void polydium$sample(Operation<Void> original) {
+        if (!this.polydium$readsSeen) {
+            original.call();
             return;
-
-        ci.cancel();
+        }
 
         long now = System.nanoTime();
         FrameStats stats = this.polydium$stats;

@@ -234,6 +234,8 @@
     //? if >= 26.3 || < 26.2
     "client.perf.MixinWholeBufferSlice",
     //?}
+    //? if >= 26.3
+    "client.perf.MixinWholeBufferSliceHolder",
     //? if >= 1.21.10
     "client.perf.MixinSortCentroidPool",
     //? if >= 1.21.1
@@ -303,6 +305,8 @@
     "client.perf.MixinUnifontCache",
     //? if >= 1.21.1
     "client.perf.MixinPreparedLanguage",
+    //? if >= 1.21.1
+    "client.perf.MixinPreparedLanguageReload",
     //? if >= 1.21.1
     "client.perf.MixinAudioDeviceReuse",
     //? if >= 1.21.1

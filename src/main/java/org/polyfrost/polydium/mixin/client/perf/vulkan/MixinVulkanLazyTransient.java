@@ -1,6 +1,7 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
 //? if >= 26.2 {
+import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.renderpearl.backend.vulkan.VulkanCommandEncoder;
@@ -27,19 +28,20 @@ public abstract class MixinVulkanLazyTransient {
     private VulkanCommandEncoder encoder;
 
     @Shadow
-    private boolean anyCommandRecorded;
-
-    @Shadow
     private VkCommandBuffer commandBuffer;
 
-    @Inject(method = "beginSubmit", at = @At("HEAD"), cancellable = true)
-    private void polydium$beginLazily(CallbackInfo ci) {
+    @WrapOperation(method = "beginSubmit", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/vulkan/VulkanCommandEncoder;allocateAndBeginTransientCommandBuffer()Lorg/lwjgl/vulkan/VkCommandBuffer;"))
+    private VkCommandBuffer polydium$beginLazily(VulkanCommandEncoder encoder, Operation<VkCommandBuffer> original) {
         if (this.commandBuffer != null) {
             throw new IllegalStateException("Transient command buffer is still open");
         }
 
-        this.anyCommandRecorded = false;
-        ci.cancel();
+        return null;
+    }
+
+    @WrapWithCondition(method = "beginSubmit", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/vulkan/VulkanCommandEncoder;execute(Lorg/lwjgl/vulkan/VkCommandBuffer;)V"))
+    private boolean polydium$executeOnFirstCopy(VulkanCommandEncoder encoder, VkCommandBuffer commandBuffer) {
+        return commandBuffer != null;
     }
 
     @Inject(method = "recordGpuMappedCopy", at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/VkBufferCopy;calloc(ILorg/lwjgl/system/MemoryStack;)Lorg/lwjgl/vulkan/VkBufferCopy$Buffer;"))

@@ -15,17 +15,14 @@ import com.mojang.renderpearl.api.vertex.VertexFormatElement;
 import org.lwjgl.system.MemoryUtil;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.At;
-//? if >= 26.2 {
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-//?} else if >= 1.21.10 {
+//? if >= 26.2 || < 1.21.10 {
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+//?} else {
 /*import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Cancellable;
 import com.llamalad7.mixinextras.sugar.Local;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-*///?} else {
-/*import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 *///?}
 
@@ -35,11 +32,11 @@ import java.nio.ByteOrder;
 @Mixin(MeshData.class)
 public abstract class MixinTranslucentSortCentroids {
     //? if >= 26.2 {
-    @Inject(method = "decodeQuadCentroids", at = @At("HEAD"), cancellable = true)
-    private static void polydium$decodeFromMemory(ByteBuffer buffer, int vertexCount, VertexFormat format, CompactVectorArray centroids, int firstQuad, CallbackInfo ci) {
+    @WrapMethod(method = "decodeQuadCentroids")
+    private static void polydium$decodeFromMemory(ByteBuffer buffer, int vertexCount, VertexFormat format, CompactVectorArray centroids, int firstQuad, Operation<Void> original) {
         VertexFormatElement position = format.getElement("Position");
-        if (position != null && polydium$decode(buffer, vertexCount, format.getVertexSize(), position.offset(), centroids, firstQuad)) {
-            ci.cancel();
+        if (position == null || !polydium$decode(buffer, vertexCount, format.getVertexSize(), position.offset(), centroids, firstQuad)) {
+            original.call(buffer, vertexCount, format, centroids, firstQuad);
         }
     }
     //?} else if >= 1.21.10 {
@@ -56,15 +53,15 @@ public abstract class MixinTranslucentSortCentroids {
     /*@Unique
     private static final Int2ObjectOpenHashMap<Vector3f[]> POLYDIUM_CENTROIDS = new Int2ObjectOpenHashMap<>();
 
-    @Inject(method = "unpackQuadCentroids", at = @At("HEAD"), cancellable = true)
-    private static void polydium$decodeFromMemory(ByteBuffer buffer, int vertexCount, VertexFormat format, CallbackInfoReturnable<Vector3f[]> cir) {
-        if (format.getOffset(VertexFormatElement.POSITION) != 0 || format.getVertexSize() % 4 != 0) {
-            return;
+    @WrapMethod(method = "unpackQuadCentroids")
+    private static Vector3f[] polydium$decodeFromMemory(ByteBuffer buffer, int vertexCount, VertexFormat format, Operation<Vector3f[]> original) {
+        if (format.getOffset(VertexFormatElement.POSITION) == 0 && format.getVertexSize() % 4 == 0) {
+            Vector3f[] centroids = polydium$centroids(vertexCount / 4);
+            if (polydium$decode(buffer, vertexCount, format.getVertexSize(), 0L, centroids, 0)) {
+                return centroids;
+            }
         }
-        Vector3f[] centroids = polydium$centroids(vertexCount / 4);
-        if (polydium$decode(buffer, vertexCount, format.getVertexSize(), 0L, centroids, 0)) {
-            cir.setReturnValue(centroids);
-        }
+        return original.call(buffer, vertexCount, format);
     }
 
     @Unique

@@ -3,6 +3,8 @@ package org.polyfrost.polydium.mixin.client.perf;
 import org.polyfrost.polydium.client.PolydiumToggles;
 
 //? if >= 1.21.1 {
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
 //? if >= 26.1 {
@@ -17,9 +19,6 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -45,18 +44,22 @@ public abstract class MixinHideReloadOverlay {
     @Shadow
     private long fadeOutStart;
 
-    @Inject(method = /*? if >= 26.1 {*/"extractRenderState"/*?} else {*//*"render"*//*?}*/, at = @At("HEAD"), cancellable = true)
-    private void polydium$skipReloadRender(/*? if >= 26.1 {*/GuiGraphicsExtractor/*?} else {*//*GuiGraphics*//*?}*/ graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
-        if (!PolydiumToggles.hideReloadOverlay)
+    @WrapMethod(method = /*? if >= 26.1 {*/"extractRenderState"/*?} else {*//*"render"*//*?}*/)
+    private void polydium$skipReloadRender(/*? if >= 26.1 {*/GuiGraphicsExtractor/*?} else {*//*GuiGraphics*//*?}*/ graphics, int mouseX, int mouseY, float partialTick, Operation<Void> original) {
+        if (!PolydiumToggles.hideReloadOverlay) {
+            original.call(graphics, mouseX, mouseY, partialTick);
             return;
+        }
         if (!this.fadeIn) {
             if (this.fadeOutStart != -1L) {
                 this.polydium$closeOverlay();
-                ci.cancel();
+            } else {
+                original.call(graphics, mouseX, mouseY, partialTick);
             }
             return;
         }
         if (this.minecraft.level == null && this.polydium$screen() == null) {
+            original.call(graphics, mouseX, mouseY, partialTick);
             return;
         }
         if (this.minecraft.level == null) {
@@ -75,7 +78,6 @@ public abstract class MixinHideReloadOverlay {
             }
             this.polydium$closeOverlay();
         }
-        ci.cancel();
     }
 
     @Unique
