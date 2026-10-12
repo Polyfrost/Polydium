@@ -12,6 +12,7 @@ plugins {
     kotlin("jvm")
     id("dev.kikugie.loom-back-compat")
     id("me.modmuss50.mod-publish-plugin") version "2.2.0"
+    `maven-publish`
 }
 
 val stonecutter = extensions.getByName("stonecutter") as StonecutterBuildExtension
@@ -226,6 +227,25 @@ publishMods {
             requires("oneconfig")
             requires("fabric-api")
             requires("fabric-language-kotlin")
+        }
+    }
+}
+
+publishing {
+    repositories {
+        maven("https://repo.polyfrost.org/releases") {
+            name = "releases"
+            credentials {
+                username = providers.gradleProperty("polyfrostRepoUsername").orNull
+                password = providers.gradleProperty("polyfrostRepoToken").orNull
+            }
+            authentication { create<BasicAuthentication>("basic") }
+        }
+    }
+    publications {
+        create<MavenPublication>("mavenJava") {
+            from(components["java"])
+            artifactId = modId
         }
     }
 }
