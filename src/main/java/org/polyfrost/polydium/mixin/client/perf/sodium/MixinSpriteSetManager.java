@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-//? if >= 1.21.11 {
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import net.caffeinemc.mods.sodium.api.texture.SpriteUtil;
@@ -69,4 +68,3 @@ public abstract class MixinSpriteSetManager {
         return Collections.emptyIterator();
     }
 }
-//?}

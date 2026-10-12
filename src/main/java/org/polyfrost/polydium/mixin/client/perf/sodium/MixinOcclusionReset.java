@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.8 {
 import net.minecraft.client.Minecraft;
 import org.polyfrost.polydium.client.perf.OcclusionCuller;
 import org.spongepowered.asm.mixin.Mixin;

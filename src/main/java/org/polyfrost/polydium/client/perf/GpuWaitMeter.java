@@ -1,7 +1,5 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
-
 public final class GpuWaitMeter {
 
     private static final long   WINDOW     = 500_000_000L;
@@ -48,4 +46,3 @@ public final class GpuWaitMeter {
         return share;
     }
 }
-//?}

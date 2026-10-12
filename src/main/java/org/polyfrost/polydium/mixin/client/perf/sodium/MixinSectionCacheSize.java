@@ -2,7 +2,6 @@ package org.polyfrost.polydium.mixin.client.perf.sodium;
 
 import org.polyfrost.polydium.client.PolydiumToggles;
 
-//? if >= 1.21.11 {
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import org.polyfrost.polydium.client.perf.SectionStates;
 import org.spongepowered.asm.mixin.Mixin;
@@ -17,4 +16,3 @@ public abstract class MixinSectionCacheSize {
         return PolydiumToggles.sectionCacheSize ? Math.max(size, SectionStates.CACHE_SIZE) : size;
     }
 }
-//?}

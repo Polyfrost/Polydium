@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.polyfrost.polydium.client.perf.EntityRendererCacheHolder;

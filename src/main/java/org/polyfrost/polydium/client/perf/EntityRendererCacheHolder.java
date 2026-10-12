@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 
 import java.util.Map;

@@ -1,11 +1,13 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.8 {
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.systems.RenderSystem;
+//? if >= 1.21.11 {
 import com.mojang.renderpearl.api.textures.FilterMode;
 import com.mojang.renderpearl.api.textures.GpuSampler;
+//?}
 import com.mojang.renderpearl.api.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.render.TextureSetup;
@@ -18,6 +20,7 @@ public abstract class MixinGuiTextureSetupReuse {
     @Unique
     private static TextureSetup polydium$last;
 
+    //? if >= 1.21.11 {
     @WrapMethod(method = "singleTextureWithLightmap")
     private static TextureSetup polydium$reuseLastSetup(GpuTextureView texture, GpuSampler sampler, Operation<TextureSetup> original) {
 
@@ -38,5 +41,22 @@ public abstract class MixinGuiTextureSetupReuse {
 
         return setup;
     }
+    //?} else {
+    /*@WrapMethod(method = "singleTextureWithLightmap")
+    private static TextureSetup polydium$reuseLastSetup(GpuTextureView texture, Operation<TextureSetup> original) {
+
+        GpuTextureView lightmap = Minecraft.getInstance().gameRenderer.lightTexture().getTextureView();
+        TextureSetup   last     = polydium$last;
+
+        if (last != null && last.texure0() == texture && last.texure2() == lightmap)
+            return last;
+
+        TextureSetup setup = original.call(texture);
+
+        polydium$last = setup;
+
+        return setup;
+    }
+    *///?}
 }
 //?}

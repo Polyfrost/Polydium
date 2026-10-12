@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-//? if >= 1.21.11 {
 import net.minecraft.client.particle.SingleQuadParticle;
 import org.polyfrost.polydium.client.perf.ParticleSectionVisibility;
 import org.spongepowered.asm.mixin.Mixin;
@@ -22,4 +21,3 @@ public class MixinParticleSectionTick implements ParticleSectionVisibility.Acces
         this.polydium$sectionVisibleTick = tick;
     }
 }
-//?}

@@ -1,6 +1,7 @@
+//~ identifier
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.10 {
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.renderer.ShaderManager;

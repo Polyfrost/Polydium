@@ -1,6 +1,7 @@
+//~ identifier
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.8 {
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 //? if >= 26.2 {
@@ -150,7 +151,8 @@ public final class OcclusionDepth {
         *///?} else {
         /*try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "Polydium depth downsample", targetView, OptionalInt.empty())) {
             pass.setPipeline(PIPELINE);
-            pass.bindTexture("DepthSampler", mainTarget.getDepthTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+            pass./^? if >= 1.21.11 {^/bindTexture("DepthSampler", mainTarget.getDepthTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))/^?} else {^//^bindSampler("DepthSampler", mainTarget.getDepthTextureView())^//^?}^/;
+            /^? if < 1.21.10 {^//^pass.setVertexBuffer(0, RenderSystem.getQuadVertexBuffer());^//^?}^/
             pass.draw(0, 3);
         }
         *///?}
@@ -170,7 +172,7 @@ public final class OcclusionDepth {
         lastCaptureNanos   = System.nanoTime();
         frameKnown         = false;
 
-        RenderSystem.getDevice().createCommandEncoder().copyTextureToBuffer(target, slot.buffer, 0L, () -> complete(slot, captureGeneration), 0);
+        RenderSystem.getDevice().createCommandEncoder().copyTextureToBuffer(target, slot.buffer, /*? if >= 1.21.11 {*/0L/*?} else {*//*0*//*?}*/, () -> complete(slot, captureGeneration), 0);
     }
 
     public static void reset() {
@@ -243,7 +245,7 @@ public final class OcclusionDepth {
 
     private static final class Slot {
 
-        private final GpuBuffer buffer = RenderSystem.getDevice().createBuffer(() -> "Polydium occlusion readback", BUFFER_USAGE, (long) TEXELS * Float.BYTES);
+        private final GpuBuffer buffer = RenderSystem.getDevice().createBuffer(() -> "Polydium occlusion readback", BUFFER_USAGE, /*? if >= 1.21.11 {*/(long) TEXELS * Float.BYTES/*?} else {*//*TEXELS * Float.BYTES*//*?}*/);
         private final float[]   matrix = new float[16];
         private boolean         pending;
         private double          x;

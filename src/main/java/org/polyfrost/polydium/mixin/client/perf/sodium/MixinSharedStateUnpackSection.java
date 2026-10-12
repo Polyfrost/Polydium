@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-//? if >= 1.21.11 {
 import net.minecraft.world.level.block.state.BlockState;
 import org.polyfrost.polydium.client.perf.SectionStates;
 import org.spongepowered.asm.mixin.Mixin;
@@ -23,4 +22,3 @@ public abstract class MixinSharedStateUnpackSection implements SectionStates.Acc
         this.polydium$states = states;
     }
 }
-//?}

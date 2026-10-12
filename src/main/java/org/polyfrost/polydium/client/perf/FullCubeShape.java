@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.4 {
+//? if >= 1.21.1 {
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.shapes.Shapes;

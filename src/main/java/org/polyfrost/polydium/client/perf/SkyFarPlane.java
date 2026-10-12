@@ -1,6 +1,7 @@
+//~ identifier
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.10 {
 //? if < 26.2
 /*import com.mojang.blaze3d.shaders.UniformType;*/
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -20,6 +21,8 @@ import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import net.fabricmc.loader.api.FabricLoader;
 //? if >= 26.2
 import net.minecraft.client.renderer.BindGroupLayouts;
+//? if < 1.21.11
+/*import net.minecraft.client.renderer.DimensionSpecialEffects;*/
 import net.minecraft.client.renderer.SkyRenderer;
 //? if >= 26.1 {
 import net.minecraft.client.renderer.state.level.SkyRenderState;
@@ -184,11 +187,16 @@ public final class SkyFarPlane {
     }
 
     public static boolean canDefer(SkyRenderState state, boolean improvedTransparency) {
+        //? if >= 1.21.11 {
         return state.skybox == DimensionType.Skybox.OVERWORLD
+                && !IrisShaders.packInUse()
+        //?} else {
+        /*return state.skyType == DimensionSpecialEffects.SkyType.OVERWORLD
+                && !IrisShaders.packInUse()
+        *///?}
                 && !improvedTransparency
                 && !SKY_MOD
-                && PATCHED.size() == SHADERS.size()
-                && !IrisShaders.packInUse();
+                && PATCHED.size() == SHADERS.size();
     }
 
     //? if >= 26.3 {

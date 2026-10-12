@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-//? if >= 1.21.11 {
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 //? if < 26.1 {
 /*import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
@@ -64,4 +63,3 @@ public abstract class MixinSpriteSetRegion implements SpriteSet.Access {
     }
     //?}
 }
-//?}

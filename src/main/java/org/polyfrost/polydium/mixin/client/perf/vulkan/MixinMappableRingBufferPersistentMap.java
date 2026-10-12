@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.8 {
 import com.mojang.renderpearl.api.buffers.GpuBuffer;
 //? if >= 26.2 {
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice.MappedView;

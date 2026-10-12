@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.IOException;

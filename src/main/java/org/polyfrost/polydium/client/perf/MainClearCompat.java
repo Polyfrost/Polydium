@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.5 {
 import net.fabricmc.loader.api.FabricLoader;
 import net.irisshaders.iris.api.v0.IrisApi;
 

@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-//? if >= 1.21.11 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -31,7 +30,7 @@ public abstract class MixinModelCubeWrites {
     private void polydium$writeCuboid(ModelPart.Cube cube, PoseStack.Pose pose, VertexConsumer builder, int lightCoords, int overlayCoords, int color,
                                       Operation<Void> original) {
         if (SodiumModelParts.CUBOIDS && cube.getClass() == ModelPart.Cube.class) {
-            VertexBufferWriter writer = VertexBufferWriter.tryOf(builder);
+            VertexBufferWriter writer = VertexBufferWriter.tryOf(builder/*? if < 1.21.4 {*//*, net.caffeinemc.mods.sodium.api.vertex.format.common.EntityVertex.FORMAT*//*?}*/);
             ModelCuboid cuboid = SodiumModelParts.cuboid(cube);
             if (writer != null && cuboid != null) {
                 EntityRenderer.renderCuboid(pose, writer, cuboid, lightCoords, overlayCoords, ColorARGB.toABGR(color));
@@ -65,4 +64,3 @@ public abstract class MixinModelCubeWrites {
         return Collections.emptyList();
     }
 }
-//?}

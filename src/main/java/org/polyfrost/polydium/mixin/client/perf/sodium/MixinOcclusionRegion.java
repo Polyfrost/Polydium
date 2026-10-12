@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.8 {
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
 import org.polyfrost.polydium.client.perf.RegionOcclusion;
 import org.spongepowered.asm.mixin.Mixin;

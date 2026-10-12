@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
@@ -35,4 +34,3 @@ public final class SpriteSet {
         }
     }
 }
-//?}

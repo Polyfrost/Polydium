@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.BlockGetter;
@@ -48,8 +48,13 @@ public final class ParticleAirCollision {
     }
 
     private static boolean isChunkAir(ChunkAccess chunk, int minX, int maxX, int minY, int maxY, int minZ, int maxZ) {
+        //? if >= 1.21.4 {
         int bottom = Math.max(minY, chunk.getMinY());
         int top = Math.min(maxY, chunk.getMaxY());
+        //?} else {
+        /*int bottom = Math.max(minY, chunk.getMinBuildHeight());
+        int top = Math.min(maxY, chunk.getMaxBuildHeight() - 1);
+        *///?}
         LevelChunkSection[] sections = chunk.getSections();
 
         int maxSectionY = SectionPos.blockToSectionCoord(top);

@@ -1,11 +1,15 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.8 || < 1.21.4 {
 import java.util.Arrays;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.systems.RenderSystem;
+//? if >= 1.21.10 {
 import com.mojang.blaze3d.vertex.CompactVectorArray;
+//?} else {
+/*import org.joml.Vector3f;
+*///?}
 import net.caffeinemc.mods.sodium.client.util.MathUtil;
 import net.caffeinemc.mods.sodium.client.util.sorting.RadixSort;
 import net.caffeinemc.mods.sodium.client.util.sorting.VertexSortingExtended;
@@ -20,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(targets = "net.caffeinemc.mods.sodium.client.util.sorting.VertexSorters$AbstractSorter", remap = false)
 public abstract class MixinSortReuse implements SharedQuadSorter {
     @WrapOperation(
-            method = "sort(Lcom/mojang/blaze3d/vertex/CompactVectorArray;)[I",
+            method = /*? if >= 1.21.10 {*/"sort(Lcom/mojang/blaze3d/vertex/CompactVectorArray;)[I"/*?} else {*//*"sort([Lorg/joml/Vector3f;)[I"*//*?}*/,
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/caffeinemc/mods/sodium/client/util/sorting/RadixSort;sortIndirect([I[IZ)V"
@@ -39,12 +43,12 @@ public abstract class MixinSortReuse implements SharedQuadSorter {
     }
 
     @Override
-    public int[] polydium$sortShared(CompactVectorArray centroids) {
+    public int[] polydium$sortShared(/*? if >= 1.21.10 {*/CompactVectorArray/*?} else {*//*Vector3f[]*//*?}*/ centroids) {
         VertexSortingExtended sorting = (VertexSortingExtended) (Object) this;
-        int length = centroids.size();
+        int length = centroids./*? if >= 1.21.10 {*/size()/*?} else {*//*length*//*?}*/;
         int[] keys = QuadSort.keys(length);
         for (int index = 0; index < length; index++) {
-            keys[index] = ~MathUtil.floatToComparableInt(sorting.applyMetric(centroids.getX(index), centroids.getY(index), centroids.getZ(index)));
+            keys[index] = ~MathUtil.floatToComparableInt(sorting.applyMetric(/*? if >= 1.21.10 {*/centroids.getX(index), centroids.getY(index), centroids.getZ(index)/*?} else {*//*centroids[index]*//*?}*/));
         }
         int[] order = QuadSort.reuseShared(PerfClock.frame, keys, length);
         if (order != null) {

@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.8 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import java.lang.ref.WeakReference;
@@ -28,7 +28,7 @@ public class MixinRainFogTickCache {
     @Unique
     private int polydium$rainFogSkyLight = -1;
 
-    @WrapOperation(method = "updateRainFogState", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/ClientLevel;getBiome(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/core/Holder;"))
+    @WrapOperation(method = /*? if >= 1.21.11 {*/"updateRainFogState"/*?} else {*//*"setupFog"*//*?}*/, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/ClientLevel;getBiome(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/core/Holder;"))
     private Holder<Biome> polydium$reuseTickBiome(ClientLevel level, BlockPos pos, Operation<Holder<Biome>> original) {
         long tick = PerfClock.tick;
         long key = pos.asLong();
@@ -46,7 +46,7 @@ public class MixinRainFogTickCache {
         return biome;
     }
 
-    @WrapOperation(method = "updateRainFogState", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/lighting/LayerLightEventListener;getLightValue(Lnet/minecraft/core/BlockPos;)I"))
+    @WrapOperation(method = /*? if >= 1.21.11 {*/"updateRainFogState"/*?} else {*//*"setupFog"*//*?}*/, at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/lighting/LayerLightEventListener;getLightValue(Lnet/minecraft/core/BlockPos;)I"))
     private int polydium$reuseTickSkyLight(LayerLightEventListener listener, BlockPos pos, Operation<Integer> original) {
         if (this.polydium$rainFogSkyLight < 0) {
             this.polydium$rainFogSkyLight = original.call(listener, pos);

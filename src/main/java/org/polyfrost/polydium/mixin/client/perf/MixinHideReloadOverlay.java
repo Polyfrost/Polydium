@@ -2,7 +2,7 @@ package org.polyfrost.polydium.mixin.client.perf;
 
 import org.polyfrost.polydium.client.PolydiumToggles;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
 //? if >= 26.1 {
@@ -60,7 +60,7 @@ public abstract class MixinHideReloadOverlay {
             return;
         }
         if (this.minecraft.level == null) {
-            this.polydium$screen()./*? if >= 26.1 {*/extractRenderStateWithTooltipAndSubtitles/*?} else {*//*renderWithTooltipAndSubtitles*//*?}*/(graphics, mouseX, mouseY, partialTick);
+            this.polydium$screen()./*? if >= 26.1 {*/extractRenderStateWithTooltipAndSubtitles/*?} else if >= 1.21.10 {*//*renderWithTooltipAndSubtitles*//*?} else {*//*renderWithTooltip*//*?}*/(graphics, mouseX, mouseY, partialTick);
         }
         if (this.fadeOutStart == -1L && this.reload.isDone()) {
             try {
@@ -71,7 +71,7 @@ public abstract class MixinHideReloadOverlay {
             }
             if (this.polydium$screen() != null) {
                 Window window = this.minecraft.getWindow();
-                this.polydium$screen().init(window.getGuiScaledWidth(), window.getGuiScaledHeight());
+                this.polydium$screen().init(/*? if < 1.21.11 {*//*this.minecraft, *//*?}*/window.getGuiScaledWidth(), window.getGuiScaledHeight());
             }
             this.polydium$closeOverlay();
         }

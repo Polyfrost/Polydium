@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-//? if >= 1.21.11 {
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import it.unimi.dsi.fastutil.longs.Long2ReferenceLinkedOpenHashMap;
@@ -34,4 +33,3 @@ public abstract class MixinSectionCopyCacheCleanup {
         }
     }
 }
-//?}

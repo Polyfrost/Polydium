@@ -2,7 +2,7 @@ package org.polyfrost.polydium.mixin.client.perf;
 
 import org.polyfrost.polydium.client.PolydiumToggles;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.10 {
 //? if >= 26.2 && < 26.3
 /*import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;*/
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;

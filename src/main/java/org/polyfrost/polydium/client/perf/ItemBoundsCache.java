@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.8 {
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -49,8 +49,10 @@ public final class ItemBoundsCache {
             /*MutableMesh mesh;
             if ((Object) layer instanceof net.fabricmc.fabric.impl.client.indigo.renderer.accessor.AccessLayerRenderState indigo) {
                 mesh = indigo.fabric_getMutableMesh();
+            //? if >= 1.21.8 {
             } else if (SODIUM && (Object) layer instanceof net.caffeinemc.mods.sodium.client.render.frapi.render.AccessLayerRenderState sodium) {
                 mesh = sodium.fabric_getMutableMesh();
+            //?}
             } else {
                 return !((Object) layer instanceof FabricLayerRenderState);
             }

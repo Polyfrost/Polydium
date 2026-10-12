@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
 import net.caffeinemc.mods.sodium.client.world.PalettedContainerROExtension;
 import net.caffeinemc.mods.sodium.client.world.cloned.ChunkRenderContext;
 import net.caffeinemc.mods.sodium.client.world.cloned.ClonedChunkSection;
@@ -64,4 +63,3 @@ public final class SectionStates {
         }
     }
 }
-//?}

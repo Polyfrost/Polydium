@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-//? if >= 1.21.11 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.caffeinemc.mods.sodium.client.render.chunk.terrain.DefaultTerrainRenderPasses;
@@ -30,6 +29,7 @@ public abstract class MixinRegionPassArrays {
         return this.polydium$lookup(this.polydium$storages, map, pass, original);
     }
 
+    //? if >= 1.21.8 || < 1.21.4 {
     @WrapOperation(
             method = "getCachedBatch",
             at = @At(value = "INVOKE", target = "Ljava/util/Map;get(Ljava/lang/Object;)Ljava/lang/Object;")
@@ -37,6 +37,7 @@ public abstract class MixinRegionPassArrays {
     private Object polydium$batchByPass(Map<?, ?> map, Object pass, Operation<Object> original) {
         return this.polydium$lookup(this.polydium$batches, map, pass, original);
     }
+    //?}
 
     @Inject(method = "delete", at = @At("TAIL"))
     private void polydium$forgetPasses(CallbackInfo ci) {
@@ -61,4 +62,3 @@ public abstract class MixinRegionPassArrays {
         return value;
     }
 }
-//?}

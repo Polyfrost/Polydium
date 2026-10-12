@@ -19,8 +19,14 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final String[] SODIUM_PERF_VERSIONS = {"0.9.2", "0.9.3"};
     //?} else if >= 26.1 {
     /*private static final String[] SODIUM_PERF_VERSIONS = {"0.9.2"};
-    *///?} else {
+    *///?} else if >= 1.21.11 {
     /*private static final String[] SODIUM_PERF_VERSIONS = {"0.8.14", "0.8.15"};
+    *///?} else if >= 1.21.8 {
+    /*private static final String[] SODIUM_PERF_VERSIONS = {"0.7.3"};
+    *///?} else if >= 1.21.4 {
+    /*private static final String[] SODIUM_PERF_VERSIONS = {"0.6.13"};
+    *///?} else {
+    /*private static final String[] SODIUM_PERF_VERSIONS = {"0.8.13"};
     *///?}
 
     public static final boolean SODIUM_PERF = FabricLoader.getInstance().getModContainer("sodium")

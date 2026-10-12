@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
 import java.util.Arrays;
 import java.util.Map;
 
@@ -39,4 +38,3 @@ public final class SodiumRegionPassCache {
         Arrays.fill(this.slotsB, null);
     }
 }
-//?}

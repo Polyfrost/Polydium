@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.renderpearl.api.vertex.VertexFormat;
@@ -30,4 +29,3 @@ public interface ParticleBufferBuilderAccessor {
     @Accessor("elementsToFill")
     void polydium$setElementsToFill(int elements);
 }
-//?}

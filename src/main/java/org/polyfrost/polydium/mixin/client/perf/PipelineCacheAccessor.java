@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.5 {
 //? if >= 26.3
 import com.mojang.blaze3d.pipeline.PipelineCache;
 import com.mojang.renderpearl.api.pipeline.CompiledRenderPipeline;

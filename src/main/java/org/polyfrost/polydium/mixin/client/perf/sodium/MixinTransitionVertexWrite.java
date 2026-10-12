@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-//? if >= 1.21.11 {
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.caffeinemc.mods.sodium.api.util.NormI8;
 import net.caffeinemc.mods.sodium.api.vertex.format.common.EntityVertex;
@@ -39,4 +38,3 @@ public abstract class MixinTransitionVertexWrite {
         ci.cancel();
     }
 }
-//?}

@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
 import org.joml.Math;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
@@ -122,4 +121,3 @@ public final class ZyxRotation {
         m.m22 = nm12 * mSinX + nm22 * cosX;
     }
 }
-//?}

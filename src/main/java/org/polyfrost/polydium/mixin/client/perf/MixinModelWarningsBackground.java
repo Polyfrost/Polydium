@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.client.resources.model.ModelManager;
@@ -27,10 +27,10 @@ public abstract class MixinModelWarningsBackground {
     }
     //?} else {
     /*@WrapOperation(
-        method = /^? if >= 26.1 {^/"lambda$loadModels$1"/^?} else {^//^"method_68047"^//^?}^/,
+        method = /^? if >= 26.1 {^/"lambda$loadModels$1"/^?} else if >= 1.21.5 {^//^"method_68047"^//^?} else {^//^"loadModels"^//^?}^/,
         at = @At(value = "INVOKE", target = "Ljava/util/Map;forEach(Ljava/util/function/BiConsumer;)V")
     )
-    private static void polydium$logMissingTexturesInBackground(Map<?, ?> missing, BiConsumer<?, ?> log, Operation<Void> original) {
+    private /^? if >= 1.21.4 {^/static /^?}^/void polydium$logMissingTexturesInBackground(Map<?, ?> missing, BiConsumer<?, ?> log, Operation<Void> original) {
         BackgroundCleanup.run(() -> original.call(missing, log));
     }
     *///?}

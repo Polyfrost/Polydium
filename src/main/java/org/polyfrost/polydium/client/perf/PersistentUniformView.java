@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 && < 26.2 {
+//? if >= 1.21.8 && < 26.2 {
 /*import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.opengl.GlBuffer;
@@ -32,7 +32,7 @@ public final class PersistentUniformView implements GpuBuffer.MappedView {
     @Override
     public void close() {
         GlBufferAccessor accessor = (GlBufferAccessor) this.buffer;
-        ((DirectStateAccessInvoker) accessor.polydium$dsa()).polydium$flushMappedBufferRange(accessor.polydium$handle(), this.offset, this.length, this.buffer.usage());
+        ((DirectStateAccessInvoker) accessor.polydium$dsa()).polydium$flushMappedBufferRange(accessor.polydium$handle(), /^? if >= 1.21.11 {^/this.offset, this.length/^?} else {^//^(int) this.offset, (int) this.length^//^?}^/ /^? if >= 1.21.10 {^/, this.buffer.usage()/^?}^/);
     }
 }
 *///?}

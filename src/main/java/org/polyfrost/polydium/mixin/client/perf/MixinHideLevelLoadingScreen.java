@@ -2,20 +2,24 @@ package org.polyfrost.polydium.mixin.client.perf;
 
 import org.polyfrost.polydium.client.PolydiumToggles;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import net.minecraft.client.Minecraft;
 //? if >= 26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 //?} else {
 /*import net.minecraft.client.gui.GuiGraphics;
 *///?}
+//? if >= 1.21.10 {
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
+//?} else {
+/*import net.minecraft.client.gui.screens.ReceivingLevelScreen;
+*///?}
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(LevelLoadingScreen.class)
+@Mixin(/*? if >= 1.21.10 {*/LevelLoadingScreen/*?} else {*//*ReceivingLevelScreen*//*?}*/.class)
 public abstract class MixinHideLevelLoadingScreen {
     //? if >= 26.1 {
     @Inject(method = {"extractRenderState", "extractBackground"}, at = @At("HEAD"), cancellable = true)

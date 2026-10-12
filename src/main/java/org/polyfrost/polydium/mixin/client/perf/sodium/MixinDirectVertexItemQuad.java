@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-//? if >= 1.21.11 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -18,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.At;
 @Pseudo
 @Mixin(targets = "net.caffeinemc.mods.sodium.client.render.immediate.model.BakedModelEncoder", remap = false)
 public abstract class MixinDirectVertexItemQuad {
-    @WrapOperation(method = /*? if >= 26.1 {*/"writeQuadVertices"/*?} else {*//*{"writeQuadVertices(Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/caffeinemc/mods/sodium/client/model/quad/ModelQuadView;IIIZ)V", "writeQuadVertices(Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/caffeinemc/mods/sodium/client/model/quad/ModelQuadView;FFFF[F[II)V"}*//*?}*/, at = @At(value = "INVOKE", target = "Lorg/lwjgl/system/MemoryStack;nmalloc(I)J"))
+    @WrapOperation(method = /*? if >= 26.1 {*/"writeQuadVertices"/*?} else {*//*{"writeQuadVertices(Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/caffeinemc/mods/sodium/client/model/quad/ModelQuadView;IIIZ)V", /^? if >= 1.21.11 {^/"writeQuadVertices(Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/caffeinemc/mods/sodium/client/model/quad/ModelQuadView;FFFF[F[II)V"/^?} else {^//^"writeQuadVertices(Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/caffeinemc/mods/sodium/client/model/quad/ModelQuadView;FFFF[FZ[II)V"^//^?}^/}*//*?}*/, at = @At(value = "INVOKE", target = "Lorg/lwjgl/system/MemoryStack;nmalloc(I)J"))
     private static long polydium$writeIntoTarget(MemoryStack stack, int size, Operation<Long> original,
                                                  @Local(argsOnly = true) VertexBufferWriter writer,
                                                  @Share("polydium$direct") LocalBooleanRef direct) {
@@ -31,7 +30,7 @@ public abstract class MixinDirectVertexItemQuad {
     }
 
     @WrapOperation(
-            method = /*? if >= 26.1 {*/"writeQuadVertices"/*?} else {*//*{"writeQuadVertices(Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/caffeinemc/mods/sodium/client/model/quad/ModelQuadView;IIIZ)V", "writeQuadVertices(Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/caffeinemc/mods/sodium/client/model/quad/ModelQuadView;FFFF[F[II)V"}*//*?}*/,
+            method = /*? if >= 26.1 {*/"writeQuadVertices"/*?} else {*//*{"writeQuadVertices(Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/caffeinemc/mods/sodium/client/model/quad/ModelQuadView;IIIZ)V", /^? if >= 1.21.11 {^/"writeQuadVertices(Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/caffeinemc/mods/sodium/client/model/quad/ModelQuadView;FFFF[F[II)V"/^?} else {^//^"writeQuadVertices(Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/caffeinemc/mods/sodium/client/model/quad/ModelQuadView;FFFF[FZ[II)V"^//^?}^/}*//*?}*/,
             at = @At(value = "INVOKE", target = "Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;push(Lorg/lwjgl/system/MemoryStack;JILcom/mojang/renderpearl/api/vertex/VertexFormat;)V")
     )
     private static void polydium$skipCopy(VertexBufferWriter writer, MemoryStack stack, long source, int count, VertexFormat format, Operation<Void> original,
@@ -41,4 +40,3 @@ public abstract class MixinDirectVertexItemQuad {
         }
     }
 }
-//?}

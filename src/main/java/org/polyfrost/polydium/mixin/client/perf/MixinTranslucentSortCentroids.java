@@ -1,7 +1,14 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
+//? if >= 1.21.10 {
 import com.mojang.blaze3d.vertex.CompactVectorArray;
+//?} else {
+/*import com.mojang.blaze3d.systems.RenderSystem;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import org.joml.Vector3f;
+import org.polyfrost.polydium.client.perf.SortCentroidScope;
+*///?}
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.renderpearl.api.vertex.VertexFormat;
 import com.mojang.renderpearl.api.vertex.VertexFormatElement;
@@ -12,10 +19,13 @@ import org.spongepowered.asm.mixin.injection.At;
 //? if >= 26.2 {
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-//?} else {
+//?} else if >= 1.21.10 {
 /*import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Cancellable;
 import com.llamalad7.mixinextras.sugar.Local;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+*///?} else {
+/*import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 *///?}
 
@@ -32,7 +42,7 @@ public abstract class MixinTranslucentSortCentroids {
             ci.cancel();
         }
     }
-    //?} else {
+    //?} else if >= 1.21.10 {
     /*@ModifyExpressionValue(method = "unpackQuadCentroids", at = @At(value = "NEW", target = "(I)Lcom/mojang/blaze3d/vertex/CompactVectorArray;"))
     private static CompactVectorArray polydium$decodeFromMemory(CompactVectorArray centroids, @Local(argsOnly = true) ByteBuffer buffer, @Local(argsOnly = true) int vertexCount, @Local(argsOnly = true) VertexFormat format,
                                                                  @Cancellable CallbackInfoReturnable<CompactVectorArray> cir) {
@@ -42,10 +52,43 @@ public abstract class MixinTranslucentSortCentroids {
         }
         return centroids;
     }
+    *///?} else {
+    /*@Unique
+    private static final Int2ObjectOpenHashMap<Vector3f[]> POLYDIUM_CENTROIDS = new Int2ObjectOpenHashMap<>();
+
+    @Inject(method = "unpackQuadCentroids", at = @At("HEAD"), cancellable = true)
+    private static void polydium$decodeFromMemory(ByteBuffer buffer, int vertexCount, VertexFormat format, CallbackInfoReturnable<Vector3f[]> cir) {
+        if (format.getOffset(VertexFormatElement.POSITION) != 0 || format.getVertexSize() % 4 != 0) {
+            return;
+        }
+        Vector3f[] centroids = polydium$centroids(vertexCount / 4);
+        if (polydium$decode(buffer, vertexCount, format.getVertexSize(), 0L, centroids, 0)) {
+            cir.setReturnValue(centroids);
+        }
+    }
+
+    @Unique
+    private static Vector3f[] polydium$centroids(int count) {
+        boolean pooled = SortCentroidScope.discarded && RenderSystem.isOnRenderThread();
+        Vector3f[] centroids = pooled ? POLYDIUM_CENTROIDS.get(count) : null;
+        if (centroids == null) {
+            centroids = new Vector3f[Math.max(count, 0)];
+            for (int i = 0; i < count; i++) {
+                centroids[i] = new Vector3f();
+            }
+            if (pooled) {
+                if (POLYDIUM_CENTROIDS.size() >= 256) {
+                    POLYDIUM_CENTROIDS.clear();
+                }
+                POLYDIUM_CENTROIDS.put(count, centroids);
+            }
+        }
+        return centroids;
+    }
     *///?}
 
     @Unique
-    private static boolean polydium$decode(ByteBuffer buffer, int vertexCount, long vertexSize, long positionOffset, CompactVectorArray centroids, int firstQuad) {
+    private static boolean polydium$decode(ByteBuffer buffer, int vertexCount, long vertexSize, long positionOffset, /*? if >= 1.21.10 {*/CompactVectorArray/*?} else {*//*Vector3f[]*//*?}*/ centroids, int firstQuad) {
         int quads = vertexCount / 4;
         if (quads <= 0 || !buffer.isDirect() || buffer.order() != ByteOrder.nativeOrder()) {
             return false;
@@ -67,7 +110,11 @@ public abstract class MixinTranslucentSortCentroids {
             float x2 = MemoryUtil.memGetFloat(third);
             float y2 = MemoryUtil.memGetFloat(third + 4L);
             float z2 = MemoryUtil.memGetFloat(third + 8L);
+            //? if >= 1.21.10 {
             centroids.set(firstQuad + quad, (x0 + x2) / 2.0F, (y0 + y2) / 2.0F, (z0 + z2) / 2.0F);
+            //?} else {
+            /*centroids[firstQuad + quad].set((x0 + x2) / 2.0F, (y0 + y2) / 2.0F, (z0 + z2) / 2.0F);
+            *///?}
         }
         return true;
     }

@@ -117,6 +117,10 @@ dependencies {
 
     optionalProperty("deps.sodium")?.let {
         modCompileOnly("maven.modrinth:sodium:$it") { isTransitive = false }
+        if (providers.gradleProperty("polydium.runtimeSodium").isPresent) {
+            modLocalRuntime("maven.modrinth:sodium:$it") { isTransitive = false }
+            project.configurations.getByName("testRuntimeClasspath").extendsFrom(project.configurations.getByName("localRuntime"))
+        }
     }
     optionalProperty("deps.iris")?.let {
         modCompileOnly("maven.modrinth:iris:$it") { isTransitive = false }

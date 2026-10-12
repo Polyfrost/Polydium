@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.renderpearl.api.vertex.VertexFormat;
 import net.fabricmc.loader.api.FabricLoader;
@@ -18,7 +17,11 @@ public final class DirectVertexBuffers {
     private static final String SODIUM_MIXINS = "net.caffeinemc.mods.sodium.";
     private static final String OWN_MIXINS = "org.polyfrost.polydium.";
     private static final String IRIS_MIXINS = "net.irisshaders.iris.mixin.vertices.";
+    //? if >= 1.21.11 {
     private static final List<String> IRIS_VERSIONS = List.of("1.10.8", "1.11.4", "1.11.7");
+    //?} else {
+    /*private static final List<String> IRIS_VERSIONS = List.of("1.8.8", "1.8.11", "1.8.14", "1.9.6", "1.9.7");
+    *///?}
     private static final Set<String> HARMLESS_MIXINS = Set.of(
             "xaeroplus.mixin.client.mc.MixinBufferBuilder",
             "net.diebuddies.mixins.iris.MixinBufferBuilder",
@@ -109,4 +112,3 @@ public final class DirectVertexBuffers {
                 .orElse(false);
     }
 }
-//?}

@@ -1,11 +1,10 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
-import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import org.polyfrost.polydium.client.perf.EntityRendererCacheHolder;
@@ -18,7 +17,7 @@ import java.util.Map;
 @Mixin(EntityRenderDispatcher.class)
 public class MixinEntityRendererCache {
     @Shadow
-    private Map<EntityType<?>, EntityRenderer<?, ?>> renderers;
+    private Map<EntityType<?>, ?> renderers;
 
     @WrapOperation(
         method = "getRenderer(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/client/renderer/entity/EntityRenderer;",

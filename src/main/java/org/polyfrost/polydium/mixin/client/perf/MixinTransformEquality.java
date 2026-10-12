@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.8 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 //? if >= 26.3 {
@@ -41,7 +41,7 @@ public class MixinTransformEquality {
                 || Objects.equals(a.modelOffset(), b.modelOffset())
                 && Objects.equals(a.colorModulator(), b.colorModulator())
                 && Objects.equals(a.modelView(), b.modelView())
-                && Objects.equals(a.textureMatrix(), b.textureMatrix());
+                && Objects.equals(a.textureMatrix(), b.textureMatrix())/*? if < 1.21.11 {*//* && Float.compare(a.lineWidth(), b.lineWidth()) == 0*//*?}*/;
         }
         return original.call(last, data);
     }

@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-//? if >= 1.21.11 && < 26.1 {
+//? if < 26.1 {
 /*import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
 import org.polyfrost.polydium.client.perf.SpriteSet;
 import org.spongepowered.asm.mixin.Final;

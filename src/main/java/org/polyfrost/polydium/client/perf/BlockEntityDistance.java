@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -21,11 +21,11 @@ public final class BlockEntityDistance {
     private BlockEntityDistance() {
     }
 
-    public static boolean inheritsDefault(BlockEntityRenderer<?, ?> renderer) {
+    public static boolean inheritsDefault(BlockEntityRenderer<?/*? if >= 1.21.10 {*/, ?/*?}*/> renderer) {
         return INHERITED.get(renderer.getClass());
     }
 
-    public static boolean shouldRender(BlockEntityRenderer<?, ?> renderer, BlockEntity blockEntity, Vec3 cameraPosition) {
+    public static boolean shouldRender(BlockEntityRenderer<?/*? if >= 1.21.10 {*/, ?/*?}*/> renderer, BlockEntity blockEntity, Vec3 cameraPosition) {
         BlockPos pos = blockEntity.getBlockPos();
         double xd = cameraPosition.x() - (pos.getX() + 0.5);
         double yd = cameraPosition.y() - (pos.getY() + 0.5);

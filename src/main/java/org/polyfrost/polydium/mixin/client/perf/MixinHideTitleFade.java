@@ -2,7 +2,7 @@ package org.polyfrost.polydium.mixin.client.perf;
 
 import org.polyfrost.polydium.client.PolydiumToggles;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 //? if >= 26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 //?} else {

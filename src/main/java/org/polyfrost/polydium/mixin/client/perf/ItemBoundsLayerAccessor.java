@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.8 {
 import java.util.function.Supplier;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 //? if >= 26.1 {

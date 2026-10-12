@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 
@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.At;
 public class MixinSortCentroidScope {
     //? if < 26.2 {
     /*@WrapOperation(
-        method = "endBatch(Lnet/minecraft/client/renderer/rendertype/RenderType;Lcom/mojang/blaze3d/vertex/BufferBuilder;)V",
+        method = /^? if >= 1.21.11 {^/"endBatch(Lnet/minecraft/client/renderer/rendertype/RenderType;Lcom/mojang/blaze3d/vertex/BufferBuilder;)V"/^?} else {^//^"endBatch(Lnet/minecraft/client/renderer/RenderType;Lcom/mojang/blaze3d/vertex/BufferBuilder;)V"^//^?}^/,
         at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/MeshData;sortQuads(Lcom/mojang/blaze3d/vertex/ByteBufferBuilder;Lcom/mojang/blaze3d/vertex/VertexSorting;)Lcom/mojang/blaze3d/vertex/MeshData$SortState;")
     )
     private MeshData.SortState polydium$markDiscarded(MeshData mesh, ByteBufferBuilder buffer, VertexSorting sorting, Operation<MeshData.SortState> original) {

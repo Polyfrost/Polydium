@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.resources.language.FormattedBidiReorder;
 import net.minecraft.network.chat.FormattedText;

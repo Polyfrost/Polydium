@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -49,7 +49,7 @@ public final class PrecipitationCache {
         int quartX = PrecipitationColumn.quart(pos.getX());
         int quartY = PrecipitationColumn.quart(pos.getY());
         int quartZ = PrecipitationColumn.quart(pos.getZ());
-        int minQuartY = level.getMinY() >> 2;
+        int minQuartY = level./*? if >= 1.21.4 {*/getMinY/*?} else {*//*getMinBuildHeight*//*?}*/() >> 2;
         Holder<Biome> result = null;
         for (int corner = 0; corner < 4; corner++) {
             Holder<Biome>[] chunk = this.sections(level, quartX + (corner & 1) >> 2, quartZ + (corner >> 1) >> 2);
@@ -97,7 +97,7 @@ public final class PrecipitationCache {
 
     public Biome.Precipitation precipitation(Biome biome, BlockPos pos, int seaLevel, Operation<Biome.Precipitation> original) {
         if (SEASONAL) {
-            return original.call(biome, pos, seaLevel);
+            return original.call(biome, pos/*? if >= 1.21.4 {*/, seaLevel/*?}*/);
         }
         long key = PrecipitationColumn.key(pos.getX(), pos.getZ());
         PrecipitationColumn column = this.columns.get(key);
@@ -112,7 +112,7 @@ public final class PrecipitationCache {
         if (cached != PrecipitationColumn.UNKNOWN) {
             return VALUES[cached];
         }
-        Biome.Precipitation precipitation = original.call(biome, pos, seaLevel);
+        Biome.Precipitation precipitation = original.call(biome, pos/*? if >= 1.21.4 {*/, seaLevel/*?}*/);
         column.put(biome, seaLevel, pos.getY(), precipitation.ordinal(), precipitation == Biome.Precipitation.SNOW);
         return precipitation;
     }

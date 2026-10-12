@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.8 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.renderpearl.api.buffers.GpuBuffer;
@@ -60,11 +60,19 @@ public abstract class MixinDynamicGpuDataPersistentWrite {
     @Unique
     private GpuBufferSlice polydium$lastSlice;
 
+    //? if >= 1.21.11 {
     @Redirect(
         method = POLYDIUM$WRITE_DATA,
         at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/buffers/GpuBuffer;slice(JJ)Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;")
     )
     private GpuBufferSlice polydium$reuseSlice(GpuBuffer buffer, long offset, long length) {
+    //?} else {
+    /*@Redirect(
+        method = POLYDIUM$WRITE_DATA,
+        at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/buffers/GpuBuffer;slice(II)Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;")
+    )
+    private GpuBufferSlice polydium$reuseSlice(GpuBuffer buffer, int offset, int length) {
+    *///?}
         GpuBufferSlice last = this.polydium$lastSlice;
         if (last != null && last.buffer() == buffer && last.offset() == offset && last.length() == length) {
             return last;

@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import net.minecraft.client.Minecraft;
 import org.lwjgl.system.MemoryStack;
 import org.polyfrost.polydium.client.perf.RenderThreadStack;

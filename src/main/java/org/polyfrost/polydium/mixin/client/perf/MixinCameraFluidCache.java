@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.client.Camera;
@@ -24,7 +24,7 @@ public class MixinCameraFluidCache {
     @Shadow
     private boolean initialized;
     @Shadow
-    private Level level;
+    private /*? if >= 1.21.11 {*/Level/*?} else {*//*net.minecraft.world.level.BlockGetter*//*?}*/ level;
     @Shadow
     private Vec3 position;
     @Shadow
@@ -55,7 +55,7 @@ public class MixinCameraFluidCache {
     @Unique
     private boolean polydium$fluidInitialized;
     @Unique
-    private Level polydium$fluidLevel;
+    private /*? if >= 1.21.11 {*/Level/*?} else {*//*net.minecraft.world.level.BlockGetter*//*?}*/ polydium$fluidLevel;
     @Unique
     private Vec3 polydium$fluidPosition;
     @Unique

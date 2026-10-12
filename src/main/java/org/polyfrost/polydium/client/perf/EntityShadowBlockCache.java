@@ -1,10 +1,10 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.lang.ref.WeakReference;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
@@ -15,12 +15,12 @@ public final class EntityShadowBlockCache {
     private static final Long2ObjectOpenHashMap<Entry> ENTRIES = new Long2ObjectOpenHashMap<>();
 
     private static long tick = -1L;
-    private static WeakReference<Level> level = new WeakReference<>(null);
+    private static WeakReference<LevelReader> level = new WeakReference<>(null);
 
     private EntityShadowBlockCache() {
     }
 
-    public static Entry get(Level currentLevel, BlockPos pos, ChunkAccess chunk) {
+    public static Entry get(LevelReader currentLevel, BlockPos pos, ChunkAccess chunk) {
         if (PerfClock.tick != tick || level.get() != currentLevel) {
             ENTRIES.clear();
             tick = PerfClock.tick;
@@ -35,7 +35,7 @@ public final class EntityShadowBlockCache {
         return entry == NONE ? null : entry;
     }
 
-    private static Entry compute(Level level, BlockPos pos, ChunkAccess chunk) {
+    private static Entry compute(LevelReader level, BlockPos pos, ChunkAccess chunk) {
         BlockPos belowPos = pos.below();
         BlockState belowState = chunk.getBlockState(belowPos);
         if (belowState.getRenderShape() == RenderShape.INVISIBLE) {

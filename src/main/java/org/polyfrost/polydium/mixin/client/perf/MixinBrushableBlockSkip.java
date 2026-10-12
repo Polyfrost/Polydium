@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.1 {
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
@@ -15,10 +15,10 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(BlockEntityRenderDispatcher.class)
 public abstract class MixinBrushableBlockSkip {
     @ModifyExpressionValue(
-            method = "tryExtractRenderState",
+            method = /*? if >= 1.21.10 {*/"tryExtractRenderState"/*?} else {*//*"render"*//*?}*/,
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/blockentity/BlockEntityRenderDispatcher;getRenderer(Lnet/minecraft/world/level/block/entity/BlockEntity;)Lnet/minecraft/client/renderer/blockentity/BlockEntityRenderer;")
     )
-    private BlockEntityRenderer<?, ?> polydium$skipUndustedBrushable(BlockEntityRenderer<?, ?> renderer, @Local(argsOnly = true) BlockEntity blockEntity) {
+    private BlockEntityRenderer<?/*? if >= 1.21.10 {*/, ?/*?}*/> polydium$skipUndustedBrushable(BlockEntityRenderer<?/*? if >= 1.21.10 {*/, ?/*?}*/> renderer, @Local(argsOnly = true) BlockEntity blockEntity) {
         if (renderer == null || renderer.getClass() != BrushableBlockRenderer.class) {
             return renderer;
         }

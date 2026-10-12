@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import net.caffeinemc.mods.sodium.client.render.immediate.model.ModelCuboid;
 import net.minecraft.client.model.geom.ModelPart;
@@ -39,4 +38,3 @@ public final class SodiumModelParts {
         }
     }
 }
-//?}

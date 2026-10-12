@@ -1,7 +1,5 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
-
 public interface RegionOcclusion {
 
     long[] polydium$getHiddenSections();
@@ -12,4 +10,3 @@ public interface RegionOcclusion {
 
     void polydium$setTestedGeneration(int generation);
 }
-//?}

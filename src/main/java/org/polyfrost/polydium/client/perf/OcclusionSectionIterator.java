@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.8 {
 
 import net.caffeinemc.mods.sodium.client.util.iterator.ByteIterator;
 

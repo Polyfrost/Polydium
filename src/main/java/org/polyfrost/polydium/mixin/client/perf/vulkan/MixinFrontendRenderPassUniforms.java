@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.8 {
 //? if >= 26.3 {
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
@@ -49,7 +49,6 @@ import java.util.Set;
 *///?} else {
 /*import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import org.polyfrost.polydium.client.perf.IrisShaders;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -284,13 +283,13 @@ public abstract class MixinFrontendRenderPassUniforms {
         method = {
             "setUniform(Ljava/lang/String;Lcom/mojang/renderpearl/api/buffers/GpuBuffer;)V",
             "setUniform(Ljava/lang/String;Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;)V",
-            "bindTexture"
+            /^? if >= 1.21.11 {^/"bindTexture"/^?} else {^//^"bindSampler"^//^?}^/
         },
         at = @At(value = "INVOKE", target = "Ljava/util/HashMap;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
     )
     private Object polydium$compareWithPrevious(HashMap<Object, Object> map, Object name, Object value, Operation<Object> original) {
         Object previous = original.call(map, name, value);
-        this.polydium$sameValue = value.equals(previous) && !IrisShaders.packInUse();
+        this.polydium$sameValue = value.equals(previous) && !org.polyfrost.polydium.client.perf.IrisShaders.packInUse();
         return previous;
     }
 
@@ -298,7 +297,7 @@ public abstract class MixinFrontendRenderPassUniforms {
         method = {
             "setUniform(Ljava/lang/String;Lcom/mojang/renderpearl/api/buffers/GpuBuffer;)V",
             "setUniform(Ljava/lang/String;Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;)V",
-            "bindTexture"
+            /^? if >= 1.21.11 {^/"bindTexture"/^?} else {^//^"bindSampler"^//^?}^/
         },
         at = @At(value = "INVOKE", target = "Ljava/util/Set;add(Ljava/lang/Object;)Z")
     )

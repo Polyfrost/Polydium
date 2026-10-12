@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-//? if >= 1.21.11 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -25,13 +24,13 @@ public abstract class MixinDirectVertexCuboid {
                                                  @Local(argsOnly = true) ModelCuboid cuboid,
                                                  @Share("polydium$direct") LocalBooleanRef direct) {
         int faces = 0;
-        for (int face = 0; face < ModelCuboid.NUM_CUBE_FACES; face++) {
+        for (int face = 0; face < /*? if >= 1.21.8 || < 1.21.4 {*/ModelCuboid.NUM_CUBE_FACES/*?} else {*//*6*//*?}*/; face++) {
             if (cuboid.shouldDrawFace(face)) {
                 faces++;
             }
         }
         if (faces > 0) {
-            long pointer = DirectVertexBuffers.reserve(writer, EntityVertex.FORMAT, EntityVertex.STRIDE, faces * ModelCuboid.NUM_FACE_VERTICES);
+            long pointer = DirectVertexBuffers.reserve(writer, EntityVertex.FORMAT, EntityVertex.STRIDE, faces * /*? if >= 1.21.8 || < 1.21.4 {*/ModelCuboid.NUM_FACE_VERTICES/*?} else {*//*4*//*?}*/);
             if (pointer != 0L) {
                 direct.set(true);
                 return pointer;
@@ -51,4 +50,3 @@ public abstract class MixinDirectVertexCuboid {
         }
     }
 }
-//?}

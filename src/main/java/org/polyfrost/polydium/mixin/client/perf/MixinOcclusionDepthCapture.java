@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.8 {
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import org.polyfrost.polydium.client.perf.OcclusionDepth;
@@ -55,8 +55,15 @@ public abstract class MixinOcclusionDepthCapture {
             OcclusionDepth.capture(Minecraft.getInstance().getMainRenderTarget());
         }
     }
-    *///?} else {
+    *///?} else if >= 1.21.10 {
     /*@Inject(method = "method_62214", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher;renderAllFeatures()V"))
+    private void polydium$captureOpaqueDepth(CallbackInfo ci) {
+        if (OcclusionDepth.canCapture()) {
+            OcclusionDepth.capture(Minecraft.getInstance().getMainRenderTarget());
+        }
+    }
+    *///?} else {
+    /*@Inject(method = "method_62214", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;renderEntities(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/Camera;Lnet/minecraft/client/DeltaTracker;Ljava/util/List;)V"))
     private void polydium$captureOpaqueDepth(CallbackInfo ci) {
         if (OcclusionDepth.canCapture()) {
             OcclusionDepth.capture(Minecraft.getInstance().getMainRenderTarget());

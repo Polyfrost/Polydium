@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 1.21.11 {
+//? if >= 1.21.10 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.client.model.EntityModel;
@@ -66,7 +66,11 @@ public abstract class MixinBareArmorStand {
     @Unique
     private static boolean polydium$isBare(ArmorStandRenderState state) {
         return state.headEquipment.isEmpty() && state.chestEquipment.isEmpty() && state.legsEquipment.isEmpty() && state.feetEquipment.isEmpty()
+                //? if >= 1.21.11 {
                 && state.rightHandItemState.isEmpty() && state.leftHandItemState.isEmpty()
+                //?} else {
+                /*&& state.rightHandItem.isEmpty() && state.leftHandItem.isEmpty()
+                *///?}
                 && state.headItem.isEmpty() && state.wornHeadType == null;
     }
 }
