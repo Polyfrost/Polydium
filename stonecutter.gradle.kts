@@ -78,4 +78,5 @@ stonecutter parameters {
 
 stonecutter tasks {
     order("runClient")
+    order("publishModrinth")
 }

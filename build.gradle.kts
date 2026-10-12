@@ -1,6 +1,7 @@
 @file:Suppress("UnstableApiUsage")
 
 import dev.kikugie.loomx.LoomCompatDependencyExtension
+import dev.kikugie.loomx.LoomCompatProjectExtension
 import dev.kikugie.stonecutter.build.StonecutterBuildExtension
 import net.fabricmc.loom.api.LoomGradleExtensionAPI
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
@@ -10,6 +11,7 @@ plugins {
     java
     kotlin("jvm")
     id("dev.kikugie.loom-back-compat")
+    id("me.modmuss50.mod-publish-plugin") version "2.2.0"
 }
 
 val stonecutter = extensions.getByName("stonecutter") as StonecutterBuildExtension
@@ -27,6 +29,8 @@ val modId = property("mod.id") as String
 val modVersion = property("mod.version") as String
 val fabricLoaderVersion = property("deps.fabric_loader") as String
 val fabricLanguageKotlinVersion = property("deps.fabric_language_kotlin") as String
+val compatibleVersions: List<String> = stonecutter.properties.rawOrNull("mod", "mc_releases")
+    ?.asList().orEmpty().map { it.toString() }
 
 group = property("mod.group") as String
 version = "$modVersion+$mcVersion"
@@ -169,4 +173,55 @@ tasks.withType<ProcessResources>().configureEach {
 
 tasks.matching { it.name == "createMinecraftArtifacts" }.configureEach {
     dependsOn("stonecutterGenerate")
+}
+
+val modrinthId = listOf("oneconfig.publish.modrinth", "publish.modrinth").firstNotNullOfOrNull(::optionalProperty)
+val modrinthToken = listOf("oneconfig.publish.modrinth.token", "publish.modrinth.token", "modrinth.token")
+    .firstNotNullOfOrNull(::optionalProperty)
+
+val changelogs = rootProject.file("CHANGELOG.md").takeIf { it.exists() }?.readText() ?: "No changelog provided."
+
+val validateChangelog = tasks.register("validateChangelog") {
+    description = "Validates that the changelog is written for the current version."
+    group = "publishing"
+    doLast {
+        if (!changelogs.contains(modVersion)) {
+            throw GradleException("Changelog for version $modVersion not found.")
+        }
+    }
+}
+
+tasks.publishMods.configure {
+    dependsOn(validateChangelog)
+}
+tasks.matching { it.name == "publishModrinth" }.configureEach {
+    dependsOn(validateChangelog)
+}
+
+val modJar = extensions.getByType<LoomCompatProjectExtension>().modJar
+
+publishMods {
+    file = modJar.flatMap { it.archiveFile }
+
+    displayName = modVersion
+    version = "v$modVersion"
+    changelog = changelogs
+    type = STABLE
+
+    modLoaders.add("fabric")
+
+    dryRun = modrinthId == null || modrinthToken == null
+
+    if (modrinthId != null) {
+        modrinth {
+            projectId = modrinthId
+            accessToken = modrinthToken.orEmpty()
+
+            minecraftVersions.addAll(compatibleVersions.ifEmpty { listOf(mcVersion) })
+
+            requires("oneconfig")
+            requires("fabric-api")
+            requires("fabric-language-kotlin")
+        }
+    }
 }
