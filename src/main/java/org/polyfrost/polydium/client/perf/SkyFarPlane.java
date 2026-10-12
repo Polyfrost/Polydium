@@ -40,7 +40,7 @@ public final class SkyFarPlane {
     private static final String POSITION = "gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);";
     private static final Set<String> SHADERS = Set.of("shaders/core/sky.vsh", "shaders/core/stars.vsh", "shaders/core/position_color.vsh", "shaders/core/position_tex.vsh");
     private static final Set<String> PATCHED = ConcurrentHashMap.newKeySet();
-    private static final boolean SKY_MOD = java.util.stream.Stream.of("skyboxify", "optiboxes", "nuit", "fabricskyboxes").anyMatch(FabricLoader.getInstance()::isModLoaded);
+    private static final boolean SKY_MOD = java.util.stream.Stream.of("skyboxify", "optiboxes", "nuit").anyMatch(FabricLoader.getInstance()::isModLoaded);
 
     public static final class Pipelines {
         //? if >= 26.2 {

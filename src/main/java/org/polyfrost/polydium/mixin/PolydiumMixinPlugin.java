@@ -39,14 +39,10 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final String[] ENABLED = System.getProperty("polydium.enable", "").split(",");
 
     private static final Map<String, String[]> STAND_DOWN = Map.ofEntries(
-            Map.entry("DebugEntryCache", new String[]{"betterf3"}),
-            Map.entry("TextWidthCache", new String[]{"caxton", "modernui"}),
-            Map.entry("PreparedText", new String[]{"caxton", "modernui"}),
-            Map.entry("InstancedWeather", new String[]{"particlerain"}),
-            Map.entry("SpriteSet", new String[]{"nvidium"}),
-            Map.entry("SharedStateUnpack", new String[]{"nvidium"}),
-            Map.entry("SectionCacheSize", new String[]{"nvidium"}),
-            Map.entry("ShadowReceiverCull", new String[]{"nvidium"})
+            Map.entry("TextWidthCache", new String[]{"modernui"}),
+            Map.entry("LtrTextFastPath", new String[]{"modernui"}),
+            Map.entry("PreparedText", new String[]{"caxton"}),
+            Map.entry("SinglePassTextShadow", new String[]{"caxton"})
     );
 
     public static boolean isEnabled(String fragment) {

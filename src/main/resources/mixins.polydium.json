@@ -371,6 +371,13 @@
     "client.perf.MixinGuiItemBakeAtlas",
     "client.perf.MixinSpriteMipRelease",
     "client.perf.SpriteContentsMipAccessor",
+    "client.perf.MixinTextEffectMerge",
+    //? if < 1.21.4
+    //"client.perf.BakedGlyphEffectAccessor",
+    //? if < 1.21.4
+    //"client.perf.MixinSinglePassTextShadow",
+    //? if < 1.21.4
+    //"client.perf.MixinSinglePassTextShadowOutput",
     "client.perf.MixinPerfClockFrame"
   ]
 }

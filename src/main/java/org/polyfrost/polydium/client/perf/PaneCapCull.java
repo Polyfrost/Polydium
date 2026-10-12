@@ -6,7 +6,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
-import org.polyfrost.polydium.compat.Mods;
 import org.slf4j.LoggerFactory;
 
 public final class PaneCapCull {
@@ -45,9 +44,6 @@ public final class PaneCapCull {
     }
 
     private static boolean vanillaModels() {
-        if (Mods.CONTINUITY) {
-            return standDown("Continuity is loaded");
-        }
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft == null) {
             return false;

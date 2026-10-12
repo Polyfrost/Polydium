@@ -8,10 +8,6 @@ import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
 
 import java.util.ArrayList;
 
-//? if < 1.21.11 {
-/*import org.polyfrost.polydium.compat.Mods;
-*///?}
-
 public final class GuiItemBake {
     public static final int SPRITE = 1;
     public static final int FOIL = 2;
@@ -33,11 +29,7 @@ public final class GuiItemBake {
     }
 
     public static void begin() {
-        //? if >= 1.21.11 {
-        preparing = !IrisShaders.packInUse();
-        //?} else {
-        /*preparing = !Mods.IRIS;
-        *///?}
+        preparing = true;
         glintStep = GLINT_INTERVAL > 0 ? System.currentTimeMillis() / GLINT_INTERVAL : 0L;
     }
 

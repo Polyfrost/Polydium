@@ -28,9 +28,6 @@ public abstract class MixinZipPackIndex {
         @Local(argsOnly = true, ordinal = 0) String namespace,
         @Local(argsOnly = true, ordinal = 1) String directory
     ) {
-        if (!ZipPackIndex.AVAILABLE) {
-            return original.call(zipFile);
-        }
         return ZipPackIndex.entries(zipFile, this.addPrefix(type.getDirectory() + "/" + namespace + "/") + directory + "/");
     }
 }

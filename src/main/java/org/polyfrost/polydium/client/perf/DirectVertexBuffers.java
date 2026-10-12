@@ -2,14 +2,12 @@ package org.polyfrost.polydium.client.perf;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.renderpearl.api.vertex.VertexFormat;
-import net.fabricmc.loader.api.FabricLoader;
 import org.polyfrost.polydium.mixin.client.perf.ParticleBufferBuilderAccessor;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 
 import java.lang.reflect.Method;
-import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -17,11 +15,6 @@ public final class DirectVertexBuffers {
     private static final String SODIUM_MIXINS = "net.caffeinemc.mods.sodium.";
     private static final String OWN_MIXINS = "org.polyfrost.polydium.";
     private static final String IRIS_MIXINS = "net.irisshaders.iris.mixin.vertices.";
-    //? if >= 1.21.11 {
-    private static final List<String> IRIS_VERSIONS = List.of("1.10.8", "1.11.4", "1.11.7");
-    //?} else {
-    /*private static final List<String> IRIS_VERSIONS = List.of("1.8.8", "1.8.11", "1.8.14", "1.9.6", "1.9.7");
-    *///?}
     private static final Set<String> HARMLESS_MIXINS = Set.of(
             "xaeroplus.mixin.client.mc.MixinBufferBuilder",
             "net.diebuddies.mixins.iris.MixinBufferBuilder",
@@ -60,7 +53,7 @@ public final class DirectVertexBuffers {
                 || HARMLESS_MIXINS.contains(mixin)
                 || addsOnly(method.getName())
                 || accessorOnly(mixin)
-                || mixin.startsWith(IRIS_MIXINS) && Iris.KNOWN;
+                || mixin.startsWith(IRIS_MIXINS);
     }
 
     public static boolean addsOnly(String name) {
@@ -103,12 +96,5 @@ public final class DirectVertexBuffers {
             return false;
         }
         return sodium;
-    }
-
-    private static final class Iris {
-        static final boolean KNOWN = FabricLoader.getInstance().getModContainer("iris")
-                .map(mod -> mod.getMetadata().getVersion().getFriendlyString())
-                .map(version -> IRIS_VERSIONS.stream().anyMatch(version::startsWith))
-                .orElse(false);
     }
 }
