@@ -35,6 +35,7 @@ public final class OcclusionCuller {
     private static final long                               MIN_INTERVAL    = 4_000_000L;
     private static final double                             TEST_BUDGET     = 0.5;
     private static final double                             EYE_TOLERANCE   = 0.5;
+    private static final double                             REPROJECT_LIMIT = 8.0;
     private static final float[][]                          PYRAMID         = createPyramid();
     private static final int[]                              LEVEL_WIDTHS    = levelWidths();
     private static final float[]                            MATRIX          = new float[16];
@@ -43,6 +44,7 @@ public final class OcclusionCuller {
     private static final float[]                            CORNER_OFFSETS  = new float[32];
     private static final long[]                             HIDDEN          = new long[MASK_WORDS];
     private static final Matrix4f                           VIEW_PROJECTION = new Matrix4f();
+    private static final Matrix4f                           INVERSE         = new Matrix4f();
     private static final ReferenceOpenHashSet<RenderRegion> REGIONS         = new ReferenceOpenHashSet<>();
     private static final ReferenceOpenHashSet<RenderRegion> CULLED_REGIONS  = new ReferenceOpenHashSet<>();
     private static final OcclusionSectionIterator            FILTERED        = new OcclusionSectionIterator();
@@ -56,6 +58,9 @@ public final class OcclusionCuller {
     private static double  testedX;
     private static double  testedY;
     private static double  testedZ;
+    private static double  sourceX;
+    private static double  sourceY;
+    private static double  sourceZ;
 
     private OcclusionCuller() {
     }
@@ -102,18 +107,18 @@ public final class OcclusionCuller {
         if (OcclusionDepth.latestVersion() == 0L)
             return;
 
-        if (hasEyeMoved(cameraX, cameraY, cameraZ)) {
+        if (isBeyond(cameraX, cameraY, cameraZ, OcclusionDepth.latestX(), OcclusionDepth.latestY(), OcclusionDepth.latestZ(), REPROJECT_LIMIT)) {
             showAll();
 
             return;
         }
 
-        if (isUnchanged())
+        if (isUnchanged(cameraX, cameraY, cameraZ))
             return;
 
         long start = System.nanoTime();
 
-        remember();
+        remember(cameraX, cameraY, cameraZ);
         buildPyramid();
         testSections(lists);
         culling   = true;
@@ -141,12 +146,12 @@ public final class OcclusionCuller {
         culling = false;
     }
 
-    private static boolean hasEyeMoved(double cameraX, double cameraY, double cameraZ) {
-        double moveX = cameraX - OcclusionDepth.latestX();
-        double moveY = cameraY - OcclusionDepth.latestY();
-        double moveZ = cameraZ - OcclusionDepth.latestZ();
+    private static boolean isBeyond(double x, double y, double z, double originX, double originY, double originZ, double limit) {
+        double moveX = x - originX;
+        double moveY = y - originY;
+        double moveZ = z - originZ;
 
-        return moveX * moveX + moveY * moveY + moveZ * moveZ > EYE_TOLERANCE * EYE_TOLERANCE;
+        return moveX * moveX + moveY * moveY + moveZ * moveZ > limit * limit;
     }
 
     private static void collectSections(ChunkRenderListIterable lists) {
@@ -186,21 +191,24 @@ public final class OcclusionCuller {
         region.clearAllCachedBatches();
     }
 
-    private static boolean isUnchanged() {
-        if (!culling || sectionsChanged)
+    private static boolean isUnchanged(double cameraX, double cameraY, double cameraZ) {
+        if (!culling || sectionsChanged || isBeyond(cameraX, cameraY, cameraZ, testedX, testedY, testedZ, EYE_TOLERANCE))
             return false;
 
         if (OcclusionDepth.latestVersion() == testedVersion)
             return true;
 
-        return OcclusionDepth.latestX() == testedX && OcclusionDepth.latestY() == testedY && OcclusionDepth.latestZ() == testedZ && Arrays.equals(OcclusionDepth.latestMatrix(), TESTED_MATRIX) && Arrays.equals(OcclusionDepth.latestDepth(), TESTED_DEPTH);
+        return OcclusionDepth.latestX() == sourceX && OcclusionDepth.latestY() == sourceY && OcclusionDepth.latestZ() == sourceZ && Arrays.equals(OcclusionDepth.latestMatrix(), TESTED_MATRIX) && Arrays.equals(OcclusionDepth.latestDepth(), TESTED_DEPTH);
     }
 
-    private static void remember() {
+    private static void remember(double cameraX, double cameraY, double cameraZ) {
         testedVersion = OcclusionDepth.latestVersion();
-        testedX       = OcclusionDepth.latestX();
-        testedY       = OcclusionDepth.latestY();
-        testedZ       = OcclusionDepth.latestZ();
+        sourceX       = OcclusionDepth.latestX();
+        sourceY       = OcclusionDepth.latestY();
+        sourceZ       = OcclusionDepth.latestZ();
+        testedX       = cameraX;
+        testedY       = cameraY;
+        testedZ       = cameraZ;
 
         System.arraycopy(OcclusionDepth.latestMatrix(), 0, TESTED_MATRIX, 0, TESTED_MATRIX.length);
         System.arraycopy(OcclusionDepth.latestDepth(), 0, TESTED_DEPTH, 0, TESTED_DEPTH.length);
@@ -318,8 +326,82 @@ public final class OcclusionCuller {
         return true;
     }
 
+    private static void reproject() {
+        float[] target = PYRAMID[0];
+        float   moveX  = (float) (testedX - sourceX);
+        float   moveY  = (float) (testedY - sourceY);
+        float   moveZ  = (float) (testedZ - sourceZ);
+
+        if (moveX == 0.0F && moveY == 0.0F && moveZ == 0.0F) {
+            System.arraycopy(TESTED_DEPTH, 0, target, 0, TESTED_DEPTH.length);
+
+            return;
+        }
+
+        float[] matrix   = TESTED_MATRIX;
+        float   shiftX   = matrix[0] * moveX + matrix[4] * moveY + matrix[8] * moveZ;
+        float   shiftY   = matrix[1] * moveX + matrix[5] * moveY + matrix[9] * moveZ;
+        float   shiftZ   = matrix[2] * moveX + matrix[6] * moveY + matrix[10] * moveZ;
+        float   shiftW   = matrix[3] * moveX + matrix[7] * moveY + matrix[11] * moveZ;
+
+        INVERSE.set(matrix).invert();
+
+        float   inverseX = INVERSE.m03();
+        float   inverseY = INVERSE.m13();
+        float   inverseZ = INVERSE.m23();
+        float   inverseW = INVERSE.m33();
+
+        Arrays.fill(target, Float.POSITIVE_INFINITY);
+
+        for (int y = 0; y < HEIGHT; y ++) {
+            float ndcY = (y + 0.5F) / HEIGHT * 2.0F - 1.0F;
+
+            for (int x = 0; x < WIDTH; x ++) {
+                int   index = y * WIDTH + x;
+                float depth = TESTED_DEPTH[index];
+
+                if (depth <= 0.0F) {
+                    target[index] = 0.0F;
+
+                    continue;
+                }
+
+                float ndcX  = (x + 0.5F) / WIDTH * 2.0F - 1.0F;
+                float scale = inverseX * ndcX + inverseY * ndcY + inverseZ * depth + inverseW;
+
+                if (scale <= 0.0F)
+                    continue;
+
+                float w     = 1.0F / scale;
+                float clipW = w - shiftW;
+
+                if (clipW <= NEAR)
+                    continue;
+
+                float inverseClipW = 1.0F / clipW;
+                float screenX      = ((ndcX * w - shiftX) * inverseClipW * 0.5F + 0.5F) * WIDTH;
+                float screenY      = ((ndcY * w - shiftY) * inverseClipW * 0.5F + 0.5F) * HEIGHT;
+                float moved        = (depth * w - shiftZ) * inverseClipW;
+                int   minX         = Math.max((int) Math.floor(screenX - 0.5F), 0);
+                int   minY         = Math.max((int) Math.floor(screenY - 0.5F), 0);
+                int   maxX         = Math.min((int) Math.ceil(screenX + 0.5F) - 1, WIDTH - 1);
+                int   maxY         = Math.min((int) Math.ceil(screenY + 0.5F) - 1, HEIGHT - 1);
+
+                for (int targetY = minY; targetY <= maxY; targetY ++) {
+                    for (int targetX = minX; targetX <= maxX; targetX ++)
+                        target[targetY * WIDTH + targetX] = Math.min(target[targetY * WIDTH + targetX], moved);
+                }
+            }
+        }
+
+        for (int index = 0; index < target.length; index ++) {
+            if (target[index] == Float.POSITIVE_INFINITY)
+                target[index] = 0.0F;
+        }
+    }
+
     private static void buildPyramid() {
-        System.arraycopy(TESTED_DEPTH, 0, PYRAMID[0], 0, TESTED_DEPTH.length);
+        reproject();
 
         int width  = WIDTH;
         int height = HEIGHT;
