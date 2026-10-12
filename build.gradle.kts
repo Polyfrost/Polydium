@@ -25,6 +25,10 @@ run {
 
 fun optionalProperty(name: String): String? = findProperty(name)?.toString()?.takeIf { it.isNotBlank() }
 
+stonecutter constants {
+    put("skyboxify", optionalProperty("deps.skyboxify") != null)
+}
+
 val minecraftPredicate = property("mod.mc_compat") as String
 val modId = property("mod.id") as String
 val modVersion = property("mod.version") as String
@@ -125,6 +129,9 @@ dependencies {
     }
     optionalProperty("deps.iris")?.let {
         modCompileOnly("maven.modrinth:iris:$it") { isTransitive = false }
+    }
+    optionalProperty("deps.skyboxify")?.let {
+        modCompileOnly("maven.modrinth:skyboxify:$it") { isTransitive = false }
     }
 
     testImplementation("org.junit.jupiter:junit-jupiter:${property("deps.junit")}")

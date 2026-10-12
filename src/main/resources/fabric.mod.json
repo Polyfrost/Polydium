@@ -11,6 +11,12 @@
     "entrypoints": {
         "client": [
             "org.polyfrost.polydium.client.PolydiumClient"
+        ],
+        "mixinsquared": [
+            "org.polyfrost.polydium.compat.IrisMixinTweaks"
+        ],
+        "mixinsquared-adjuster": [
+            "org.polyfrost.polydium.compat.IrisMixinTweaks"
         ]
     },
     "mixins": [

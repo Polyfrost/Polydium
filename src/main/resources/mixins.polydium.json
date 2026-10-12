@@ -101,6 +101,30 @@
     "client.perf.ParticleBufferBuilderAccessor",
     //? if >= 1.21.10
     "client.perf.QuadParticleStorageAccessor",
+    //? if >= 26.2
+    "client.perf.MixinStagedVertexBufferPool",
+    //? if >= 26.2
+    "client.perf.iris.MixinClientLevelData",
+    //? if >= 26.2
+    "client.perf.iris.MixinFogRenderer",
+    //? if >= 26.2
+    "client.perf.iris.MixinGlCommandEncoder",
+    //? if >= 26.2
+    "client.perf.iris.MixinHandRenderer",
+    //? if >= 26.2
+    "client.perf.iris.MixinIrisTimeUniforms",
+    //? if >= 26.2
+    "client.perf.iris.MixinLevelRenderer",
+    //? if >= 26.2
+    "client.perf.iris.MixinSkyRenderer",
+    //? if >= 26.2
+    "client.perf.iris.MixinSpriteContents",
+    //? if >= 26.2
+    "client.perf.iris.MixinVanillaRenderingPipeline",
+    //? if = 26.2
+    //"client.perf.iris.MixinRenderRegion",
+    "client.perf.skyboxify.MixinEventManager",
+    "client.perf.skyboxify.MixinSkyboxManager",
     "client.perf.sodium.MixinAnimatedSpriteMarksAnimationState",
     "client.perf.sodium.MixinAnimatedSpriteMarksManager",
     "client.perf.sodium.MixinAnimatedSpriteMarksRegion",
@@ -378,6 +402,8 @@
     //"client.perf.MixinSinglePassTextShadow",
     //? if < 1.21.4
     //"client.perf.MixinSinglePassTextShadowOutput",
+    "client.perf.wwaypoints.MixinClientDimensionUtils",
+    "client.perf.wwaypoints.MixinHideWaypointCycle",
     "client.perf.MixinPerfClockFrame"
   ]
 }
