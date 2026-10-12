@@ -19,6 +19,7 @@ import org.joml.Matrix4f;
 public final class OcclusionCuller {
 
     private static final boolean                            ENABLED         = PolydiumMixinPlugin.isEnabled("OcclusionCull");
+    private static final boolean                            FORCE           = Boolean.getBoolean("polydium.forceOcclusionCull");
     private static final int                                WIDTH           = OcclusionDepth.WIDTH;
     private static final int                                HEIGHT          = OcclusionDepth.HEIGHT;
     private static final int                                MASK_WORDS      = 4;
@@ -96,7 +97,7 @@ public final class OcclusionCuller {
         collectSections(lists);
         releaseAbsentRegions();
 
-        if (IrisShaders.packInUse() || !GpuWaitMeter.isGpuBound()) {
+        if (IrisShaders.packInUse() || !FORCE && !GpuWaitMeter.isGpuBound()) {
             stopCulling();
 
             return;
@@ -126,6 +127,9 @@ public final class OcclusionCuller {
     }
 
     static long captureInterval() {
+        if (FORCE)
+            return MIN_INTERVAL;
+
         return Math.max(MIN_INTERVAL, (long) (testNanos / (GpuWaitMeter.waitShare() * TEST_BUDGET)));
     }
 
