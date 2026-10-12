@@ -1,5 +1,7 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
+import org.polyfrost.polydium.client.PolydiumToggles;
+
 //? if >= 1.21.11 {
 import net.minecraft.client.Minecraft;
 //? if >= 26.1 {
@@ -22,6 +24,8 @@ public abstract class MixinHideLevelLoadingScreen {
     /*@Inject(method = {"render", "renderBackground"}, at = @At("HEAD"), cancellable = true)
     private void polydium$skipRender(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
     *///?}
+        if (!PolydiumToggles.hideLevelLoadingScreen)
+            return;
         if (Minecraft.getInstance().level != null) {
             ci.cancel();
         }

@@ -1,5 +1,7 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
+import org.polyfrost.polydium.client.PolydiumToggles;
+
 //? if >= 1.21.11 {
 //? if >= 26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -25,6 +27,8 @@ public abstract class MixinHideTitleFade {
     /*@Inject(method = "render", at = @At("HEAD"))
     private void polydium$skipFade(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
     *///?}
+        if (!PolydiumToggles.hideTitleFade)
+            return;
         this.fading = false;
     }
 }

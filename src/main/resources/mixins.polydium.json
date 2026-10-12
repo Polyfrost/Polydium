@@ -84,8 +84,6 @@
     "client.perf.sodium.MixinDirectVertexItemQuad",
     "client.perf.sodium.MixinSkinLayersBatchWrite",
     "client.perf.sodium.MixinTransitionVertexWrite",
-    "client.perf.sodium.MixinEntityCheckOrder",
-    "client.perf.sodium.MixinEntityCheckOrderSodium",
     "client.perf.sodium.MixinParticleSectionCull",
     "client.perf.sodium.MixinParticleSectionTick",
     //? if >= 26.2
@@ -166,20 +164,6 @@
     "client.perf.MixinSkyFarPlane",
     "client.perf.MixinShaderSourcePatch",
     //? if >= 26.1
-    "client.perf.sodium.MixinTreeArrayAccessor",
-    //? if >= 26.1
-    "client.perf.sodium.MixinBiForestAccessor",
-    //? if >= 26.1
-    "client.perf.sodium.MixinMultiForestAccessor",
-    //? if >= 26.1
-    "client.perf.sodium.MixinRayTreeAccessor",
-    //? if >= 26.1
-    "client.perf.sodium.MixinTreeArrayPool",
-    //? if >= 26.1
-    "client.perf.sodium.MixinTreePoolRelease",
-    //? if >= 26.3
-    "client.perf.sodium.MixinTerrainPushConstants",
-    //? if >= 26.1
     "client.perf.sodium.MixinSectionCopyCacheCleanup",
     "client.perf.sodium.MixinSharedStateUnpack",
     "client.perf.sodium.MixinSharedStateUnpackSection",
@@ -221,9 +205,6 @@
     "client.perf.RenderSystemPipelineCacheAccessor",
     //? if >= 26.3
     "client.perf.MixinShaderModuleBackgroundClose",
-    "client.perf.FontPreparationAccessor",
-    "client.perf.MixinFontSelectionManager",
-    "client.perf.MixinFontSelectionSet",
     "client.perf.MixinUnifontCache",
     "client.perf.MixinPreparedLanguage",
     "client.perf.MixinAudioDeviceReuse",

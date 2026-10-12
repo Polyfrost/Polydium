@@ -1,5 +1,7 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
+import org.polyfrost.polydium.client.PolydiumToggles;
+
 //? if >= 1.21.11 {
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
@@ -45,6 +47,8 @@ public abstract class MixinHideReloadOverlay {
 
     @Inject(method = /*? if >= 26.1 {*/"extractRenderState"/*?} else {*//*"render"*//*?}*/, at = @At("HEAD"), cancellable = true)
     private void polydium$skipReloadRender(/*? if >= 26.1 {*/GuiGraphicsExtractor/*?} else {*//*GuiGraphics*//*?}*/ graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
+        if (!PolydiumToggles.hideReloadOverlay)
+            return;
         if (!this.fadeIn) {
             if (this.fadeOutStart != -1L) {
                 this.polydium$closeOverlay();

@@ -1,5 +1,7 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
+import org.polyfrost.polydium.client.PolydiumToggles;
+
 //? if >= 1.21.10 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -19,7 +21,7 @@ public abstract class MixinDebugEntryCache {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/debug/DebugScreenEntry;display(Lnet/minecraft/client/gui/components/debug/DebugScreenDisplayer;Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/chunk/LevelChunk;Lnet/minecraft/world/level/chunk/LevelChunk;)V")
     )
     private void polydium$cachedEntry(DebugScreenEntry entry, DebugScreenDisplayer displayer, Level level, LevelChunk clientChunk, LevelChunk serverChunk, Operation<Void> original) {
-        if (!DebugEntryCache.cacheable(entry)) {
+        if (!PolydiumToggles.debugEntryCache || !DebugEntryCache.cacheable(entry)) {
             original.call(entry, displayer, level, clientChunk, serverChunk);
             return;
         }

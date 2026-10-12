@@ -1,5 +1,7 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
+import org.polyfrost.polydium.client.PolydiumToggles;
+
 //? if >= 1.21.11 {
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -19,8 +21,8 @@ public abstract class MixinParticleSectionCull {
     // Reads the result instead of wrapping the call: particle_core wraps the same call, and a second wrapper per particle costs more than the cull saves.
     @ModifyExpressionValue(method = "extractRenderState", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/culling/Frustum;pointInFrustum(DDD)Z"))
     private boolean polydium$cullHiddenSection(boolean kept, @Local(argsOnly = true) Frustum frustum, @Local SingleQuadParticle particle) {
-        if (!kept) {
-            return false;
+        if (!kept || !PolydiumToggles.particleSectionCull) {
+            return kept;
         }
         ParticleSectionVisibility.Access cached = (Object) particle instanceof ParticleSectionVisibility.Access access ? access : null;
         if (cached != null && cached.polydium$sectionVisibleTick() == PerfClock.tick) {

@@ -49,15 +49,6 @@ public abstract class MixinVulkanDescriptorPushSkip {
     private static final ReferenceArrayList<Object> POLYDIUM$VALUES = new ReferenceArrayList<>();
     *///?}
 
-    @Unique
-    private Object[] polydium$pushed;
-
-    @Unique
-    private int polydium$pushedCount = -1;
-
-    @Unique
-    private long polydium$pushedLayout;
-
     @WrapWithCondition(
         method = {
             "drawIndexed(IIIII)V",
@@ -75,7 +66,6 @@ public abstract class MixinVulkanDescriptorPushSkip {
         }
         VulkanRenderPipeline pipeline = this.pipeline;
         if (pipeline != null) {
-            this.polydium$pushedCount = -1;
             if (VulkanDynamicState.changesDescriptors(this.commandBuffer.address(), pipeline.pipelineLayout(), this.polydium$values(pipeline))) {
                 return true;
             }
@@ -83,37 +73,6 @@ public abstract class MixinVulkanDescriptorPushSkip {
             return false;
         }
         VulkanDynamicState.forgetDescriptors();
-        if (pipeline == null) {
-            this.polydium$pushedCount = -1;
-            return true;
-        }
-        long layout = pipeline.pipelineLayout();
-        ReferenceList<Object> uniforms = this.polydium$values(pipeline);
-        int count = uniforms.size();
-        Object[] pushed = this.polydium$pushed;
-        if (count == this.polydium$pushedCount && layout == this.polydium$pushedLayout) {
-            int index = 0;
-            while (index < count && pushed[index].equals(uniforms.get(index))) {
-                index++;
-            }
-            if (index == count) {
-                this.anyDescriptorDirty = false;
-                return false;
-            }
-        }
-        if (pushed == null || pushed.length < count) {
-            pushed = this.polydium$pushed = new Object[Math.max(count, 8)];
-        }
-        this.polydium$pushedCount = -1;
-        for (int index = 0; index < count; index++) {
-            Object value = uniforms.get(index);
-            if (value == null) {
-                return true;
-            }
-            pushed[index] = value;
-        }
-        this.polydium$pushedLayout = layout;
-        this.polydium$pushedCount = count;
         return true;
     }
 

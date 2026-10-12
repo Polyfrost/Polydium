@@ -1,5 +1,7 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
+import org.polyfrost.polydium.client.PolydiumToggles;
+
 //? if >= 1.21.11 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -28,6 +30,11 @@ public class MixinSoundListenerThrottle {
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/sounds/SoundEngineExecutor;execute(Ljava/lang/Runnable;)V")
     )
     private void polydium$throttleListener(SoundEngineExecutor executor, Runnable task, Operation<Void> original, @Local ListenerTransform transform) {
+        if (!PolydiumToggles.soundListenerThrottle) {
+            this.polydium$sentTransform = null;
+            original.call(executor, task);
+            return;
+        }
         ListenerTransform sent = this.polydium$sentTransform;
         if (sent != null && transform.position().equals(sent.position()) && transform.forward().equals(sent.forward()) && transform.up().equals(sent.up())) {
             return;

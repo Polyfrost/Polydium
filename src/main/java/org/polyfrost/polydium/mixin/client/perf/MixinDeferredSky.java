@@ -1,5 +1,7 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
+import org.polyfrost.polydium.client.PolydiumToggles;
+
 //? if >= 1.21.11 {
 //? if >= 26.2 && < 26.3
 /*import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;*/
@@ -49,7 +51,7 @@ public abstract class MixinDeferredSky {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/SkyRenderer;render(Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;Lnet/minecraft/client/renderer/state/level/SkyRenderState;)V")
     )
     private void polydium$deferSky(SkyRenderer renderer, GpuBufferSlice fog, SkyRenderState state, Operation<Void> original) {
-        if (SkyFarPlane.canDefer(state, this.gameRenderer.useImprovedTransparency())) {
+        if (PolydiumToggles.deferredSky && SkyFarPlane.canDefer(state, this.gameRenderer.useImprovedTransparency())) {
             SkyFarPlane.defer(renderer, fog, state);
         } else {
             original.call(renderer, fog, state);
@@ -98,7 +100,7 @@ public abstract class MixinDeferredSky {
 
     @WrapMethod(method = "lambda$addSkyPass$0")
     private void polydium$deferSky(GpuBufferSlice fog, SkyRenderState state, Operation<Void> original) {
-        if (SkyFarPlane.canDefer(state, this.targets.translucent != null)) {
+        if (PolydiumToggles.deferredSky && SkyFarPlane.canDefer(state, this.targets.translucent != null)) {
             SkyFarPlane.defer(() -> original.call(fog, state));
         } else {
             original.call(fog, state);
@@ -122,7 +124,7 @@ public abstract class MixinDeferredSky {
     @WrapOperation(method = "addSkyPass", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/framegraph/FramePass;executes(Ljava/lang/Runnable;)V"))
     private void polydium$deferSky(FramePass pass, Runnable sky, Operation<Void> original, @Local SkyRenderState state) {
         original.call(pass, (Runnable) () -> {
-            if (SkyFarPlane.canDefer(state, this.targets.translucent != null)) {
+            if (PolydiumToggles.deferredSky && SkyFarPlane.canDefer(state, this.targets.translucent != null)) {
                 SkyFarPlane.defer(sky);
             } else {
                 sky.run();
