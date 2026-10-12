@@ -27,4 +27,6 @@ public class PolydiumToggles {
     public static boolean hideReloadOverlay = true;
     @Switch(title = "Hide Title Fade")
     public static boolean hideTitleFade = true;
+    @Switch(title = "Free Sprite Mipmaps", description = "Frees generated sprite mipmaps from the CPU once atlas is uploaded. Applies on next resource reload.")
+    public static boolean spriteMipRelease = true;
 }

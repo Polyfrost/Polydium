@@ -369,6 +369,8 @@
     "client.perf.MixinGuiItemBakeTick",
     //? if >= 26.1
     "client.perf.MixinGuiItemBakeAtlas",
+    "client.perf.MixinSpriteMipRelease",
+    "client.perf.SpriteContentsMipAccessor",
     "client.perf.MixinPerfClockFrame"
   ]
 }
