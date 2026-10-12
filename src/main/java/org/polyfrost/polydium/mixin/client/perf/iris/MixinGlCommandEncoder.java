@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf.iris;
 
-//? if >= 26.2 {
+//? if >= 1.21.5 {
 import com.bawnorton.mixinsquared.TargetHandler;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-//? if = 26.2 {
+//? if < 26.3 {
 /*import java.util.Collection;
 import net.irisshaders.iris.Iris;
 import net.irisshaders.iris.vertices.ImmediateState;
@@ -23,8 +23,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(targets = "com.mojang.renderpearl.backend.opengl.GlCommandEncoder", priority = 1500)
 public class MixinGlCommandEncoder {
     private static final String IRIS_MIXIN = "net.irisshaders.iris.mixin.MixinGlCommandEncoder";
+    //? if >= 26.1 {
     private static final String LAST_PASS = "Lcom/mojang/renderpearl/backend/opengl/GlCommandEncoder;lastPass:Lcom/mojang/renderpearl/backend/opengl/GlRenderPass;";
     private static final String GET_CUSTOM_PASS = "Lcom/mojang/renderpearl/backend/opengl/GlRenderPass;iris$getCustomPass()Lnet/irisshaders/iris/mixinterface/CustomPass;";
+    //?} else {
+    /*private static final String LAST_PASS = "lastPass";
+    private static final String GET_CUSTOM_PASS = "iris$getCustomPass()Lnet/irisshaders/iris/mixinterface/CustomPass;";
+    *///?}
 
     @Unique
     private CustomPass polydium$customPass;
@@ -33,26 +38,30 @@ public class MixinGlCommandEncoder {
     @Inject(method = "@MixinSquared:Handler", at = @At("HEAD"), require = 0, expect = 0)
     //? if >= 26.3 {
     private void polydium$readCustomPass(@Coerce Object pass, CallbackInfo irisCi, CallbackInfo ci) {
-    //?} else {
+    //?} else if >= 1.21.8 {
     /*private void polydium$readCustomPass(@Coerce Object pass, Collection<String> uniforms, CallbackInfoReturnable<Boolean> irisCir, CallbackInfo ci) {
+    *///?} else {
+    /*private void polydium$readCustomPass(@Coerce Object pass, CallbackInfoReturnable<Boolean> irisCir, CallbackInfo ci) {
     *///?}
         polydium$customPass = ((RenderPassInterface) pass).iris$getCustomPass();
     }
 
+    //? if >= 26.2 {
     @TargetHandler(mixin = IRIS_MIXIN, name = "iris$bypassSetup")
     @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = "Lnet/irisshaders/iris/Iris;isPackInUseQuick()Z"), require = 0, expect = 0)
     private boolean polydium$customPassFirst(Operation<Boolean> original) {
         return polydium$customPass != null || original.call();
     }
+    //?}
 
     @TargetHandler(mixin = IRIS_MIXIN, name = "iris$bypassSetup")
-    @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = GET_CUSTOM_PASS), require = 0, expect = 0)
+    @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = GET_CUSTOM_PASS, remap = false), require = 0, expect = 0)
     private CustomPass polydium$cachedCustomPass(@Coerce Object pass, Operation<CustomPass> original) {
         return polydium$customPass;
     }
 
     @TargetHandler(mixin = IRIS_MIXIN, name = "iris$bypassSetup")
-    @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "FIELD", target = LAST_PASS, opcode = Opcodes.PUTSTATIC), require = 0, expect = 0)
+    @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "FIELD", target = LAST_PASS, opcode = Opcodes.PUTSTATIC, remap = false), require = 0, expect = 0)
     private void polydium$dropLastPass(@Coerce Object pass, Operation<Void> original) {
     }
 

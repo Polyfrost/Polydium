@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf.iris;
 
-//? if = 26.2 {
+//? if < 26.3 {
 /*import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;

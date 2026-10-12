@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.iris;
 
-//? if >= 26.2 {
 import com.bawnorton.mixinsquared.TargetHandler;
 import net.caffeinemc.mods.sodium.api.texture.SpriteUtil;
 import net.irisshaders.iris.pbr.texture.PBRSpriteHolder;
@@ -39,4 +38,3 @@ public class MixinSpriteContents {
         if (specular != null) SpriteUtil.INSTANCE.markSpriteActive(specular);
     }
 }
-//?}

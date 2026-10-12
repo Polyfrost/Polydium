@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.iris;
 
-//? if >= 26.2 {
 import net.irisshaders.iris.uniforms.IrisTimeUniforms;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -12,4 +11,3 @@ public class MixinIrisTimeUniforms {
         IrisTimeUniforms.updateTime();
     }
 }
-//?}

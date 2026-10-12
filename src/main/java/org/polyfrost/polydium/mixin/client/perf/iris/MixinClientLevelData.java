@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf.iris;
 
-//? if >= 26.2 {
+//? if >= 26.1 {
 import com.bawnorton.mixinsquared.TargetHandler;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -16,7 +16,7 @@ public class MixinClientLevelData {
     @TargetHandler(mixin = "net.irisshaders.iris.mixin.sky.MixinClientLevelData_DisableVoidPlane", name = "iris$getHorizonHeight")
     @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;getFluidInCamera()Lnet/minecraft/world/level/material/FogType;"), require = 0, expect = 0)
     private FogType polydium$extractedFogType(Camera camera, Operation<FogType> original) {
-        return Minecraft.getInstance().gameRenderer.gameRenderState().levelRenderState.cameraRenderState.fogType;
+        return /*? if >= 26.2 {*/Minecraft.getInstance().gameRenderer.gameRenderState().levelRenderState/*?} else {*//*((net.irisshaders.iris.mixin.LevelRendererAccessor) Minecraft.getInstance().levelRenderer).getLevelRenderState()*//*?}*/.cameraRenderState.fogType;
     }
 }
 //?}

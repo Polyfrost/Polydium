@@ -19,10 +19,10 @@ public final class IrisMixinTweaks implements MixinCanceller, MixinAnnotationAdj
 
     @Override
     public AdjustableAnnotationNode adjust(List<String> targetClassNames, String mixinClassName, MethodNode handlerNode, AdjustableAnnotationNode annotationNode) {
-        //? if >= 26.2 {
+        //? if >= 1.21.8 {
         if (mixinClassName.equals("net.irisshaders.iris.mixin.vertices.immediate.MixinBufferSource")
                 && handlerNode.name.equals("iris$redirectBegin")
-                && annotationNode.is(com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod.class)) {
+                && annotationNode.is(com.llamalad7.mixinextras.injector./*? if >= 26.2 {*/wrapmethod.WrapMethod/*?} else {*//*wrapoperation.WrapOperation*//*?}*/.class)) {
             return null;
         }
         //?}

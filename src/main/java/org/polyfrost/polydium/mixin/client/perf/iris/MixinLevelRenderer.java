@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.iris;
 
-//? if >= 26.2 {
 import com.bawnorton.mixinsquared.TargetHandler;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
@@ -15,7 +14,6 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.material.FogType;
@@ -24,6 +22,13 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+//? if >= 1.21.4 {
+import net.minecraft.util.profiling.Profiler;
+//?} else {
+/*import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import org.joml.Quaternionf;
+*///?}
 //? if >= 26.3 {
 import com.mojang.renderpearl.api.commands.RenderPass;
 import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
@@ -49,11 +54,13 @@ public class MixinLevelRenderer {
         return pipeline;
     }
 
+    //? if >= 1.21.4 {
     @TargetHandler(mixin = IRIS_MIXIN, name = "iris$beginLevelRender")
     @Inject(method = "@MixinSquared:Handler", at = @At("HEAD"), cancellable = true, require = 0, expect = 0)
     private void polydium$skipEmptySetupPass(CallbackInfo ci) {
         if (!Iris.isPackInUseQuick()) ci.cancel();
     }
+    //?}
 
     @TargetHandler(mixin = IRIS_MIXIN, name = "iris$endLevelRender")
     @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/profiling/ProfilerFiller;popPush(Ljava/lang/String;)V"), require = 0, expect = 0)
@@ -64,7 +71,7 @@ public class MixinLevelRenderer {
     @TargetHandler(mixin = IRIS_MIXIN, name = "iris$endLevelRender")
     @Inject(method = "@MixinSquared:Handler", at = @At("TAIL"), require = 0, expect = 0)
     private void polydium$popIrisFinal(CallbackInfo ci) {
-        if (Iris.isPackInUseQuick()) Profiler.get().pop();
+        if (Iris.isPackInUseQuick()) /*? if >= 1.21.4 {*/Profiler.get()/*?} else {*//*Minecraft.getInstance().getProfiler()*//*?}*/.pop();
     }
 
     //? if >= 26.3 {
@@ -93,17 +100,24 @@ public class MixinLevelRenderer {
     @TargetHandler(mixin = IRIS_MIXIN, name = "iris$beginTranslucents")
     @Inject(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = "Lnet/irisshaders/iris/pipeline/WorldRenderingPipeline;beginTranslucents()V", shift = At.Shift.AFTER), require = 0, expect = 0)
     private void polydium$popPreTranslucent(CallbackInfo ci) {
-        Profiler.get().pop();
+        /*? if >= 1.21.4 {*/Profiler.get()/*?} else {*//*Minecraft.getInstance().getProfiler()*//*?}*/.pop();
     }
+
+    //? if >= 26.1 {
+    //? if >= 26.2 {
+    private static final String MAIN_CAMERA = "Lnet/minecraft/client/renderer/GameRenderer;mainCamera()Lnet/minecraft/client/Camera;";
+    //?} else {
+    /*private static final String MAIN_CAMERA = "Lnet/minecraft/client/renderer/GameRenderer;getMainCamera()Lnet/minecraft/client/Camera;";
+    *///?}
 
     @TargetHandler(mixin = IRIS_SKY_MIXIN, name = "preRenderSky")
     @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;getFluidInCamera()Lnet/minecraft/world/level/material/FogType;"), require = 0, expect = 0)
     private static FogType polydium$extractedFogType(Camera camera, Operation<FogType> original) {
-        return Minecraft.getInstance().gameRenderer.gameRenderState().levelRenderState.cameraRenderState.fogType;
+        return /*? if >= 26.2 {*/Minecraft.getInstance().gameRenderer.gameRenderState().levelRenderState/*?} else {*//*((net.irisshaders.iris.mixin.LevelRendererAccessor) Minecraft.getInstance().levelRenderer).getLevelRenderState()*//*?}*/.cameraRenderState.fogType;
     }
 
     @TargetHandler(mixin = IRIS_SKY_MIXIN, name = "preRenderSky")
-    @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;mainCamera()Lnet/minecraft/client/Camera;"), require = 0, expect = 0)
+    @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = MAIN_CAMERA), require = 0, expect = 0)
     private static Camera polydium$skipMainCamera(GameRenderer gameRenderer, Operation<Camera> original) {
         return null;
     }
@@ -119,5 +133,19 @@ public class MixinLevelRenderer {
     private static Entity polydium$skipCameraEntity(Camera camera, Operation<Entity> original) {
         return null;
     }
+    //?}
+
+    //? if < 1.21.4 {
+    /*@TargetHandler(mixin = IRIS_MIXIN, name = "iris$renderSky$tiltSun")
+    @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = "Lcom/mojang/math/Axis;rotationDegrees(F)Lorg/joml/Quaternionf;"), require = 0, expect = 0)
+    private Quaternionf polydium$noZeroTiltQuaternion(Axis axis, float degrees, Operation<Quaternionf> original) {
+        return degrees != 0 ? original.call(axis, degrees) : null;
+    }
+
+    @TargetHandler(mixin = IRIS_MIXIN, name = "iris$renderSky$tiltSun")
+    @WrapWithCondition(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;mulPose(Lorg/joml/Quaternionf;)V"), require = 0, expect = 0)
+    private boolean polydium$skipZeroTilt(PoseStack poseStack, Quaternionf rotation) {
+        return rotation != null;
+    }
+    *///?}
 }
-//?}
