@@ -16,7 +16,6 @@ import com.mojang.renderpearl.backend.vulkan.VulkanRenderPass;
 import com.mojang.renderpearl.frontend.FrontendRenderPass;
 import com.mojang.renderpearl.frontend.FrontendRenderPipeline;
 import com.mojang.renderpearl.util.TextureViewAndSampler;
-import org.jspecify.annotations.Nullable;
 import org.polyfrost.polydium.client.perf.IrisShaders;
 import org.polyfrost.polydium.client.perf.PipelineUniforms;
 import org.spongepowered.asm.mixin.Final;
@@ -140,13 +139,17 @@ public abstract class MixinFrontendRenderPassUniforms {
         }
     }
 
-    @WrapMethod(method = "setUniform(Ljava/lang/String;Lcom/mojang/renderpearl/api/textures/GpuTextureView;Lcom/mojang/renderpearl/api/textures/GpuSampler;)V")
-    private void polydium$skipBoundTexture(String name, @Nullable GpuTextureView textureView, @Nullable GpuSampler sampler, Operation<Void> original) {
-        if (textureView != null && sampler != null && this.polydium$tracksBackend()
+    @WrapOperation(
+        method = "setUniform(Ljava/lang/String;Lcom/mojang/renderpearl/api/textures/GpuTextureView;Lcom/mojang/renderpearl/api/textures/GpuSampler;)V",
+        at = @At(value = "NEW", target = "(Lcom/mojang/renderpearl/api/textures/GpuTextureView;Lcom/mojang/renderpearl/api/textures/GpuSampler;)Lcom/mojang/renderpearl/util/TextureViewAndSampler;")
+    )
+    private TextureViewAndSampler polydium$reuseBoundTexture(GpuTextureView textureView, GpuSampler sampler, Operation<TextureViewAndSampler> original,
+                                                             @Local(argsOnly = true) String name) {
+        if (this.polydium$tracksBackend()
             && this.uniforms.get(name) instanceof TextureViewAndSampler bound && bound.view() == textureView && bound.sampler() == sampler) {
-            return;
+            return bound;
         }
-        original.call(name, textureView, sampler);
+        return original.call(textureView, sampler);
     }
 
     @ModifyExpressionValue(

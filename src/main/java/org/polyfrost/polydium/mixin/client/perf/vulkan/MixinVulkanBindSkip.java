@@ -2,19 +2,16 @@ package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
 //? if >= 26.2 {
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
-import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
-import com.mojang.renderpearl.backend.vulkan.VulkanGpuBuffer;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.renderpearl.backend.vulkan.VulkanRenderPass;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.vulkan.VK10;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.polyfrost.polydium.client.perf.VulkanDynamicState;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 
@@ -22,10 +19,6 @@ import java.nio.LongBuffer;
 
 @Mixin(VulkanRenderPass.class)
 public abstract class MixinVulkanBindSkip {
-    @Shadow
-    @Final
-    private VkCommandBuffer commandBuffer;
-
     @Unique
     private long polydium$boundPipeline;
     @Unique
@@ -48,50 +41,28 @@ public abstract class MixinVulkanBindSkip {
         return VulkanDynamicState.changesPipeline(commandBuffer.address(), pipeline);
     }
 
-    @WrapMethod(method = "setVertexBuffer")
-    private void polydium$bindVertexBufferDirectly(int slot, GpuBufferSlice vertexBuffer, Operation<Void> original) {
-        if (vertexBuffer == null) {
-            original.call(slot, vertexBuffer);
-            return;
-        }
-        long buffer = ((VulkanGpuBuffer) vertexBuffer.buffer()).vkBuffer();
-        long offset = vertexBuffer.offset();
-        if (slot == 0) {
-            if (buffer == this.polydium$boundVertexBuffer && offset == this.polydium$boundVertexOffset) {
-                return;
-            } else {
-                this.polydium$boundVertexBuffer = buffer;
-                this.polydium$boundVertexOffset = offset;
-            }
-        }
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            long values = stack.nmalloc(Long.BYTES, 2 * Long.BYTES);
-            MemoryUtil.memPutLong(values, buffer);
-            MemoryUtil.memPutLong(values + Long.BYTES, offset);
-            VK10.nvkCmdBindVertexBuffers(this.commandBuffer, slot, 1, values, values + Long.BYTES);
-        }
+    @WrapOperation(method = "setVertexBuffer", at = @At(value = "INVOKE", target = "Lorg/lwjgl/system/MemoryStack;longs(J)Ljava/nio/LongBuffer;"))
+    private LongBuffer polydium$skipBindBuffers(MemoryStack stack, long value, Operation<LongBuffer> original) {
+        return null;
     }
 
-    @WrapWithCondition(
+    @WrapOperation(
         method = "setVertexBuffer",
         at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/VK12;vkCmdBindVertexBuffers(Lorg/lwjgl/vulkan/VkCommandBuffer;ILjava/nio/LongBuffer;Ljava/nio/LongBuffer;)V")
     )
-    private boolean polydium$bindChangedVertexBuffer(VkCommandBuffer commandBuffer, int slot, LongBuffer buffers, LongBuffer offsets) {
-        if (slot != 0) {
-            return true;
+    private void polydium$bindVertexBufferDirectly(VkCommandBuffer commandBuffer, int slot, LongBuffer buffers, LongBuffer offsets, Operation<Void> original,
+                                                   @Local MemoryStack stack, @Local(ordinal = 0) long buffer, @Local(ordinal = 1) long offset) {
+        if (slot == 0) {
+            if (buffer == this.polydium$boundVertexBuffer && offset == this.polydium$boundVertexOffset) {
+                return;
+            }
+            this.polydium$boundVertexBuffer = buffer;
+            this.polydium$boundVertexOffset = offset;
         }
-        if (buffers.remaining() != 1 || offsets.remaining() != 1) {
-            this.polydium$boundVertexBuffer = 0L;
-            return true;
-        }
-        long buffer = buffers.get(buffers.position());
-        long offset = offsets.get(offsets.position());
-        if (buffer == this.polydium$boundVertexBuffer && offset == this.polydium$boundVertexOffset) {
-            return false;
-        }
-        this.polydium$boundVertexBuffer = buffer;
-        this.polydium$boundVertexOffset = offset;
-        return true;
+        long values = stack.nmalloc(Long.BYTES, 2 * Long.BYTES);
+        MemoryUtil.memPutLong(values, buffer);
+        MemoryUtil.memPutLong(values + Long.BYTES, offset);
+        VK10.nvkCmdBindVertexBuffers(commandBuffer, slot, 1, values, values + Long.BYTES);
     }
 
     @WrapWithCondition(

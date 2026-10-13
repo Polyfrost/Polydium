@@ -1,13 +1,16 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.StringSplitter;
 import net.minecraft.client.gui.Font;
+import net.minecraft.util.Mth;
 import org.polyfrost.polydium.client.perf.FontGeneration;
 import org.polyfrost.polydium.client.perf.TextWidthCache;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
 
 @Mixin(Font.class)
 public abstract class MixinTextWidthCache implements TextWidthCache.Access {
@@ -19,19 +22,19 @@ public abstract class MixinTextWidthCache implements TextWidthCache.Access {
         this.polydium$widthCache = new TextWidthCache(TextWidthCache.LIMIT);
     }
 
-    @WrapMethod(method = "width(Ljava/lang/String;)I")
-    private int polydium$cachedWidth(String text, Operation<Integer> original) {
+    @WrapOperation(method = "width(Ljava/lang/String;)I", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/StringSplitter;stringWidth(Ljava/lang/String;)F"))
+    private float polydium$cachedWidth(StringSplitter splitter, String text, Operation<Float> original) {
         TextWidthCache cache = this.polydium$widthCache;
         if (cache == null || text == null || !RenderSystem.isOnRenderThread()) {
-            return original.call(text);
+            return original.call(splitter, text);
         }
         int generation = FontGeneration.get();
         Integer cached = cache.get(text, generation);
         if (cached != null) {
             return cached;
         }
-        int width = original.call(text);
-        cache.put(text, generation, width);
+        float width = original.call(splitter, text);
+        cache.put(text, generation, Mth.ceil(width));
         return width;
     }
 }

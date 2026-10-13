@@ -1,10 +1,11 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
 //? if >= 1.21.1 {
-import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.core.BlockPos;
 import org.polyfrost.polydium.client.perf.PerfClock;
@@ -33,23 +34,27 @@ public class MixinParticleLightCache {
     @Unique
     private int polydium$light;
 
-    //? if >= 26.1 {
-    @WrapMethod(method = "getLightCoords(F)I")
-    //?} else {
-    /*@WrapMethod(method = "getLightColor(F)I")
-    *///?}
-    private int polydium$cacheLight(float partialTick, Operation<Integer> original) {
-        long tick = PerfClock.tick;
-        if (this.polydium$lightTick == tick && this.polydium$lightX == this.x && this.polydium$lightY == this.y && this.polydium$lightZ == this.z) {
+    @WrapOperation(method = /*? if >= 26.1 {*/"getLightCoords(F)I"/*?} else {*//*"getLightColor(F)I"*//*?}*/, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/ClientLevel;hasChunkAt(Lnet/minecraft/core/BlockPos;)Z"))
+    private boolean polydium$skipCachedLookup(ClientLevel level, BlockPos pos, Operation<Boolean> original) {
+        return !this.polydium$lightCached() && original.call(level, pos);
+    }
+
+    @ModifyReturnValue(method = /*? if >= 26.1 {*/"getLightCoords(F)I"/*?} else {*//*"getLightColor(F)I"*//*?}*/, at = @At("RETURN"))
+    private int polydium$cacheLight(int light) {
+        if (this.polydium$lightCached()) {
             return this.polydium$light;
         }
-        int light = original.call(partialTick);
-        this.polydium$lightTick = tick;
+        this.polydium$lightTick = PerfClock.tick;
         this.polydium$lightX = this.x;
         this.polydium$lightY = this.y;
         this.polydium$lightZ = this.z;
         this.polydium$light = light;
         return light;
+    }
+
+    @Unique
+    private boolean polydium$lightCached() {
+        return this.polydium$lightTick == PerfClock.tick && this.polydium$lightX == this.x && this.polydium$lightY == this.y && this.polydium$lightZ == this.z;
     }
 
     @Unique
