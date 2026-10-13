@@ -1,5 +1,7 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
+//? if >= 1.21.10 || < 1.21.4
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 //? if >= 1.21.10 {
@@ -14,9 +16,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 
@@ -63,20 +63,19 @@ public abstract class MixinTextEffectMerge {
         return x0;
     }
 
-    @Inject(method = "addEffect", at = @At("HEAD"), cancellable = true)
-    private void polydium$replaceExtendedEffect(TextRenderable effect, CallbackInfo ci) {
+    @WrapMethod(method = "addEffect")
+    private void polydium$replaceExtendedEffect(TextRenderable effect, Operation<Void> original) {
         TextEffectRun run = this.polydium$pending;
-        if (run == null) {
-            return;
-        }
         this.polydium$pending = null;
-        if (run.extended) {
+        if (run != null && run.extended) {
             this.effects.set(run.index, effect);
             this.markSize(effect.left(), effect.top(), effect.right(), effect.bottom());
-            ci.cancel();
-        } else {
+            return;
+        }
+        if (run != null) {
             run.index = this.effects == null ? 0 : this.effects.size();
         }
+        original.call(effect);
     }
     //?} else if >= 1.21.4 {
     /*@Shadow private List<BakedGlyph.Effect> effects;
@@ -101,28 +100,24 @@ public abstract class MixinTextEffectMerge {
     *///?} else {
     /*@Shadow private List<BakedGlyph.Effect> effects;
 
-    @Inject(method = "addEffect", at = @At("HEAD"), cancellable = true)
-    private void polydium$extendPreviousEffect(BakedGlyph.Effect effect, CallbackInfo ci) {
+    @WrapMethod(method = "addEffect")
+    private void polydium$extendPreviousEffect(BakedGlyph.Effect effect, Operation<Void> original) {
         List<BakedGlyph.Effect> effects = this.effects;
-        if (effects == null || !PolydiumToggles.textEffectMerge) {
-            return;
-        }
         BakedGlyphEffectAccessor next = (BakedGlyphEffectAccessor) (Object) effect;
-        if (next.polydium$a() != 1.0F) {
-            return;
-        }
-        int size = effects.size();
-        for (int index = size - 1; index >= 0 && index >= size - 2; index--) {
-            BakedGlyphEffectAccessor previous = (BakedGlyphEffectAccessor) (Object) effects.get(index);
-            if (previous.polydium$x1() - 1.0F == next.polydium$x0() && previous.polydium$y0() == next.polydium$y0() && previous.polydium$y1() == next.polydium$y1()
-                    && previous.polydium$depth() == next.polydium$depth() && previous.polydium$r() == next.polydium$r() && previous.polydium$g() == next.polydium$g()
-                    && previous.polydium$b() == next.polydium$b() && previous.polydium$a() == 1.0F) {
-                effects.set(index, new BakedGlyph.Effect(previous.polydium$x0(), next.polydium$y0(), next.polydium$x1(), next.polydium$y1(), next.polydium$depth(),
-                        next.polydium$r(), next.polydium$g(), next.polydium$b(), 1.0F));
-                ci.cancel();
-                return;
+        if (effects != null && PolydiumToggles.textEffectMerge && next.polydium$a() == 1.0F) {
+            int size = effects.size();
+            for (int index = size - 1; index >= 0 && index >= size - 2; index--) {
+                BakedGlyphEffectAccessor previous = (BakedGlyphEffectAccessor) (Object) effects.get(index);
+                if (previous.polydium$x1() - 1.0F == next.polydium$x0() && previous.polydium$y0() == next.polydium$y0() && previous.polydium$y1() == next.polydium$y1()
+                        && previous.polydium$depth() == next.polydium$depth() && previous.polydium$r() == next.polydium$r() && previous.polydium$g() == next.polydium$g()
+                        && previous.polydium$b() == next.polydium$b() && previous.polydium$a() == 1.0F) {
+                    effects.set(index, new BakedGlyph.Effect(previous.polydium$x0(), next.polydium$y0(), next.polydium$x1(), next.polydium$y1(), next.polydium$depth(),
+                            next.polydium$r(), next.polydium$g(), next.polydium$b(), 1.0F));
+                    return;
+                }
             }
         }
+        original.call(effect);
     }
     *///?}
 }

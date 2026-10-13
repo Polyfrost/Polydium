@@ -10,12 +10,11 @@ import org.spongepowered.asm.mixin.injection.At;
 
 //? if skyboxify {
 import btw.lowercase.skyboxify.skybox.impl.Skybox;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
 //?}
@@ -40,16 +39,16 @@ public class MixinSkyboxManager {
     @Final
     private List<Skybox> activeSkies;
 
-    @Inject(method = "containsEnabled", at = @At("HEAD"), cancellable = true, require = 0)
-    private void polydium$containsEnabled(ResourceKey<Level> resourceKey, CallbackInfoReturnable<Boolean> cir) {
+    // Same result as the original without streaming into a throwaway list
+    @WrapMethod(method = "containsEnabled", require = 0)
+    private boolean polydium$containsEnabled(ResourceKey<Level> resourceKey, Operation<Boolean> original) {
         for (Skybox skybox : this.activeSkies) {
             if (resourceKey.equals(skybox.dimension())) {
-                cir.setReturnValue(true);
-                return;
+                return true;
             }
         }
 
-        cir.setReturnValue(false);
+        return false;
     }
     //?}
 }

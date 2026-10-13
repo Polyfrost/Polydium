@@ -1,6 +1,8 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
 //? if >= 26.2 {
+import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
@@ -135,25 +137,32 @@ public abstract class MixinVulkanDeferral {
         this.polydium$flushBarrier();
     }
 
-    @Inject(method = "clearDepthTexture", at = @At("HEAD"), cancellable = true)
-    private void polydium$deferDepthClear(GpuTexture depthTexture, double clearDepth, CallbackInfo ci) {
+    @WrapOperation(method = "clearDepthTexture", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/vulkan/VulkanCommandEncoder;clearDepthTextureUnsynced(Lorg/lwjgl/system/MemoryStack;Lcom/mojang/renderpearl/api/textures/GpuTexture;D)V"))
+    private void polydium$deferDepthClear(VulkanCommandEncoder encoder, MemoryStack stack, GpuTexture depthTexture, double clearDepth, Operation<Void> original) {
         if (this.polydium$clearColorTexture != null || this.polydium$clearDepthTexture != null) {
             this.polydium$flushClears();
         }
 
         this.polydium$clearDepthTexture = depthTexture;
         this.polydium$clearDepth = clearDepth;
-        ci.cancel();
     }
 
-    @Inject(method = "clearColorAndDepthTextures(Lcom/mojang/renderpearl/api/textures/GpuTexture;Lorg/joml/Vector4fc;Lcom/mojang/renderpearl/api/textures/GpuTexture;D)V", at = @At("HEAD"), cancellable = true)
-    private void polydium$deferColorAndDepthClear(GpuTexture colorTexture, Vector4fc clearColor, GpuTexture depthTexture, double clearDepth, CallbackInfo ci) {
+    @WrapOperation(method = "clearColorAndDepthTextures(Lcom/mojang/renderpearl/api/textures/GpuTexture;Lorg/joml/Vector4fc;Lcom/mojang/renderpearl/api/textures/GpuTexture;D)V", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/vulkan/VulkanCommandEncoder;clearColorTextureUnsynced(Lorg/lwjgl/system/MemoryStack;Lcom/mojang/renderpearl/api/textures/GpuTexture;Lorg/joml/Vector4fc;)V"))
+    private void polydium$deferColorClear(VulkanCommandEncoder encoder, MemoryStack stack, GpuTexture colorTexture, Vector4fc clearColor, Operation<Void> original) {
         this.polydium$flushClears();
         this.polydium$clearColorTexture = colorTexture;
         this.polydium$clearColor = clearColor;
+    }
+
+    @WrapOperation(method = "clearColorAndDepthTextures(Lcom/mojang/renderpearl/api/textures/GpuTexture;Lorg/joml/Vector4fc;Lcom/mojang/renderpearl/api/textures/GpuTexture;D)V", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/vulkan/VulkanCommandEncoder;clearDepthTextureUnsynced(Lorg/lwjgl/system/MemoryStack;Lcom/mojang/renderpearl/api/textures/GpuTexture;D)V"))
+    private void polydium$deferPairedDepthClear(VulkanCommandEncoder encoder, MemoryStack stack, GpuTexture depthTexture, double clearDepth, Operation<Void> original) {
         this.polydium$clearDepthTexture = depthTexture;
         this.polydium$clearDepth = clearDepth;
-        ci.cancel();
+    }
+
+    @WrapWithCondition(method = {"clearDepthTexture", "clearColorAndDepthTextures(Lcom/mojang/renderpearl/api/textures/GpuTexture;Lorg/joml/Vector4fc;Lcom/mojang/renderpearl/api/textures/GpuTexture;D)V"}, at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/vulkan/VulkanCommandEncoder;memoryBarrier(Lorg/lwjgl/system/MemoryStack;)V"))
+    private boolean polydium$deferClearBarrier(VulkanCommandEncoder encoder, MemoryStack stack) {
+        return false;
     }
 
     @ModifyVariable(method = "createRenderPass", at = @At("HEAD"), argsOnly = true)
@@ -205,14 +214,14 @@ public abstract class MixinVulkanDeferral {
         *///?}
     }
 
-    @Inject(method = "createRenderPass", at = @At("HEAD"), cancellable = true)
-    private void polydium$continueSuspendedPass(RenderPassDescriptor descriptor, CallbackInfoReturnable<RenderPassBackend> cir) {
+    @WrapMethod(method = "createRenderPass")
+    private RenderPassBackend polydium$continueSuspendedPass(RenderPassDescriptor descriptor, Operation<RenderPassBackend> original) {
         if (!this.polydium$canContinue(descriptor)) {
             if (RenderPassStats.ENABLED && this.polydium$suspendedPass != null) {
                 RenderPassStats.refused(this.polydium$suspendedPass.getLabel(), descriptor.label(), this.polydium$barrierPending ? "upload barrier pending" : "attachments, area or clear differ");
             }
 
-            return;
+            return original.call(descriptor);
         }
 
         if (RenderPassStats.ENABLED) {
@@ -247,7 +256,7 @@ public abstract class MixinVulkanDeferral {
             polydium$clearDepthInPass(commandBuffer, polydium$area(descriptor), (float) depthClear.getAsDouble());
         }
 
-        cir.setReturnValue(this.currentRenderPass);
+        return this.currentRenderPass;
     }
 
     @Inject(method = "createRenderPass", at = @At("RETURN"))
@@ -266,9 +275,10 @@ public abstract class MixinVulkanDeferral {
         }
     }
 
-    @Inject(method = "submitRenderPass", at = @At("HEAD"), cancellable = true)
-    private void polydium$suspendPass(CallbackInfo ci) {
+    @WrapMethod(method = "submitRenderPass")
+    private void polydium$suspendPass(Operation<Void> original) {
         if (this.currentRenderPass == null || this.polydium$openDescriptor == null) {
+            original.call();
             return;
         }
 
@@ -280,7 +290,6 @@ public abstract class MixinVulkanDeferral {
         this.polydium$suspendedDescriptor = this.polydium$openDescriptor;
         this.polydium$openDescriptor = null;
         this.currentRenderPass = null;
-        ci.cancel();
     }
 
     @Inject(method = "writeToBuffer", at = @At("HEAD"))

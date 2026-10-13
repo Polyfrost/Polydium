@@ -3,6 +3,8 @@ package org.polyfrost.polydium.mixin.client.perf;
 import org.polyfrost.polydium.client.PolydiumToggles;
 
 //? if >= 1.21.1 {
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.client.Minecraft;
 //? if >= 26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -15,23 +17,18 @@ import net.minecraft.client.gui.screens.LevelLoadingScreen;
 /*import net.minecraft.client.gui.screens.ReceivingLevelScreen;
 *///?}
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(/*? if >= 1.21.10 {*/LevelLoadingScreen/*?} else {*//*ReceivingLevelScreen*//*?}*/.class)
 public abstract class MixinHideLevelLoadingScreen {
     //? if >= 26.1 {
-    @Inject(method = {"extractRenderState", "extractBackground"}, at = @At("HEAD"), cancellable = true)
-    private void polydium$skipRender(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
+    @WrapMethod(method = {"extractRenderState", "extractBackground"})
+    private void polydium$skipRender(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick, Operation<Void> original) {
     //?} else {
-    /*@Inject(method = {"render", "renderBackground"}, at = @At("HEAD"), cancellable = true)
-    private void polydium$skipRender(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
+    /*@WrapMethod(method = {"render", "renderBackground"})
+    private void polydium$skipRender(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, Operation<Void> original) {
     *///?}
-        if (!PolydiumToggles.hideLevelLoadingScreen)
-            return;
-        if (Minecraft.getInstance().level != null) {
-            ci.cancel();
+        if (!PolydiumToggles.hideLevelLoadingScreen || Minecraft.getInstance().level == null) {
+            original.call(graphics, mouseX, mouseY, partialTick);
         }
     }
 }

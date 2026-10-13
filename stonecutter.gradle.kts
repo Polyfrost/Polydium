@@ -47,6 +47,7 @@ val renderpearlRenames = mapOf(
     "renderpearl.backend.opengl.GlBuffer" to "blaze3d.opengl.GlBuffer",
     "renderpearl.backend.opengl.GlFence" to "blaze3d.opengl.GlFence",
     "renderpearl.backend.opengl.GlRenderPass" to "blaze3d.opengl.GlRenderPass",
+    "renderpearl.backend.opengl.GlStateManager" to "blaze3d.opengl.GlStateManager",
     "renderpearl.backend.vulkan.Destroyable" to "blaze3d.vulkan.Destroyable",
     "renderpearl.backend.vulkan.DestructionQueue" to "blaze3d.vulkan.DestructionQueue",
     "renderpearl.api.device.DeviceType" to "blaze3d.systems.DeviceType",

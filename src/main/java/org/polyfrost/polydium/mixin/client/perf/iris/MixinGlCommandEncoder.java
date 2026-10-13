@@ -22,19 +22,24 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(targets = "com.mojang.renderpearl.backend.opengl.GlCommandEncoder", priority = 1500)
 public class MixinGlCommandEncoder {
-    private static final String IRIS_MIXIN = "net.irisshaders.iris.mixin.MixinGlCommandEncoder";
+    @Unique
+    private static final String POLYDIUM$IRIS_MIXIN = "net.irisshaders.iris.mixin.MixinGlCommandEncoder";
     //? if >= 26.1 {
-    private static final String LAST_PASS = "Lcom/mojang/renderpearl/backend/opengl/GlCommandEncoder;lastPass:Lcom/mojang/renderpearl/backend/opengl/GlRenderPass;";
-    private static final String GET_CUSTOM_PASS = "Lcom/mojang/renderpearl/backend/opengl/GlRenderPass;iris$getCustomPass()Lnet/irisshaders/iris/mixinterface/CustomPass;";
+    @Unique
+    private static final String POLYDIUM$LAST_PASS = "Lcom/mojang/renderpearl/backend/opengl/GlCommandEncoder;lastPass:Lcom/mojang/renderpearl/backend/opengl/GlRenderPass;";
+    @Unique
+    private static final String POLYDIUM$GET_CUSTOM_PASS = "Lcom/mojang/renderpearl/backend/opengl/GlRenderPass;iris$getCustomPass()Lnet/irisshaders/iris/mixinterface/CustomPass;";
     //?} else {
-    /*private static final String LAST_PASS = "lastPass";
-    private static final String GET_CUSTOM_PASS = "iris$getCustomPass()Lnet/irisshaders/iris/mixinterface/CustomPass;";
+    /*@Unique
+    private static final String POLYDIUM$LAST_PASS = "lastPass";
+    @Unique
+    private static final String POLYDIUM$GET_CUSTOM_PASS = "iris$getCustomPass()Lnet/irisshaders/iris/mixinterface/CustomPass;";
     *///?}
 
     @Unique
     private CustomPass polydium$customPass;
 
-    @TargetHandler(mixin = IRIS_MIXIN, name = "iris$bypassSetup")
+    @TargetHandler(mixin = POLYDIUM$IRIS_MIXIN, name = "iris$bypassSetup")
     @Inject(method = "@MixinSquared:Handler", at = @At("HEAD"), require = 0, expect = 0)
     //? if >= 26.3 {
     private void polydium$readCustomPass(@Coerce Object pass, CallbackInfo irisCi, CallbackInfo ci) {
@@ -47,21 +52,21 @@ public class MixinGlCommandEncoder {
     }
 
     //? if >= 26.2 {
-    @TargetHandler(mixin = IRIS_MIXIN, name = "iris$bypassSetup")
+    @TargetHandler(mixin = POLYDIUM$IRIS_MIXIN, name = "iris$bypassSetup")
     @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = "Lnet/irisshaders/iris/Iris;isPackInUseQuick()Z"), require = 0, expect = 0)
     private boolean polydium$customPassFirst(Operation<Boolean> original) {
         return polydium$customPass != null || original.call();
     }
     //?}
 
-    @TargetHandler(mixin = IRIS_MIXIN, name = "iris$bypassSetup")
-    @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = GET_CUSTOM_PASS, remap = false), require = 0, expect = 0)
+    @TargetHandler(mixin = POLYDIUM$IRIS_MIXIN, name = "iris$bypassSetup")
+    @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = POLYDIUM$GET_CUSTOM_PASS, remap = false), require = 0, expect = 0)
     private CustomPass polydium$cachedCustomPass(@Coerce Object pass, Operation<CustomPass> original) {
         return polydium$customPass;
     }
 
-    @TargetHandler(mixin = IRIS_MIXIN, name = "iris$bypassSetup")
-    @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "FIELD", target = LAST_PASS, opcode = Opcodes.PUTSTATIC, remap = false), require = 0, expect = 0)
+    @TargetHandler(mixin = POLYDIUM$IRIS_MIXIN, name = "iris$bypassSetup")
+    @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "FIELD", target = POLYDIUM$LAST_PASS, opcode = Opcodes.PUTSTATIC, remap = false), require = 0, expect = 0)
     private void polydium$dropLastPass(@Coerce Object pass, Operation<Void> original) {
     }
 
@@ -70,7 +75,7 @@ public class MixinGlCommandEncoder {
     @Unique
     private boolean polydium$drawBuffersSet;
 
-    @TargetHandler(mixin = IRIS_MIXIN, name = "iris$skipShadowDrawBuffers")
+    @TargetHandler(mixin = POLYDIUM$IRIS_MIXIN, name = "iris$skipShadowDrawBuffers")
     @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL33C;glDrawBuffers([I)V"), require = 0, expect = 0)
     private void polydium$drawBuffersOncePerPass(int[] buffers, Operation<Void> original) {
         if (Iris.isPackInUseQuick() || ImmediateState.safeToMultiply) {

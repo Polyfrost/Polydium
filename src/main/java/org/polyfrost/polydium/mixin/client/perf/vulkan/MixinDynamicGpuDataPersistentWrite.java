@@ -26,7 +26,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.nio.ByteBuffer;
 //? if >= 26.2
@@ -61,23 +60,23 @@ public abstract class MixinDynamicGpuDataPersistentWrite {
     private GpuBufferSlice polydium$lastSlice;
 
     //? if >= 1.21.11 {
-    @Redirect(
+    @WrapOperation(
         method = POLYDIUM$WRITE_DATA,
         at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/buffers/GpuBuffer;slice(JJ)Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;")
     )
-    private GpuBufferSlice polydium$reuseSlice(GpuBuffer buffer, long offset, long length) {
+    private GpuBufferSlice polydium$reuseSlice(GpuBuffer buffer, long offset, long length, Operation<GpuBufferSlice> original) {
     //?} else {
-    /*@Redirect(
+    /*@WrapOperation(
         method = POLYDIUM$WRITE_DATA,
         at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/buffers/GpuBuffer;slice(II)Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;")
     )
-    private GpuBufferSlice polydium$reuseSlice(GpuBuffer buffer, int offset, int length) {
+    private GpuBufferSlice polydium$reuseSlice(GpuBuffer buffer, int offset, int length, Operation<GpuBufferSlice> original) {
     *///?}
         GpuBufferSlice last = this.polydium$lastSlice;
         if (last != null && last.buffer() == buffer && last.offset() == offset && last.length() == length) {
             return last;
         }
-        return this.polydium$lastSlice = buffer.slice(offset, length);
+        return this.polydium$lastSlice = original.call(buffer, offset, length);
     }
 
     //? if >= 26.2 {

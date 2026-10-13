@@ -1,6 +1,8 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
 //? if >= 1.21.11 {
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -25,9 +27,6 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 
@@ -57,24 +56,22 @@ public abstract class MixinDebugLineFastPath {
     *///?}
 
     //? if >= 26.2 {
-    @Inject(method = "buildLines", at = @At("HEAD"), cancellable = true)
-    private void polydium$buildLinesIdentityPose(List<DrawableGizmoPrimitives.Line> lines, CameraRenderState camera, Matrix4fc modelViewMatrix, boolean opaque, CallbackInfo ci) {
-        if (lines.isEmpty()) {
-            return;
-        }
+    @WrapMethod(method = "buildLines")
+    private void polydium$buildLinesIdentityPose(List<DrawableGizmoPrimitives.Line> lines, CameraRenderState camera, Matrix4fc modelViewMatrix, boolean opaque, Operation<Void> original) {
         PoseStack.Pose pose = this.poseStack.last();
+        if (lines.isEmpty() || !POLYDIUM_IDENTITY.equals(pose.pose())) {
+            original.call(lines, camera, modelViewMatrix, opaque);
+            return;
+        }
     //?} else {
-    /*@Inject(method = "renderLines", at = @At("HEAD"), cancellable = true)
-    private void polydium$buildLinesIdentityPose(PoseStack poseStack, MultiBufferSource bufferSource, CameraRenderState camera, /^? if >= 26.1 {^/Matrix4fc/^?} else {^//^Matrix4f^//^?}^/ modelViewMatrix, CallbackInfo ci) {
-        if (this.lines.isEmpty()) {
-            return;
-        }
+    /*@WrapMethod(method = "renderLines")
+    private void polydium$buildLinesIdentityPose(PoseStack poseStack, MultiBufferSource bufferSource, CameraRenderState camera, /^? if >= 26.1 {^/Matrix4fc/^?} else {^//^Matrix4f^//^?}^/ modelViewMatrix, Operation<Void> original) {
         PoseStack.Pose pose = poseStack.last();
-    *///?}
-        if (!POLYDIUM_IDENTITY.equals(pose.pose())) {
+        if (this.lines.isEmpty() || !POLYDIUM_IDENTITY.equals(pose.pose())) {
+            original.call(poseStack, bufferSource, camera, modelViewMatrix);
             return;
         }
-        ci.cancel();
+    *///?}
 
         //? if >= 26.3 {
         VertexConsumer builder = this.getVertexBuilder(opaque ? RenderTypes.lines() : RenderTypes.linesTranslucentNoDepthWrite());

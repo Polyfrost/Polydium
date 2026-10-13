@@ -1,6 +1,8 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
 //? if >= 26.2 {
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.renderpearl.api.device.GpuSurface;
 import com.mojang.renderpearl.api.device.SurfaceException;
@@ -87,10 +89,11 @@ public abstract class MixinVulkanGpuSurfacePresentThread {
         return imageCount + 1;
     }
 
-    @Inject(method = "present", at = @At("HEAD"), cancellable = true)
-    private void polydium$handOffPresent(CallbackInfo ci) {
+    @WrapMethod(method = "present")
+    private void polydium$handOffPresent(Operation<Void> original) {
         if (!PresentThread.isCapturing()) {
             PresentThread.drain();
+            original.call();
 
             return;
         }
@@ -104,7 +107,6 @@ public abstract class MixinVulkanGpuSurfacePresentThread {
 
         this.currentImageIndex = -1;
         PresentThread.capture(() -> this.polydium$queuePresent(semaphore, frameChain, imageIndex));
-        ci.cancel();
     }
 
     @Unique

@@ -1,6 +1,8 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
 //? if >= 1.21.11 || < 1.21.4 {
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.caffeinemc.mods.sodium.api.util.ColorARGB;
@@ -13,23 +15,22 @@ import org.polyfrost.polydium.client.perf.DirectVertexBuffers;
 import org.polyfrost.polydium.client.perf.SkinLayerMeshes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Pseudo
 @Mixin(targets = "dev.tr7zw.skinlayers.render.CustomizableModelPart", remap = false)
 public abstract class MixinSkinLayersBatchWrite {
-    @Inject(method = "compile", at = @At("HEAD"), cancellable = true, require = 0, expect = 0)
+    @WrapMethod(method = "compile", require = 0, expect = 0)
     private void polydium$writeMesh(ModelPart vanillaModel, PoseStack.Pose pose, VertexConsumer consumer, int light, int overlay, int color,
-                                    CallbackInfo ci) {
+                                    Operation<Void> original) {
         float[] data = SkinLayerMeshes.polygons(this);
         if (data == null || data.length == 0) {
+            original.call(vanillaModel, pose, consumer, light, overlay, color);
             return;
         }
         int quads = data.length / SkinLayerMeshes.QUAD_FLOATS;
         long pointer = DirectVertexBuffers.reserve(consumer, EntityVertex.FORMAT, EntityVertex.STRIDE, quads * 4);
         if (pointer == 0L) {
+            original.call(vanillaModel, pose, consumer, light, overlay, color);
             return;
         }
 
@@ -61,7 +62,6 @@ public abstract class MixinSkinLayersBatchWrite {
                 pointer += EntityVertex.STRIDE;
             }
         }
-        ci.cancel();
     }
 }
 //?}

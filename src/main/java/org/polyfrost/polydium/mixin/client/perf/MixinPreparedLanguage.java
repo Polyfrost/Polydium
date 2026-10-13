@@ -3,7 +3,6 @@ package org.polyfrost.polydium.mixin.client.perf;
 //? if >= 1.21.1 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.resources.language.ClientLanguage;
 import net.minecraft.client.resources.language.LanguageInfo;
 import net.minecraft.client.resources.language.LanguageManager;
@@ -28,10 +27,7 @@ import java.util.concurrent.Executor;
 import java.util.stream.Stream;
 
 @Mixin(LanguageManager.class)
-public abstract class MixinPreparedLanguage implements ResourceManagerReloadListener {
-    @Unique
-    private static final boolean POLYDIUM$AVAILABLE = !FabricLoader.getInstance().isModLoaded("languagereload");
-
+public abstract class MixinPreparedLanguage implements ResourceManagerReloadListener, PreparedLanguage.Access {
     @Shadow
     private String currentCode;
 
@@ -44,23 +40,7 @@ public abstract class MixinPreparedLanguage implements ResourceManagerReloadList
     }
 
     @Override
-    //? if >= 1.21.10 {
-    public CompletableFuture<Void> reload(PreparableReloadListener.SharedState currentReload, Executor taskExecutor, PreparableReloadListener.PreparationBarrier preparationBarrier, Executor reloadExecutor) {
-        if (!POLYDIUM$AVAILABLE) {
-            return ResourceManagerReloadListener.super.reload(currentReload, taskExecutor, preparationBarrier, reloadExecutor);
-        }
-        ResourceManager manager = currentReload.resourceManager();
-    //?} else if >= 1.21.4 {
-    /*public CompletableFuture<Void> reload(PreparableReloadListener.PreparationBarrier preparationBarrier, ResourceManager manager, Executor taskExecutor, Executor reloadExecutor) {
-        if (!POLYDIUM$AVAILABLE) {
-            return ResourceManagerReloadListener.super.reload(preparationBarrier, manager, taskExecutor, reloadExecutor);
-        }
-    *///?} else {
-    /*public CompletableFuture<Void> reload(PreparableReloadListener.PreparationBarrier preparationBarrier, ResourceManager manager, ProfilerFiller prepareProfiler, ProfilerFiller reloadProfiler, Executor taskExecutor, Executor reloadExecutor) {
-        if (!POLYDIUM$AVAILABLE) {
-            return ResourceManagerReloadListener.super.reload(preparationBarrier, manager, prepareProfiler, reloadProfiler, taskExecutor, reloadExecutor);
-        }
-    *///?}
+    public CompletableFuture<Void> polydium$reload(PreparableReloadListener.PreparationBarrier preparationBarrier, ResourceManager manager, Executor taskExecutor, Executor reloadExecutor/*? if < 1.21.4 {*//*, ProfilerFiller reloadProfiler*//*?}*/) {
         String code = this.currentCode;
         return CompletableFuture.supplyAsync(() -> polydium$prepare(manager, code), taskExecutor)
             .thenCompose(preparationBarrier::wait)

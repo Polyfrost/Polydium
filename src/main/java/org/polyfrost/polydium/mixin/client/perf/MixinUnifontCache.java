@@ -2,16 +2,15 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
 //? if >= 1.21.1 {
-import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.mojang.blaze3d.font.GlyphProvider;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.client.gui.font.providers.UnihexProvider;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.packs.resources.ResourceManager;
 import org.polyfrost.polydium.client.perf.UnifontCache;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -28,21 +27,15 @@ public abstract class MixinUnifontCache {
     @Final
     private List<?> sizeOverrides;
 
-    @Shadow
-    protected abstract UnihexProvider loadData(InputStream zipFile) throws IOException;
-
-    @WrapMethod(method = "load")
-    private GlyphProvider polydium$reuseParsedUnifont(ResourceManager resourceManager, Operation<GlyphProvider> original) throws IOException {
-        byte[] contents;
-        try (InputStream raw = resourceManager.open(this.hexFile)) {
-            contents = raw.readAllBytes();
-        }
+    @WrapOperation(method = "load", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/font/providers/UnihexProvider$Definition;loadData(Ljava/io/InputStream;)Lnet/minecraft/client/gui/font/providers/UnihexProvider;"))
+    private UnihexProvider polydium$reuseParsedUnifont(UnihexProvider.Definition definition, InputStream zipFile, Operation<UnihexProvider> original) throws IOException {
+        byte[] contents = zipFile.readAllBytes();
         byte[] digest = UnifontCache.digest(contents);
-        GlyphProvider cached = UnifontCache.find(this.hexFile, this.sizeOverrides, digest);
+        UnihexProvider cached = UnifontCache.find(this.hexFile, this.sizeOverrides, digest);
         if (cached != null) {
             return cached;
         }
-        GlyphProvider provider = this.loadData(new ByteArrayInputStream(contents));
+        UnihexProvider provider = original.call(definition, new ByteArrayInputStream(contents));
         UnifontCache.remember(this.hexFile, this.sizeOverrides, digest, provider);
         return provider;
     }

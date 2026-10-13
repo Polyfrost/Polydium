@@ -1,6 +1,8 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
 //? if >= 26.2 {
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.CompactVectorArray;
 import com.mojang.blaze3d.vertex.MeshData;
@@ -14,9 +16,6 @@ import net.minecraft.client.renderer.StagedVertexBuffer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -28,10 +27,11 @@ public abstract class MixinStagedVertexDirectCopy {
         throw new AssertionError();
     }
 
-    @Inject(method = "uploadDrawsToBuffers", at = @At("HEAD"), cancellable = true)
-    private void polydium$writeDirectly(GpuDevice device, List<StagedVertexBuffer.Draw> draws, GpuBuffer vertexGpuBuffer, GpuBuffer indexGpuBuffer, int vertexBufferSize, int indexBufferSize, CallbackInfo ci) {
+    @WrapMethod(method = "uploadDrawsToBuffers")
+    private void polydium$writeDirectly(GpuDevice device, List<StagedVertexBuffer.Draw> draws, GpuBuffer vertexGpuBuffer, GpuBuffer indexGpuBuffer, int vertexBufferSize, int indexBufferSize, Operation<Void> original) {
         if (!polydium$isWritable(vertexGpuBuffer)
             || (indexGpuBuffer != null && !polydium$isWritable(indexGpuBuffer))) {
+            original.call(device, draws, vertexGpuBuffer, indexGpuBuffer, vertexBufferSize, indexBufferSize);
             return;
         }
         try (GpuBufferSlice.MappedView view = vertexGpuBuffer.slice(0L, vertexBufferSize).map(false, true)) {
@@ -61,7 +61,6 @@ public abstract class MixinStagedVertexDirectCopy {
                 }
             }
         }
-        ci.cancel();
     }
 
     @Unique

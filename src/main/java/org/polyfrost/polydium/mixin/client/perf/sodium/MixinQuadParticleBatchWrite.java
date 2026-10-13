@@ -1,6 +1,8 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
 //? if >= 1.21.10 {
+//? if >= 26.2
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -30,8 +32,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Map;
 
@@ -51,26 +51,34 @@ public abstract class MixinQuadParticleBatchWrite {
     @Final
     private Map<SingleQuadParticle.Layer, ?> particles;
 
-    @Inject(method = "buildLayer", at = @At("HEAD"), cancellable = true, require = 0, expect = 0)
-    private void polydium$buildLayerBatched(SingleQuadParticle.Layer layer, VertexConsumer builder, CallbackInfo ci) {
+    //? if >= 26.2 {
+    @WrapMethod(method = "buildLayer")
+    private void polydium$buildLayerBatched(SingleQuadParticle.Layer layer, VertexConsumer builder, Operation<Void> original) {
+        if (!this.polydium$tryBuildBatched(layer, builder)) {
+            original.call(layer, builder);
+        }
+    }
+    //?}
+
+    @Unique
+    private boolean polydium$tryBuildBatched(SingleQuadParticle.Layer layer, VertexConsumer builder) {
         if (builder.getClass() != BufferBuilder.class
                 || ((Object) this).getClass() != QuadParticleRenderState.class) {
-            return;
+            return false;
         }
         Object storage = this.particles.get(layer);
         if (storage == null
                 || ((ParticleBufferBuilderAccessor) builder).polydium$format() != ParticleVertex.FORMAT
                 || !ParticleQuadSupport.canBatch(QuadParticleRenderState.class, storage.getClass())) {
-            return;
+            return false;
         }
         VertexBufferWriter writer = VertexBufferWriter.tryOf(builder);
         QuadParticleStorageAccessor stored = (QuadParticleStorageAccessor) storage;
         int count = stored.polydium$particleCount();
         if (writer == null || count <= 0 || count > POLYDIUM_MAX_BATCH) {
-            return;
+            return false;
         }
 
-        ci.cancel();
         float[] floats = stored.polydium$floatValues();
         int[] ints = stored.polydium$intValues();
         ParticleBufferBuilderAccessor target = (ParticleBufferBuilderAccessor) builder;
@@ -107,11 +115,12 @@ public abstract class MixinQuadParticleBatchWrite {
             target.polydium$setVertices(target.polydium$vertices() + count * 4);
             target.polydium$setVertexPointer(buffer + bytes - ParticleVertex.STRIDE);
             target.polydium$setElementsToFill(0);
-            return;
+            return true;
         }
         try (MemoryStack stack = MemoryStack.stackPush()) {
             writer.push(stack, buffer, count * 4, ParticleVertex.FORMAT);
         }
+        return true;
     }
 
     //? if < 26.2 {
@@ -123,9 +132,7 @@ public abstract class MixinQuadParticleBatchWrite {
     )
     private void polydium$prepareLayerBatched(@Coerce Object storage, QuadParticleRenderState.ParticleConsumer consumer, Operation<Void> original,
                                               @Local Map.Entry<SingleQuadParticle.Layer, ?> entry, @Local BufferBuilder builder) {
-        CallbackInfo ci = new CallbackInfo("prepare", true);
-        this.polydium$buildLayerBatched(entry.getKey(), builder, ci);
-        if (!ci.isCancelled()) {
+        if (!this.polydium$tryBuildBatched(entry.getKey(), builder)) {
             original.call(storage, consumer);
         }
     }
