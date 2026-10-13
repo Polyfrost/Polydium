@@ -1,2 +1,2 @@
-## 1.0.4
-- Fixed crash on launch with VulkanMod
+## Unreleased changes
+- Fixed random crash when reloading resources on Minecraft 26.3

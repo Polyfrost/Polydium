@@ -143,7 +143,10 @@ public final class SpirvCache {
         for (Identifier id : ids) {
             update(digest, id.toString());
             ShaderSource.CachedIncludeSource include = configs.getInclude(id);
-            ByteBuffer contents = include == null ? null : ShadercIncludeResult.create(include.includeResultPtr()).content();
+            // Minecraft doesn't null-terminate include contents, so content() would read past the allocation
+            ByteBuffer contents = include == null ? null : MemoryUtil.memByteBufferSafe(
+                    MemoryUtil.memGetAddress(include.includeResultPtr() + ShadercIncludeResult.CONTENT),
+                    (int) ShadercIncludeResult.ncontent_length(include.includeResultPtr()));
             digest.update(longBytes(contents == null ? -1 : contents.remaining()));
             if (contents != null) {
                 digest.update(contents);
