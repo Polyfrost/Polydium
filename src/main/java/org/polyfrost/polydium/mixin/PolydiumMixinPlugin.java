@@ -45,13 +45,15 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("SinglePassTextShadow", new String[]{"caxton"})
     );
 
+    private static final String[] OPT_IN = {"UnfocusedFullscreenThrottle"};
+
     public static boolean isEnabled(String fragment) {
         return contains(ENABLED, fragment) && !isDisabled(fragment);
     }
 
     private static boolean contains(String[] fragments, String name) {
         for (String fragment : fragments) {
-            if (!fragment.isEmpty() && name.contains(fragment))
+            if (!fragment.isEmpty() && (name.contains(fragment) || fragment.contains(name)))
                 return true;
         }
 
@@ -74,10 +76,24 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         return false;
     }
 
+    private static final String[] GL_BUFFER_UNIT = {
+            "org.polyfrost.polydium.mixin.client.perf.opengl.MixinGlBufferMapFlags",
+            "org.polyfrost.polydium.mixin.client.perf.opengl.MixinGlBufferNoUnmapFlush",
+            "org.polyfrost.polydium.mixin.client.perf.opengl.MixinGlBufferStorageCoherent"
+    };
+
     public static boolean isDisabled(String mixinClassName) {
-        for (String disabled : DISABLED) {
-            if (!disabled.isEmpty() && mixinClassName.contains(disabled))
-                return true;
+        if (contains(DISABLED, mixinClassName))
+            return true;
+
+        for (String member : GL_BUFFER_UNIT) {
+            if (!member.equals(mixinClassName))
+                continue;
+
+            for (String other : GL_BUFFER_UNIT) {
+                if (contains(DISABLED, other))
+                    return true;
+            }
         }
 
         return false;
@@ -89,6 +105,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             return false;
 
         if (standsDown(mixinClassName))
+            return false;
+
+        if (contains(OPT_IN, mixinClassName) && !contains(ENABLED, mixinClassName))
             return false;
 
         return SODIUM_PERF || !mixinClassName.startsWith(SODIUM_PERF_PACKAGE);

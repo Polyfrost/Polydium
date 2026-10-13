@@ -33,7 +33,7 @@ public final class OcclusionCuller {
     /*private static final float                              DEPTH_ABSOLUTE  = 1.0e-6F;
     *///?}
     private static final int                                LEVEL_SPAN      = 4;
-    private static final long                               MIN_INTERVAL    = 4_000_000L;
+    private static final long                               MIN_INTERVAL    = Integer.getInteger("polydium.occlusionCaptureMs", 4) * 1_000_000L;
     private static final double                             TEST_BUDGET     = 0.5;
     private static final double                             EYE_TOLERANCE   = 0.5;
     private static final double                             REPROJECT_LIMIT = 8.0;

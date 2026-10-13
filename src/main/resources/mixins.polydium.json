@@ -324,6 +324,62 @@
     //? if >= 26.2
     "client.perf.vulkan.MixinMinecraftPresentThread",
     //? if >= 26.2
+    "client.perf.vulkan.MixinAutoVulkan",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinAutoVulkanProbe",
+    //? if >= 26.2 && < 26.3
+    //"client.perf.vulkan.MixinTransientBlockRecycle",
+    //? if >= 26.2 && < 26.3
+    //"client.perf.vulkan.MixinTransientHeapPlacement",
+    //? if >= 26.2 && < 26.3
+    //"client.perf.vulkan.MixinVulkanDepthBiasEnable",
+    //? if < 26.3
+    //"client.perf.MixinEntityOutlineGate",
+    //? if >= 1.21.5 && < 26.3
+    //"client.perf.MixinItemLayerSharedQuads",
+    //? if >= 1.21.5 && < 26.3
+    //"client.perf.MixinCuboidItemSharedQuads",
+    //? if < 26.3
+    //"client.perf.MixinEntityCullPartialTick",
+    //? if >= 26.2 && < 26.3
+    //"client.perf.MixinHitboxCullPartialTick",
+    //? if < 26.3
+    //"client.perf.MixinEntityCullLerp",
+    //? if < 26.3
+    //"client.perf.AABBAccessor",
+    //? if >= 1.21.4 && < 26.3
+    //"client.perf.MixinDisplayCullLerp",
+    //? if >= 26.2 && < 26.3
+    //"client.perf.MixinScissorRenderAreaY",
+    //? if >= 1.21.4 && < 26.3
+    //"client.perf.MixinUnfocusedFullscreenThrottle",
+    //? if >= 26.2 && < 26.3
+    //"client.perf.WindowExclusiveFullscreenAccessor",
+    //? if >= 26.2 && < 26.3
+    //"client.perf.MixinTranslucentFeatureStableSort",
+    //? if < 26.3
+    //"client.perf.MixinWorldBorderInset",
+    //? if < 26.3
+    //"client.perf.MixinDecoratedPotSpriteCache",
+    //? if < 1.21.10
+    //"client.perf.MixinMaterialSpriteHandoff",
+    //? if >= 1.21.10 && < 26.3
+    //"client.perf.MixinFontProviderInvalidate",
+    //? if >= 1.21.8 && < 26.3
+    //"client.perf.opengl.MixinGlBufferStorageCoherent",
+    //? if >= 1.21.8 && < 26.3
+    //"client.perf.opengl.MixinGlBufferMapFlags",
+    //? if >= 1.21.8 && < 26.3
+    //"client.perf.opengl.MixinGlBufferNoUnmapFlush",
+    //? if >= 26.2 && < 26.3
+    //"client.perf.opengl.MixinGlBlendEnableIndexed",
+    //? if >= 26.2 && < 26.3
+    //"client.perf.opengl.GlBooleanStateAccessor",
+    //? if >= 1.21.5 && < 26.3
+    //"client.perf.opengl.MixinGlDrawSetupDedup",
+    //? if >= 26.2 && < 26.3
+    //"client.perf.opengl.MixinVertexArrayLookup",
+    //? if >= 26.2
     "client.perf.vulkan.MixinVulkanCommandEncoderPresentThread",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanGpuSurfacePresentThread",

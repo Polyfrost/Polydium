@@ -6,11 +6,14 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.opengl.GlBuffer;
 import org.polyfrost.polydium.mixin.client.perf.DirectStateAccessInvoker;
 import org.polyfrost.polydium.mixin.client.perf.GlBufferAccessor;
+import org.polyfrost.polydium.mixin.PolydiumMixinPlugin;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 public final class PersistentUniformView implements GpuBuffer.MappedView {
+    private static final boolean FLUSH_EXPLICIT = PolydiumMixinPlugin.isDisabled("org.polyfrost.polydium.mixin.client.perf.opengl.MixinGlBufferMapFlags");
+
     private GlBuffer buffer;
     private long offset;
     private long length;
@@ -31,6 +34,9 @@ public final class PersistentUniformView implements GpuBuffer.MappedView {
 
     @Override
     public void close() {
+        if (!FLUSH_EXPLICIT) {
+            return;
+        }
         GlBufferAccessor accessor = (GlBufferAccessor) this.buffer;
         ((DirectStateAccessInvoker) accessor.polydium$dsa()).polydium$flushMappedBufferRange(accessor.polydium$handle(), /^? if >= 1.21.11 {^/this.offset, this.length/^?} else {^//^(int) this.offset, (int) this.length^//^?}^/ /^? if >= 1.21.10 {^/, this.buffer.usage()/^?}^/);
     }

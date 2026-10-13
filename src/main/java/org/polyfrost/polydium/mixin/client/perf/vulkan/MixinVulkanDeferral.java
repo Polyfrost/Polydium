@@ -19,7 +19,11 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.joml.Vector4fc;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.KHRDynamicRendering;
+import org.lwjgl.vulkan.VK10;
+import org.lwjgl.vulkan.VkClearAttachment;
+import org.lwjgl.vulkan.VkClearRect;
 import org.lwjgl.vulkan.VkCommandBuffer;
+import org.polyfrost.polydium.client.perf.RenderPassStats;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -133,7 +137,10 @@ public abstract class MixinVulkanDeferral {
 
     @Inject(method = "clearDepthTexture", at = @At("HEAD"), cancellable = true)
     private void polydium$deferDepthClear(GpuTexture depthTexture, double clearDepth, CallbackInfo ci) {
-        this.polydium$flushClears();
+        if (this.polydium$clearColorTexture != null || this.polydium$clearDepthTexture != null) {
+            this.polydium$flushClears();
+        }
+
         this.polydium$clearDepthTexture = depthTexture;
         this.polydium$clearDepth = clearDepth;
         ci.cancel();
@@ -152,6 +159,10 @@ public abstract class MixinVulkanDeferral {
     @ModifyVariable(method = "createRenderPass", at = @At("HEAD"), argsOnly = true)
     private RenderPassDescriptor polydium$clearOnLoad(RenderPassDescriptor descriptor) {
         if (this.polydium$clearColorTexture == null && this.polydium$clearDepthTexture == null) {
+            return descriptor;
+        }
+
+        if (this.polydium$canContinue(descriptor)) {
             return descriptor;
         }
 
@@ -197,7 +208,25 @@ public abstract class MixinVulkanDeferral {
     @Inject(method = "createRenderPass", at = @At("HEAD"), cancellable = true)
     private void polydium$continueSuspendedPass(RenderPassDescriptor descriptor, CallbackInfoReturnable<RenderPassBackend> cir) {
         if (!this.polydium$canContinue(descriptor)) {
+            if (RenderPassStats.ENABLED && this.polydium$suspendedPass != null) {
+                RenderPassStats.refused(this.polydium$suspendedPass.getLabel(), descriptor.label(), this.polydium$barrierPending ? "upload barrier pending" : "attachments, area or clear differ");
+            }
+
             return;
+        }
+
+        if (RenderPassStats.ENABLED) {
+            RenderPassStats.merged();
+        }
+
+        OptionalDouble depthClear = descriptor.depthAttachment() == null ? OptionalDouble.empty() : descriptor.depthAttachment().clearValue();
+
+        if (this.polydium$clearDepthTexture != null) {
+            if (depthClear.isEmpty()) {
+                depthClear = OptionalDouble.of(this.polydium$clearDepth);
+            }
+
+            this.polydium$clearDepthTexture = null;
         }
 
         VkCommandBuffer commandBuffer = this.currentCommandBuffer;
@@ -214,12 +243,27 @@ public abstract class MixinVulkanDeferral {
         this.polydium$openDescriptor = descriptor;
         this.currentRenderPass = new VulkanRenderPass(this.device, (VulkanCommandEncoder) (Object) this, commandBuffer, this.checkpointStorage, polydium$area(descriptor), polydium$outputWidth(descriptor), polydium$outputHeight(descriptor), descriptor.depthAttachment() != null, descriptor.label());
 
+        if (depthClear.isPresent()) {
+            polydium$clearDepthInPass(commandBuffer, polydium$area(descriptor), (float) depthClear.getAsDouble());
+        }
+
         cir.setReturnValue(this.currentRenderPass);
     }
 
     @Inject(method = "createRenderPass", at = @At("RETURN"))
     private void polydium$rememberDescriptor(RenderPassDescriptor descriptor, CallbackInfoReturnable<RenderPassBackend> cir) {
         this.polydium$openDescriptor = descriptor;
+
+        if (RenderPassStats.ENABLED) {
+            RenderPassStats.begun();
+        }
+    }
+
+    @Inject(method = "submit", at = @At("RETURN"))
+    private void polydium$reportPassStats(CallbackInfo ci) {
+        if (RenderPassStats.ENABLED) {
+            RenderPassStats.submit();
+        }
     }
 
     @Inject(method = "submitRenderPass", at = @At("HEAD"), cancellable = true)
@@ -311,7 +355,7 @@ public abstract class MixinVulkanDeferral {
             return false;
         }
 
-        if (this.polydium$clearColorTexture != null || this.polydium$clearDepthTexture != null) {
+        if (this.polydium$clearColorTexture != null) {
             return false;
         }
 
@@ -340,10 +384,31 @@ public abstract class MixinVulkanDeferral {
         RenderPassDescriptor.Attachment<OptionalDouble> previousDepth = previous.depthAttachment();
 
         if (depth == null || previousDepth == null) {
-            return depth == previousDepth;
+            return depth == previousDepth && this.polydium$clearDepthTexture == null;
         }
 
-        return depth.textureView() == previousDepth.textureView() && depth.clearValue().isEmpty();
+        if (depth.textureView() != previousDepth.textureView()) {
+            return false;
+        }
+
+        return this.polydium$clearDepthTexture == null || polydium$coversTexture(depth.textureView(), this.polydium$clearDepthTexture, polydium$area(descriptor));
+    }
+
+    @Unique
+    private static void polydium$clearDepthInPass(VkCommandBuffer commandBuffer, RenderPass.RenderArea area, float depth) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            VkClearRect.Buffer rects = VkClearRect.calloc(1, stack);
+            rects.baseArrayLayer(0);
+            rects.layerCount(1);
+            rects.rect().offset().set(area.x(), area.y());
+            rects.rect().extent().set(area.width(), area.height());
+
+            VkClearAttachment.Buffer attachments = VkClearAttachment.calloc(1, stack);
+            attachments.aspectMask(VK10.VK_IMAGE_ASPECT_DEPTH_BIT);
+            attachments.clearValue().depthStencil().depth(depth);
+
+            VK10.vkCmdClearAttachments(commandBuffer, attachments, rects);
+        }
     }
 
     @Unique
@@ -352,6 +417,10 @@ public abstract class MixinVulkanDeferral {
 
         if (pass == null) {
             return;
+        }
+
+        if (RenderPassStats.ENABLED) {
+            RenderPassStats.split(pass.getLabel());
         }
 
         VkCommandBuffer commandBuffer = this.currentCommandBuffer;
