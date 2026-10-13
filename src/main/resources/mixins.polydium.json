@@ -379,6 +379,8 @@
     //"client.perf.opengl.GlBooleanStateAccessor",
     //? if >= 1.21.5 && < 26.3
     //"client.perf.opengl.MixinGlDrawSetupDedup",
+    //? if >= 1.21.8 && < 26.3
+    //"client.perf.opengl.MixinGlRenderPassDirty",
     //? if >= 26.2 && < 26.3
     //"client.perf.opengl.MixinVertexArrayLookup",
     //? if >= 26.2
