@@ -3,6 +3,7 @@ package org.polyfrost.polydium.mixin.client.perf.opengl;
 //? if >= 26.2 && < 26.3 {
 /*import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
+import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(targets = "com.mojang.renderpearl.backend.opengl.GlStateManager$BooleanState")
 public interface GlBooleanStateAccessor {
@@ -11,5 +12,11 @@ public interface GlBooleanStateAccessor {
 
     @Accessor("enabled")
     void polydium$setEnabled(boolean enabled);
+
+    @Invoker("enable")
+    void polydium$enable();
+
+    @Invoker("disable")
+    void polydium$disable();
 }
 *///?}
