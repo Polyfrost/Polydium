@@ -43,6 +43,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("LtrTextFastPath", new String[]{"modernui"}),
             Map.entry("PreparedText", new String[]{"caxton"}),
             Map.entry("PreparedLanguage", new String[]{"languagereload"}),
+            Map.entry("ParticleRotationReuse", new String[]{"vulkanmod"}),
             Map.entry("SinglePassTextShadow", new String[]{"caxton"})
     );
 
