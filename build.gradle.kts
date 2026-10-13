@@ -163,10 +163,12 @@ tasks.test {
 
 tasks.withType<ProcessResources>().configureEach {
     val modName = project.property("mod.name") as String
+    val oneconfigVersion = project.property("deps.oneconfig") as String
     inputs.property("modId", modId)
     inputs.property("modName", modName)
     inputs.property("modVersion", modVersion)
     inputs.property("minorMcVersion", minecraftPredicate)
+    inputs.property("oneconfigVersion", oneconfigVersion)
     filesMatching("fabric.mod.json") {
         expand(
             mapOf(
@@ -175,6 +177,7 @@ tasks.withType<ProcessResources>().configureEach {
                 "mod_version" to modVersion,
                 "mod_description" to "Client performance optimizations for OneClient",
                 "minor_mc_version" to minecraftPredicate,
+                "oneconfig_version" to oneconfigVersion,
             ),
         )
     }
