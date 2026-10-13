@@ -4,6 +4,7 @@ import dev.kikugie.loomx.LoomCompatDependencyExtension
 import dev.kikugie.loomx.LoomCompatProjectExtension
 import dev.kikugie.stonecutter.build.StonecutterBuildExtension
 import net.fabricmc.loom.api.LoomGradleExtensionAPI
+import net.fabricmc.loom.task.prod.ClientProductionRunTask
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmExtension
 
@@ -181,6 +182,10 @@ tasks.withType<ProcessResources>().configureEach {
     filesMatching("mixins.*.json") {
         expand("id" to modId)
     }
+}
+
+tasks.register<ClientProductionRunTask>("prodClient") {
+    optionalProperty("polydium.gameDir")?.let { runDir.set(file(it)) }
 }
 
 tasks.matching { it.name == "createMinecraftArtifacts" }.configureEach {
