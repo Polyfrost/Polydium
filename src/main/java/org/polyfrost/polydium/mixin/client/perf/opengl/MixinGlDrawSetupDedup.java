@@ -5,6 +5,9 @@ package org.polyfrost.polydium.mixin.client.perf.opengl;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.opengl.VertexArrayCache;
 import com.mojang.renderpearl.backend.opengl.GlProgram;
+import com.mojang.blaze3d.opengl.Uniform;
+import com.mojang.renderpearl.backend.opengl.GlRenderPass;
+import com.llamalad7.mixinextras.sugar.Local;
 import org.polyfrost.polydium.client.perf.IrisShaders;
 import org.polyfrost.polydium.compat.Mods;
 import org.spongepowered.asm.mixin.Mixin;
@@ -15,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -32,7 +35,13 @@ public abstract class MixinGlDrawSetupDedup {
     @Unique
     private GlProgram polydium$programBefore;
     @Unique
+    private GlProgram polydium$texturesProgram;
+    @Unique
+    private Map<?, ?> polydium$textures;
+    @Unique
     private Set<?> polydium$passDirty;
+    @Unique
+    private GlRenderPass polydium$dirtyPass;
     @Unique
     private boolean polydium$drawBuffersDone;
     @Unique
@@ -63,18 +72,36 @@ public abstract class MixinGlDrawSetupDedup {
     }
 
     @WrapOperation(method = "trySetup", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/opengl/GlProgram;getUniforms()Ljava/util/Map;", ordinal = 1))
-    private Map<?, ?> polydium$skipCleanUniforms(GlProgram program, Operation<Map<?, ?>> original) {
+    private Map<?, ?> polydium$skipCleanUniforms(GlProgram program, Operation<Map<?, ?>> original, @Local(argsOnly = true) GlRenderPass pass) {
         Set<?> dirty = polydium$passDirty;
-        if (dirty != null && dirty.isEmpty() && program == polydium$programBefore && !IrisShaders.packInUse()) {
-            return Collections.emptyMap();
+        if (dirty != null && pass == polydium$dirtyPass && dirty.isEmpty() && program == polydium$programBefore && !IrisShaders.packInUse()) {
+            return polydium$texturesOf(program, original);
         }
 
         return original.call(program);
     }
 
+    @Unique
+    private Map<?, ?> polydium$texturesOf(GlProgram program, Operation<Map<?, ?>> original) {
+        if (program != polydium$texturesProgram) {
+            Map<Object, Object> textures = new HashMap<>();
+            for (Map.Entry<?, ?> entry : original.call(program).entrySet()) {
+                if (!(entry.getValue() instanceof Uniform.Ubo)) {
+                    textures.put(entry.getKey(), entry.getValue());
+                }
+            }
+
+            polydium$textures = textures;
+            polydium$texturesProgram = program;
+        }
+
+        return polydium$textures;
+    }
+
     @WrapOperation(method = "trySetup", at = @At(value = "INVOKE", target = "Ljava/util/Set;clear()V"))
-    private void polydium$trackDirtySet(Set<?> dirty, Operation<Void> original) {
+    private void polydium$trackDirtySet(Set<?> dirty, Operation<Void> original, @Local(argsOnly = true) GlRenderPass pass) {
         polydium$passDirty = dirty;
+        polydium$dirtyPass = pass;
         original.call(dirty);
     }
 
@@ -123,6 +150,9 @@ import com.mojang.blaze3d.opengl.VertexArrayCache;
 import com.mojang.renderpearl.api.vertex.VertexFormat;
 import com.mojang.renderpearl.backend.opengl.GlBuffer;
 import com.mojang.renderpearl.backend.opengl.GlProgram;
+import com.mojang.blaze3d.opengl.Uniform;
+import com.mojang.renderpearl.backend.opengl.GlRenderPass;
+import com.llamalad7.mixinextras.sugar.Local;
 import org.polyfrost.polydium.client.perf.IrisShaders;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -132,7 +162,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -144,7 +174,13 @@ public abstract class MixinGlDrawSetupDedup {
     @Unique
     private GlProgram polydium$programBefore;
     @Unique
+    private GlProgram polydium$texturesProgram;
+    @Unique
+    private Map<?, ?> polydium$textures;
+    @Unique
     private Set<?> polydium$passDirty;
+    @Unique
+    private GlRenderPass polydium$dirtyPass;
     @Unique
     private boolean polydium$scissorSet;
     @Unique
@@ -174,18 +210,36 @@ public abstract class MixinGlDrawSetupDedup {
     }
 
     @WrapOperation(method = "trySetup", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/opengl/GlProgram;getUniforms()Ljava/util/Map;", ordinal = 1))
-    private Map<?, ?> polydium$skipCleanUniforms(GlProgram program, Operation<Map<?, ?>> original) {
+    private Map<?, ?> polydium$skipCleanUniforms(GlProgram program, Operation<Map<?, ?>> original, @Local(argsOnly = true) GlRenderPass pass) {
         Set<?> dirty = polydium$passDirty;
-        if (dirty != null && dirty.isEmpty() && program == polydium$programBefore && !IrisShaders.packInUse()) {
-            return Collections.emptyMap();
+        if (dirty != null && pass == polydium$dirtyPass && dirty.isEmpty() && program == polydium$programBefore && !IrisShaders.packInUse()) {
+            return polydium$texturesOf(program, original);
         }
 
         return original.call(program);
     }
 
+    @Unique
+    private Map<?, ?> polydium$texturesOf(GlProgram program, Operation<Map<?, ?>> original) {
+        if (program != polydium$texturesProgram) {
+            Map<Object, Object> textures = new HashMap<>();
+            for (Map.Entry<?, ?> entry : original.call(program).entrySet()) {
+                if (!(entry.getValue() instanceof Uniform.Ubo)) {
+                    textures.put(entry.getKey(), entry.getValue());
+                }
+            }
+
+            polydium$textures = textures;
+            polydium$texturesProgram = program;
+        }
+
+        return polydium$textures;
+    }
+
     @WrapOperation(method = "trySetup", at = @At(value = "INVOKE", target = "Ljava/util/Set;clear()V"))
-    private void polydium$trackDirtySet(Set<?> dirty, Operation<Void> original) {
+    private void polydium$trackDirtySet(Set<?> dirty, Operation<Void> original, @Local(argsOnly = true) GlRenderPass pass) {
         polydium$passDirty = dirty;
+        polydium$dirtyPass = pass;
         original.call(dirty);
     }
 
