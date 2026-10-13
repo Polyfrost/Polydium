@@ -19,6 +19,9 @@
             "org.polyfrost.polydium.compat.IrisMixinTweaks"
         ]
     },
+    "languageAdapters": {
+        "polydium-early": "org.polyfrost.polydium.early.EarlyVulkan"
+    },
     "mixins": [
         "mixins.${mod_id}.json"
     ],

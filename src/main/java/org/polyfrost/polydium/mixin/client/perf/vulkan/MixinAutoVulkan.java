@@ -1,31 +1,34 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
 //? if >= 26.2 {
-import com.llamalad7.mixinextras.injector.ModifyReceiver;
-//? if >= 26.3 {
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.mojang.renderpearl.api.device.BackendCreationException;
-//?}
+import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.renderpearl.api.device.GpuDevice;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.Options;
 import net.minecraft.client.PreferredGraphicsApi;
-import org.polyfrost.polydium.client.perf.AutoVulkan;
+import net.minecraft.client.main.GameConfig;
+import org.polyfrost.polydium.early.EarlyVulkan;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 
 @Mixin(Minecraft.class)
 public abstract class MixinAutoVulkan {
 
-    @ModifyReceiver(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/PreferredGraphicsApi;getBackendsToTry"))
-    private PreferredGraphicsApi polydium$autoVulkan(PreferredGraphicsApi api) {
-        return AutoVulkan.pick(api);
-    }
+    @Shadow
+    @Final
+    public Options options;
 
-    //? if >= 26.3 {
-    @WrapOperation(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/vulkan/VulkanBackend;checkBackendAvailable"))
-    private BackendCreationException polydium$reuseProbe(Operation<BackendCreationException> original) {
-        return AutoVulkan.probed ? AutoVulkan.probeResult : original.call();
+    @ModifyArg(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;initRenderer"))
+    private GpuDevice polydium$undoFailedVulkan(GpuDevice device, @Local(argsOnly = true) GameConfig config) {
+        if (config.game.forcedGraphicsApi == null && this.options.preferredGraphicsBackend().get() == PreferredGraphicsApi.VULKAN
+                && !"Vulkan".equalsIgnoreCase(device.getDeviceInfo().backendName()) && EarlyVulkan.switched()) {
+            this.options.preferredGraphicsBackend().set(PreferredGraphicsApi.DEFAULT);
+            this.options.save();
+        }
+        return device;
     }
-    //?}
 }
 //?}
