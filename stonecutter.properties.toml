@@ -1,6 +1,6 @@
 mod.name = "Polydium"
 mod.id = "polydium"
-mod.version = "1.0.1"
+mod.version = "1.0.2"
 mod.group = "org.polyfrost"
 
 deps.fabric_loader = "0.19.5"
