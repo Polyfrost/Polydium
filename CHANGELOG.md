@@ -1,3 +1,2 @@
-## 1.0.3
-- Fix Iris pack GL state corruption
-- Fix textures being rendered weirdly
+## 1.0.4
+- Fixed crash on launch with VulkanMod
