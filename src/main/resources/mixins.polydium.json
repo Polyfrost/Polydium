@@ -409,6 +409,8 @@
     "client.perf.vulkan.MixinMinecraftPresentThread",
     //? if >= 1.21.11
     "client.perf.vulkan.MixinAutoVulkan",
+    //? if >= 1.21.11
+    "client.perf.vulkan.MixinIrisUppercasePaths",
     //? if >= 26.2 && < 26.3
     //"client.perf.vulkan.MixinTransientBlockRecycle",
     //? if >= 26.2 && < 26.3

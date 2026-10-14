@@ -173,6 +173,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith("MixinVulkanOwoBlur") && !Mods.loaded("owo"))
             return false;
 
+        if (mixinClassName.endsWith("MixinIrisUppercasePaths") && !Mods.loaded("iris"))
+            return false;
+
         if (mixinClassName.endsWith("MixinVulkanBackendListImGui") && !Mods.loaded("flashback") && !Mods.loaded("axiom"))
             return false;
 
