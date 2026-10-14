@@ -17,8 +17,10 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final String SODIUM_PERF_PACKAGE = "org.polyfrost.polydium.mixin.client.perf.sodium.";
     //? if >= 26.3 {
     private static final String[] SODIUM_PERF_VERSIONS = {"0.9.2", "0.9.3"};
-    //?} else if >= 26.1 {
+    //?} else if >= 26.2 {
     /*private static final String[] SODIUM_PERF_VERSIONS = {"0.9.2"};
+    *///?} else if >= 26.1 {
+    /*private static final String[] SODIUM_PERF_VERSIONS = {"0.9.2", "0.8.9", "0.8.10", "0.8.11", "0.8.12"};
     *///?} else if >= 1.21.11 {
     /*private static final String[] SODIUM_PERF_VERSIONS = {"0.8.14", "0.8.15"};
     *///?} else if >= 1.21.8 {
@@ -29,10 +31,23 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     /*private static final String[] SODIUM_PERF_VERSIONS = {"0.8.13"};
     *///?}
 
-    public static final boolean SODIUM_PERF = FabricLoader.getInstance().getModContainer("sodium")
+    private static final String SODIUM_VERSION = FabricLoader.getInstance().getModContainer("sodium")
             .map(mod -> mod.getMetadata().getVersion().getFriendlyString())
-            .map(version -> Arrays.stream(SODIUM_PERF_VERSIONS).anyMatch(version::startsWith))
-            .orElse(false);
+            .orElse("");
+
+    public static final boolean SODIUM_PERF = Arrays.stream(SODIUM_PERF_VERSIONS).anyMatch(SODIUM_VERSION::startsWith);
+
+    private static final String SODIUM_08_PACKAGE = SODIUM_PERF_PACKAGE + "v08.";
+    private static final Set<String> SODIUM_09_ONLY = Set.of(
+            SODIUM_PERF_PACKAGE + "MixinAnimatedSpriteMarksRegion",
+            SODIUM_PERF_PACKAGE + "MixinSpriteSetRegion",
+            SODIUM_PERF_PACKAGE + "MixinRegionList"
+    );
+    //? if >= 26.1 && < 26.2 {
+    /*private static final boolean SODIUM_08 = SODIUM_VERSION.startsWith("0.8.");
+    *///?} else {
+    private static final boolean SODIUM_08 = false;
+    //?}
 
     private static final String[] DISABLED = System.getProperty("polydium.disable", "").split(",");
 
@@ -112,7 +127,16 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (contains(OPT_IN, mixinClassName) && !contains(ENABLED, mixinClassName))
             return false;
 
-        return SODIUM_PERF || !mixinClassName.startsWith(SODIUM_PERF_PACKAGE);
+        if (!mixinClassName.startsWith(SODIUM_PERF_PACKAGE))
+            return true;
+
+        if (!SODIUM_PERF)
+            return false;
+
+        if (mixinClassName.startsWith(SODIUM_08_PACKAGE))
+            return SODIUM_08;
+
+        return !SODIUM_08 || !SODIUM_09_ONLY.contains(mixinClassName);
     }
 
     @Override
