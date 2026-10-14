@@ -10,7 +10,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 
-@Mixin(RenderType.class)
+// above default so the wrap can still land inside VulkanMod's @Overwrite of draw
+@Mixin(value = RenderType.class, priority = 1100)
 public class MixinDefaultTextureMatrix {
     @Unique
     private static final Matrix4f POLYDIUM_IDENTITY = new Matrix4f();

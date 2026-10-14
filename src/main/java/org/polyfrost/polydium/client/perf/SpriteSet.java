@@ -15,6 +15,12 @@ public final class SpriteSet {
         void polydium$forgetSprites();
     }
 
+    //? if >= 26.1 && < 26.2 {
+    /*public interface SectionSprites {
+        TextureAtlasSprite[] polydium$animatedSprites();
+    }
+    *///?}
+
     public static int generation() {
         return generation;
     }

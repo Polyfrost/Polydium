@@ -164,10 +164,12 @@ tasks.test {
 
 tasks.withType<ProcessResources>().configureEach {
     val modName = project.property("mod.name") as String
+    val oneconfigVersion = project.property("deps.oneconfig") as String
     inputs.property("modId", modId)
     inputs.property("modName", modName)
     inputs.property("modVersion", modVersion)
     inputs.property("minorMcVersion", minecraftPredicate)
+    inputs.property("oneconfigVersion", oneconfigVersion)
     filesMatching("fabric.mod.json") {
         expand(
             mapOf(
@@ -176,6 +178,7 @@ tasks.withType<ProcessResources>().configureEach {
                 "mod_version" to modVersion,
                 "mod_description" to "Client performance optimizations for OneClient",
                 "minor_mc_version" to minecraftPredicate,
+                "oneconfig_version" to oneconfigVersion,
             ),
         )
     }
@@ -194,6 +197,10 @@ tasks.matching { it.name == "createMinecraftArtifacts" }.configureEach {
 
 val modrinthId = listOf("oneconfig.publish.modrinth", "publish.modrinth").firstNotNullOfOrNull(::optionalProperty)
 val modrinthToken = listOf("oneconfig.publish.modrinth.token", "publish.modrinth.token", "modrinth.token")
+    .firstNotNullOfOrNull(::optionalProperty)
+
+val curseforgeId = listOf("oneconfig.publish.curseforge", "publish.curseforge").firstNotNullOfOrNull(::optionalProperty)
+val curseforgeToken = listOf("oneconfig.publish.curseforge.token", "publish.curseforge.token", "curseforge.token")
     .firstNotNullOfOrNull(::optionalProperty)
 
 val changelogs = rootProject.file("CHANGELOG.md").takeIf { it.exists() }?.readText() ?: "No changelog provided."
@@ -227,7 +234,7 @@ publishMods {
 
     modLoaders.add("fabric")
 
-    dryRun = modrinthId == null || modrinthToken == null
+    dryRun = (modrinthId == null || modrinthToken == null) && (curseforgeId == null || curseforgeToken == null)
 
     if (modrinthId != null) {
         modrinth {
@@ -235,6 +242,24 @@ publishMods {
             accessToken = modrinthToken.orEmpty()
 
             minecraftVersions.addAll(compatibleVersions.ifEmpty { listOf(mcVersion) })
+
+            environment = CLIENT_ONLY
+
+            requires("oneconfig")
+            requires("fabric-api")
+            requires("fabric-language-kotlin")
+        }
+    }
+
+    if (curseforgeId != null) {
+        curseforge {
+            projectId = curseforgeId
+            accessToken = curseforgeToken.orEmpty()
+
+            minecraftVersions.addAll(compatibleVersions.ifEmpty { listOf(mcVersion) })
+
+            client = true
+            server = false
 
             requires("oneconfig")
             requires("fabric-api")

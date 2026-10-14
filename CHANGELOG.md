@@ -1,3 +1,2 @@
-## 1.0.3
-- Fix Iris pack GL state corruption
-- Fix textures being rendered weirdly
+## 1.0.5
+- Fixed random crash when reloading resources on Minecraft 26.3
