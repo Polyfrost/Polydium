@@ -194,6 +194,10 @@ val modrinthId = listOf("oneconfig.publish.modrinth", "publish.modrinth").firstN
 val modrinthToken = listOf("oneconfig.publish.modrinth.token", "publish.modrinth.token", "modrinth.token")
     .firstNotNullOfOrNull(::optionalProperty)
 
+val curseforgeId = listOf("oneconfig.publish.curseforge", "publish.curseforge").firstNotNullOfOrNull(::optionalProperty)
+val curseforgeToken = listOf("oneconfig.publish.curseforge.token", "publish.curseforge.token", "curseforge.token")
+    .firstNotNullOfOrNull(::optionalProperty)
+
 val changelogs = rootProject.file("CHANGELOG.md").takeIf { it.exists() }?.readText() ?: "No changelog provided."
 
 val validateChangelog = tasks.register("validateChangelog") {
@@ -225,7 +229,7 @@ publishMods {
 
     modLoaders.add("fabric")
 
-    dryRun = modrinthId == null || modrinthToken == null
+    dryRun = (modrinthId == null || modrinthToken == null) && (curseforgeId == null || curseforgeToken == null)
 
     if (modrinthId != null) {
         modrinth {
@@ -233,6 +237,24 @@ publishMods {
             accessToken = modrinthToken.orEmpty()
 
             minecraftVersions.addAll(compatibleVersions.ifEmpty { listOf(mcVersion) })
+
+            environment = CLIENT_ONLY
+
+            requires("oneconfig")
+            requires("fabric-api")
+            requires("fabric-language-kotlin")
+        }
+    }
+
+    if (curseforgeId != null) {
+        curseforge {
+            projectId = curseforgeId
+            accessToken = curseforgeToken.orEmpty()
+
+            minecraftVersions.addAll(compatibleVersions.ifEmpty { listOf(mcVersion) })
+
+            client = true
+            server = false
 
             requires("oneconfig")
             requires("fabric-api")
