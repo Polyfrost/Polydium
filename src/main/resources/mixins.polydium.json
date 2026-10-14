@@ -252,6 +252,7 @@
     "client.perf.vulkan.MixinVulkanTexelViewCache",
     //? if >= 1.21.11
     "client.perf.MixinSodiumExtraFrameCounter",
+    "client.perf.MixinSparkBackgroundProfiler",
     //? if >= 1.21.1
     "client.perf.MixinAnimateTickFluid",
     //? if >= 1.21.1
