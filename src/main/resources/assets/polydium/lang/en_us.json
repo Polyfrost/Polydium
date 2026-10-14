@@ -1,8 +1,0 @@
-{
-  "options.graphicsApi": "Graphics API",
-  "options.graphicsApi.default": "Default",
-  "options.graphicsApi.opengl": "Prefer OpenGL",
-  "options.graphicsApi.tooltip": "Which graphics API to use for rendering. Leave as Default unless you have a specific need to change this!",
-  "options.graphicsApi.tooltip.vulkan": "Experimental. Might reduce performance or cause instability on some systems.",
-  "options.graphicsApi.vulkan": "Prefer Vulkan (Experimental)"
-}

@@ -38,15 +38,16 @@ public abstract class MixinVulkanRenderPassTexelView {
         if (!(slice.buffer() instanceof VulkanGpuBuffer.Direct direct) || direct.isClosed()) {
             return original.call(device, info, allocator, view);
         }
-        TexelViewCache.Views views = ((TexelViewCache) direct).polydium$texelViews();
-        if (views.reuse(info, view)) {
+        TexelViewCache cache = (TexelViewCache) direct;
+        long handle = cache.polydium$findTexelView(info.offset(), info.range(), info.format());
+        if (handle != 0L) {
+            view.put(0, handle);
             this.polydium$texelViewCached = true;
             return VK10.VK_SUCCESS;
         }
-
         int result = original.call(device, info, allocator, view);
         if (result == VK10.VK_SUCCESS) {
-            this.polydium$texelViewCached = views.store(info, view.get(0));
+            this.polydium$texelViewCached = cache.polydium$storeTexelView(info.offset(), info.range(), info.format(), view.get(0));
         }
         return result;
     }

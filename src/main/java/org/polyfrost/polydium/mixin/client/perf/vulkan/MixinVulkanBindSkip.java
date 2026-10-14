@@ -20,13 +20,24 @@ import java.nio.LongBuffer;
 @Mixin(VulkanRenderPass.class)
 public abstract class MixinVulkanBindSkip {
     @Unique
-    private final VulkanDynamicState.Bindings polydium$bindings = new VulkanDynamicState.Bindings();
+    private long polydium$boundPipeline;
+    @Unique
+    private long polydium$boundVertexBuffer;
+    @Unique
+    private long polydium$boundVertexOffset;
+    @Unique
+    private long polydium$boundIndexBuffer;
+    @Unique
+    private long polydium$boundIndexOffset;
+    @Unique
+    private int polydium$boundIndexType;
 
     @WrapWithCondition(
         method = "setPipeline",
         at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/VK12;vkCmdBindPipeline(Lorg/lwjgl/vulkan/VkCommandBuffer;IJ)V")
     )
     private boolean polydium$bindChangedPipeline(VkCommandBuffer commandBuffer, int bindPoint, long pipeline) {
+        this.polydium$boundPipeline = pipeline;
         return VulkanDynamicState.changesPipeline(commandBuffer.address(), pipeline);
     }
 
@@ -41,8 +52,12 @@ public abstract class MixinVulkanBindSkip {
     )
     private void polydium$bindVertexBufferDirectly(VkCommandBuffer commandBuffer, int slot, LongBuffer buffers, LongBuffer offsets, Operation<Void> original,
                                                    @Local MemoryStack stack, @Local(ordinal = 0) long buffer, @Local(ordinal = 1) long offset) {
-        if (!this.polydium$bindings.changesVertexBuffer(slot, buffer, offset)) {
-            return;
+        if (slot == 0) {
+            if (buffer == this.polydium$boundVertexBuffer && offset == this.polydium$boundVertexOffset) {
+                return;
+            }
+            this.polydium$boundVertexBuffer = buffer;
+            this.polydium$boundVertexOffset = offset;
         }
         long values = stack.nmalloc(Long.BYTES, 2 * Long.BYTES);
         MemoryUtil.memPutLong(values, buffer);
@@ -55,7 +70,13 @@ public abstract class MixinVulkanBindSkip {
         at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/VK12;vkCmdBindIndexBuffer(Lorg/lwjgl/vulkan/VkCommandBuffer;JJI)V")
     )
     private boolean polydium$bindChangedIndexBuffer(VkCommandBuffer commandBuffer, long buffer, long offset, int indexType) {
-        return this.polydium$bindings.changesIndexBuffer(buffer, offset, indexType);
+        if (buffer == this.polydium$boundIndexBuffer && offset == this.polydium$boundIndexOffset && indexType == this.polydium$boundIndexType) {
+            return false;
+        }
+        this.polydium$boundIndexBuffer = buffer;
+        this.polydium$boundIndexOffset = offset;
+        this.polydium$boundIndexType = indexType;
+        return true;
     }
 }
 //?}

@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 import java.nio.LongBuffer;
+import java.util.concurrent.locks.Lock;
 
 @Mixin(VulkanRenderPipeline.class)
 public abstract class MixinVulkanPipelineCacheUse {
@@ -24,7 +25,14 @@ public abstract class MixinVulkanPipelineCacheUse {
         allow = 2
     )
     private static int polydium$usePipelineCache(VkDevice vkDevice, long pipelineCache, VkGraphicsPipelineCreateInfo.Buffer createInfos, VkAllocationCallbacks allocator, LongBuffer pipelines, Operation<Integer> original, @Local(argsOnly = true) VulkanDevice device) {
-        return ((VulkanPipelineCache.Holder) device).polydium$pipelineCache().createPipelines(vkDevice, createInfos, allocator, pipelines, original);
+        VulkanPipelineCache cache = (VulkanPipelineCache) device;
+        Lock use = cache.polydium$pipelineCacheUse();
+        use.lock();
+        try {
+            return original.call(vkDevice, cache.polydium$pipelineCache(), createInfos, allocator, pipelines);
+        } finally {
+            use.unlock();
+        }
     }
 }
 //?}

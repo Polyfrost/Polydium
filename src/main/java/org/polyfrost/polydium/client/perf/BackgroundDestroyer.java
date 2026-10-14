@@ -1,19 +1,11 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if >= 1.21.11 {
 //? if >= 26.2 {
 import com.mojang.renderpearl.backend.vulkan.Destroyable;
 import com.mojang.renderpearl.backend.vulkan.DestructionQueue;
 import com.mojang.renderpearl.backend.vulkan.VulkanGpuBuffer;
 import com.mojang.renderpearl.backend.vulkan.VulkanGpuTexture;
 import com.mojang.renderpearl.backend.vulkan.VulkanGpuTextureView;
-//?} else {
-/*import org.polyfrost.polydium.vulkan.Destroyable;
-import org.polyfrost.polydium.vulkan.DestructionQueue;
-import org.polyfrost.polydium.vulkan.VulkanGpuBuffer;
-import org.polyfrost.polydium.vulkan.VulkanGpuTexture;
-import org.polyfrost.polydium.vulkan.VulkanGpuTextureView;
-*///?}
 
 import java.util.ArrayList;
 import java.util.List;

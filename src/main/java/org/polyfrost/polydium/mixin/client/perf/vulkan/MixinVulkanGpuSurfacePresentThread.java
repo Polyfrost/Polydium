@@ -9,7 +9,9 @@ import com.mojang.renderpearl.api.device.SurfaceException;
 import com.mojang.renderpearl.backend.vulkan.VulkanDevice;
 import com.mojang.renderpearl.backend.vulkan.VulkanGpuSurface;
 import com.mojang.renderpearl.backend.vulkan.VulkanUtils;
+import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.KHRSwapchain;
+import org.lwjgl.vulkan.VkPresentInfoKHR;
 import org.lwjgl.vulkan.VkQueue;
 import org.lwjgl.vulkan.VkSurfaceCapabilitiesKHR;
 import org.polyfrost.polydium.client.perf.PresentThread;
@@ -109,15 +111,25 @@ public abstract class MixinVulkanGpuSurfacePresentThread {
 
     @Unique
     private void polydium$queuePresent(long semaphore, long frameChain, int imageIndex) {
-        int result = PresentThread.queuePresent(this.presentQueue, semaphore, frameChain, imageIndex);
-        if (result == KHRSwapchain.VK_ERROR_OUT_OF_DATE_KHR) {
-            this.swapchainSuboptimal = true;
-            this.swapchainOutOfDate  = true;
-            this.eatenException      = new SurfaceException("Failed to present image, swapchain out of date");
-        } else if (result == KHRSwapchain.VK_SUBOPTIMAL_KHR) {
-            this.swapchainSuboptimal = true;
-        } else {
-            VulkanUtils.crashIfFailure(this.device, result, "Failed to present image");
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            VkPresentInfoKHR presentInfo = VkPresentInfoKHR.calloc(stack).sType$Default();
+
+            presentInfo.pWaitSemaphores(stack.longs(semaphore));
+            presentInfo.swapchainCount(1);
+            presentInfo.pSwapchains(stack.longs(frameChain));
+            presentInfo.pImageIndices(stack.ints(imageIndex));
+
+            int result = KHRSwapchain.vkQueuePresentKHR(this.presentQueue, presentInfo);
+
+            if (result == KHRSwapchain.VK_ERROR_OUT_OF_DATE_KHR) {
+                this.swapchainSuboptimal = true;
+                this.swapchainOutOfDate  = true;
+                this.eatenException      = new SurfaceException("Failed to present image, swapchain out of date");
+            } else if (result == KHRSwapchain.VK_SUBOPTIMAL_KHR) {
+                this.swapchainSuboptimal = true;
+            } else {
+                VulkanUtils.crashIfFailure(this.device, result, "Failed to present image");
+            }
         }
     }
 }

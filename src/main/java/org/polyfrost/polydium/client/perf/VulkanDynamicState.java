@@ -1,20 +1,9 @@
 package org.polyfrost.polydium.client.perf;
 
 //? if >= 1.21.11 {
-//? if >= 26.2 && < 26.3 {
-/*import com.mojang.blaze3d.vulkan.VulkanBindGroupLayout;
-*///?} else if < 26.2 {
-/*import org.polyfrost.polydium.vulkan.VulkanBindGroupLayout;
-*///?}
 import it.unimi.dsi.fastutil.objects.ReferenceList;
-import org.lwjgl.vulkan.VkCommandBuffer;
-import org.lwjgl.vulkan.VkRect2D;
-import org.lwjgl.vulkan.VkViewport;
 
 import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public final class VulkanDynamicState {
     private static long commandBuffer;
@@ -26,10 +15,6 @@ public final class VulkanDynamicState {
     private static long descriptorLayout;
     private static int descriptorCount = -1;
     private static Object[] descriptors = new Object[16];
-    private static boolean sameDescriptors;
-    public static final Object[] NO_SLOTS = {};
-    private static final ConcurrentHashMap<String, Integer> SLOTS = new ConcurrentHashMap<>();
-    private static final AtomicInteger NEXT_SLOT = new AtomicInteger();
 
     private VulkanDynamicState() {
     }
@@ -65,13 +50,31 @@ public final class VulkanDynamicState {
 
     public static boolean changesDescriptors(long buffer, long layout, ReferenceList<Object> values) {
         int count = values.size();
-        beginDescriptors(buffer, layout, count);
-        for (int index = 0; index < count; index++) {
-            if (!descriptor(index, count, values.get(index))) {
-                return true;
+        if (buffer == commandBuffer && layout == descriptorLayout && count == descriptorCount) {
+            int index = 0;
+            while (index < count && descriptors[index].equals(values.get(index))) {
+                index++;
+            }
+            if (index == count) {
+                return false;
             }
         }
-        return endDescriptors(layout, count);
+        track(buffer);
+        forgetDescriptors();
+        if (descriptors.length < count) {
+            descriptors = new Object[count];
+        }
+        for (int index = 0; index < count; index++) {
+            Object value = values.get(index);
+            if (value == null) {
+                Arrays.fill(descriptors, 0, index, null);
+                return true;
+            }
+            descriptors[index] = value;
+        }
+        descriptorLayout = layout;
+        descriptorCount = count;
+        return true;
     }
 
     public static boolean changesViewport(long buffer, float x, float y, float width, float height, float minDepth, float maxDepth) {
@@ -101,134 +104,6 @@ public final class VulkanDynamicState {
         scissorWidth = width;
         scissorHeight = height;
         return true;
-    }
-
-    public static boolean changesViewport(VkCommandBuffer buffer, int firstViewport, VkViewport.Buffer viewports) {
-        if (firstViewport != 0 || viewports.remaining() != 1) {
-            reset();
-            return true;
-        }
-        VkViewport viewport = viewports.get(viewports.position());
-        return changesViewport(buffer.address(), viewport.x(), viewport.y(), viewport.width(), viewport.height(), viewport.minDepth(), viewport.maxDepth());
-    }
-
-    public static boolean changesScissor(VkCommandBuffer buffer, int firstScissor, VkRect2D.Buffer scissors) {
-        if (firstScissor != 0 || scissors.remaining() != 1) {
-            reset();
-            return true;
-        }
-        VkRect2D scissor = scissors.get(scissors.position());
-        return changesScissor(buffer.address(), scissor.offset().x(), scissor.offset().y(), scissor.extent().width(), scissor.extent().height());
-    }
-
-    public static int slot(String name) {
-        Integer slot = SLOTS.get(name);
-        return slot != null ? slot : SLOTS.computeIfAbsent(name, key -> NEXT_SLOT.getAndIncrement());
-    }
-
-    public static Object[] setSlot(Object[] slots, String name, Object value) {
-        int slot = slot(name);
-        if (slot >= slots.length) {
-            if (value == null) {
-                return slots;
-            }
-            slots = Arrays.copyOf(slots, slot + 8);
-        }
-        slots[slot] = value;
-        return slots;
-    }
-
-    //? if < 26.3 {
-    /*public static int[] slots(List<VulkanBindGroupLayout.Entry> entries) {
-        int[] slots = new int[entries.size()];
-        for (int index = 0; index < slots.length; index++) {
-            slots[index] = slot(entries.get(index).name());
-        }
-        return slots;
-    }
-
-    public static boolean changesDescriptors(long buffer, long layout, List<VulkanBindGroupLayout.Entry> entries, int[] slots, Object[] textureSlots, Object[] uniformSlots) {
-        int count = entries.size();
-        beginDescriptors(buffer, layout, count);
-        for (int index = 0; index < count; index++) {
-            Object[] values = entries.get(index).type() == VulkanBindGroupLayout.VulkanBindGroupEntryType.SAMPLED_IMAGE ? textureSlots : uniformSlots;
-            int slot = slots[index];
-            if (!descriptor(index, count, slot < values.length ? values[slot] : null)) {
-                return true;
-            }
-        }
-        return endDescriptors(layout, count);
-    }
-    *///?}
-
-    //? if >= 26.2 && < 26.3 {
-    /*public interface LayoutSlots {
-        int[] polydium$slots();
-    }
-    *///?}
-
-    private static void beginDescriptors(long buffer, long layout, int count) {
-        sameDescriptors = buffer == commandBuffer && layout == descriptorLayout && count == descriptorCount;
-        if (!sameDescriptors) {
-            track(buffer);
-            forgetDescriptors();
-            if (descriptors.length < count) {
-                descriptors = new Object[count];
-            }
-        }
-    }
-
-    private static boolean descriptor(int index, int count, Object value) {
-        if (value == null) {
-            Arrays.fill(descriptors, 0, count, null);
-            descriptorLayout = 0L;
-            descriptorCount = -1;
-            return false;
-        }
-        if (!sameDescriptors || !descriptors[index].equals(value)) {
-            sameDescriptors = false;
-            descriptors[index] = value;
-        }
-        return true;
-    }
-
-    private static boolean endDescriptors(long layout, int count) {
-        if (sameDescriptors) {
-            return false;
-        }
-        descriptorLayout = layout;
-        descriptorCount = count;
-        return true;
-    }
-
-    public static final class Bindings {
-        private long vertexBuffer;
-        private long vertexOffset;
-        private long indexBuffer;
-        private long indexOffset;
-        private int indexType;
-
-        public boolean changesVertexBuffer(int slot, long buffer, long offset) {
-            if (slot != 0) {
-                return true;
-            }
-            if (buffer == this.vertexBuffer && offset == this.vertexOffset) {
-                return false;
-            }
-            this.vertexBuffer = buffer;
-            this.vertexOffset = offset;
-            return true;
-        }
-
-        public boolean changesIndexBuffer(long buffer, long offset, int type) {
-            if (buffer == this.indexBuffer && offset == this.indexOffset && type == this.indexType) {
-                return false;
-            }
-            this.indexBuffer = buffer;
-            this.indexOffset = offset;
-            this.indexType = type;
-            return true;
-        }
     }
 
     private static void track(long buffer) {

@@ -161,75 +161,6 @@
     "client.perf.sodium.MixinTranslucentSortSmall",
     //? if >= 1.21.11
     "client.perf.sodium.MixinTerrainRgssSkip",
-    //? if >= 26.1 && < 26.2
-    //"client.perf.vulkan.backport.MixinVulkanBackendList",
-    //? if >= 1.21.11 && < 26.1 {
-    /*"client.perf.vulkan.backport.MixinVulkanBackendListOneConfig",
-    "client.perf.vulkan.backport.MixinVulkanBackendListRenderSystem",
-    "client.perf.vulkan.backport.MixinVulkanBackendListWindow",
-    *///?}
-    //? if >= 1.21.11 && < 26.2 {
-    /*"client.perf.vulkan.backport.MixinGraphicsApiOption",
-    "client.perf.sodium.vulkan.MixinGraphicsApiOptionSodium",
-    "client.perf.sodium.vulkan.MixinVulkanBufferStorage",
-    "client.perf.sodium.vulkan.MixinVulkanChunkRendererInvoker",
-    "client.perf.sodium.vulkan.MixinVulkanFrameEnd",
-    "client.perf.sodium.vulkan.MixinVulkanGlBuffer",
-    "client.perf.sodium.vulkan.MixinVulkanRenderAhead",
-    "client.perf.sodium.vulkan.MixinVulkanRenderDevice",
-    "client.perf.sodium.vulkan.MixinVulkanSodium08ChunkRenderer",
-    "client.perf.sodium.vulkan.MixinVulkanSodiumGuard",
-    "client.perf.sodium.vulkan.MixinVulkanSodiumOptions",
-    "client.perf.sodium.vulkan.MixinVulkanStagingBuffer",
-    "client.perf.vulkan.backport.MixinMinecraftPresentThreadBackport",
-    "client.perf.vulkan.backport.MixinVulkanBackendListAsyncParticles",
-    "client.perf.vulkan.backport.MixinVulkanBackendListDistantHorizons",
-    "client.perf.vulkan.backport.MixinVulkanBackendListGlState",
-    "client.perf.vulkan.backport.MixinVulkanBackendListImGui",
-    "client.perf.vulkan.backport.MixinVulkanBackgroundDestroyBackport",
-    "client.perf.vulkan.backport.MixinVulkanBackgroundDestroyDrainBackport",
-    "client.perf.vulkan.backport.MixinVulkanBindSkipBackport",
-    "client.perf.vulkan.backport.MixinVulkanBufferMappingBackport",
-    "client.perf.vulkan.backport.MixinVulkanBufferMappingUnmapBackport",
-    "client.perf.vulkan.backport.MixinVulkanCommandEncoderPresentThreadBackport",
-    "client.perf.vulkan.backport.MixinVulkanDeferralBackport",
-    "client.perf.vulkan.backport.MixinVulkanDescriptorPushSkipBackport",
-    "client.perf.vulkan.backport.MixinVulkanDhLightmap",
-    "client.perf.vulkan.backport.MixinVulkanDynamicStateBackport",
-    "client.perf.vulkan.backport.MixinVulkanDynamicStateResetBackport",
-    "client.perf.vulkan.backport.MixinVulkanFancyMenu",
-    "client.perf.vulkan.backport.MixinVulkanFancyMenuScissor",
-    "client.perf.vulkan.backport.MixinVulkanGpuSurfacePresentThreadBackport",
-    "client.perf.vulkan.backport.MixinVulkanImGui",
-    "client.perf.vulkan.backport.MixinVulkanLazyTransientBackport",
-    "client.perf.vulkan.backport.MixinVulkanLazyTransientEncoderAccessorBackport",
-    "client.perf.vulkan.backport.MixinVulkanLazyTransientStageAccessorBackport",
-    "client.perf.vulkan.backport.MixinVulkanLazyTransientSubmissionBackport",
-    "client.perf.vulkan.backport.MixinVulkanModGl",
-    "client.perf.vulkan.backport.MixinVulkanPipelineCacheBackport",
-    "client.perf.vulkan.backport.MixinVulkanPipelineCacheUseBackport",
-    "client.perf.vulkan.backport.MixinVulkanQueuePresentDrainBackport",
-    "client.perf.vulkan.backport.MixinVulkanRenderPassTexelViewBackport",
-    "client.perf.vulkan.backport.MixinVulkanSemaphoreCounterReadBackport",
-    "client.perf.vulkan.backport.MixinVulkanServerEntryGl",
-    "client.perf.vulkan.backport.MixinVulkanSubmissionPresentDrainBackport",
-    "client.perf.vulkan.backport.MixinVulkanTexelViewCacheBackport",
-    "client.perf.vulkan.backport.MixinVulkanUniversalCraft",
-    "client.perf.vulkan.backport.MixinVulkanXaero",
-    "client.perf.vulkan.backport.MixinVulkanXaeroWorldMap",
-    *///?}
-    //? if >= 26.1 && < 26.2 {
-    /*"client.perf.sodium.vulkan.MixinVulkanChunkRenderer",
-    "client.perf.sodium.vulkan.MixinVulkanGlTexelBuffer",
-    "client.perf.sodium.vulkan.MixinVulkanGpuBufferHandle",
-    "client.perf.vulkan.backport.MixinVulkanGpuWaitMeterBackport",
-    "client.perf.vulkan.backport.MixinVulkanJourneyMap",
-    "client.perf.vulkan.backport.MixinVulkanOdin",
-    "client.perf.vulkan.backport.MixinVulkanOwoBlur",
-    "client.perf.vulkan.backport.MixinVulkanOwoBraid",
-    "client.perf.vulkan.backport.MixinVulkanShine",
-    "client.perf.vulkan.backport.MixinVulkanStella",
-    *///?}
     //? if >= 26.2
     "client.perf.vulkan.MixinStagedRecyclePoll",
     //? if >= 26.2
@@ -341,8 +272,6 @@
     "client.perf.vulkan.MixinFrontendRenderPipelineUniforms",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanDescriptorPushSkip",
-    //? if >= 26.2 && < 26.3
-    //"client.perf.vulkan.MixinVulkanBindGroupLayoutSlots",
     //? if >= 26.3
     "client.perf.vulkan.MixinVulkanPushConstantCall",
     //? if >= 1.21.8
@@ -407,7 +336,7 @@
     "client.perf.MixinHideTitleFade",
     //? if >= 26.2
     "client.perf.vulkan.MixinMinecraftPresentThread",
-    //? if >= 1.21.11
+    //? if >= 26.2
     "client.perf.vulkan.MixinAutoVulkan",
     //? if >= 1.21.11
     "client.perf.vulkan.MixinIrisUppercasePaths",
@@ -473,7 +402,7 @@
     "client.perf.vulkan.MixinVulkanQueuePresentDrain",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanSubmissionPresentDrain",
-    //? if >= 1.21.11
+    //? if >= 26.2
     "client.perf.vulkan.MixinSkiaPresentDrain",
     //? if >= 1.21.5
     "client.perf.MixinSkipFirstMainClear",
