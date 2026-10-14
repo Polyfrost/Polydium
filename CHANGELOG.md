@@ -1,2 +1,3 @@
-## 1.0.5
-- Fixed random crash when reloading resources on Minecraft 26.3
+## 1.0.6
+- Stop spark from running background profiles in singleplayer
+- Add uppercase paths fix from Iris
