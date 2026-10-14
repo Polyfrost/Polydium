@@ -32,3 +32,22 @@ public abstract class MixinAutoVulkan {
     }
 }
 //?}
+//? if >= 1.21.11 && < 26.2 {
+/*import net.minecraft.client.Minecraft;
+import org.polyfrost.polydium.early.EarlyVulkan;
+import org.polyfrost.polydium.vulkan.VulkanActive;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+@Mixin(Minecraft.class)
+public abstract class MixinAutoVulkan {
+
+    @Inject(method = "<init>", at = @At("TAIL"))
+    private void polydium$undoFailedVulkan(CallbackInfo ci) {
+        if (EarlyVulkan.vulkanAtStartup() && !VulkanActive.active && EarlyVulkan.switched())
+            EarlyVulkan.setGraphicsApi("default");
+    }
+}
+*///?}

@@ -5,11 +5,11 @@ import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.mojang.renderpearl.backend.vulkan.VulkanRenderPass;
 import com.mojang.renderpearl.backend.vulkan.VulkanRenderPipeline;
 //? if < 26.3 {
-/*import com.mojang.blaze3d.vulkan.VulkanBindGroupLayout;
+/*import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.mojang.blaze3d.vulkan.VulkanBindGroupLayout;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
-import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.HashMap;
-import java.util.List;
 *///?}
 import it.unimi.dsi.fastutil.objects.ReferenceList;
 import org.lwjgl.vulkan.VkCommandBuffer;
@@ -17,7 +17,8 @@ import org.polyfrost.polydium.client.perf.VulkanDynamicState;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
+//? if < 26.3
+/*import org.spongepowered.asm.mixin.Unique;*/
 import org.spongepowered.asm.mixin.injection.At;
 
 @Mixin(VulkanRenderPass.class)
@@ -46,7 +47,40 @@ public abstract class MixinVulkanDescriptorPushSkip {
     protected HashMap<String, Object> textures;
 
     @Unique
-    private static final ReferenceArrayList<Object> POLYDIUM$VALUES = new ReferenceArrayList<>();
+    private Object[] polydium$uniformSlots = VulkanDynamicState.NO_SLOTS;
+
+    @Unique
+    private Object[] polydium$textureSlots = VulkanDynamicState.NO_SLOTS;
+
+    @WrapOperation(
+        method = {
+            "setUniform(Ljava/lang/String;Lcom/mojang/renderpearl/api/buffers/GpuBuffer;)V",
+            "setUniform(Ljava/lang/String;Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;)V",
+            "bindTexture"
+        },
+        at = @At(value = "INVOKE", target = "Ljava/util/HashMap;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
+    )
+    private Object polydium$mirrorSlot(HashMap<Object, Object> map, Object name, Object value, Operation<Object> original) {
+        Object previous = original.call(map, name, value);
+        if (!value.equals(previous)) {
+            if (map == (Object) this.textures) {
+                this.polydium$textureSlots = VulkanDynamicState.setSlot(this.polydium$textureSlots, (String) name, value);
+            } else {
+                this.polydium$uniformSlots = VulkanDynamicState.setSlot(this.polydium$uniformSlots, (String) name, value);
+            }
+        }
+        return previous;
+    }
+
+    @WrapOperation(method = "bindTexture", at = @At(value = "INVOKE", target = "Ljava/util/HashMap;remove(Ljava/lang/Object;)Ljava/lang/Object;"))
+    private Object polydium$clearSlot(HashMap<Object, Object> map, Object name, Operation<Object> original) {
+        Object previous = original.call(map, name);
+        if (previous != null) {
+            this.polydium$textureSlots = VulkanDynamicState.setSlot(this.polydium$textureSlots, (String) name, null);
+        }
+        return previous;
+    }
+
     *///?}
 
     @WrapWithCondition(
@@ -66,7 +100,14 @@ public abstract class MixinVulkanDescriptorPushSkip {
         }
         VulkanRenderPipeline pipeline = this.pipeline;
         if (pipeline != null) {
-            if (VulkanDynamicState.changesDescriptors(this.commandBuffer.address(), pipeline.pipelineLayout(), this.polydium$values(pipeline))) {
+            //? if >= 26.3 {
+            boolean changed = VulkanDynamicState.changesDescriptors(this.commandBuffer.address(), pipeline.pipelineLayout(), this.uniforms);
+            //?} else {
+            /*VulkanBindGroupLayout layout = pipeline.layout();
+            boolean changed = VulkanDynamicState.changesDescriptors(this.commandBuffer.address(), pipeline.pipelineLayout(), layout.entries(),
+                ((VulkanDynamicState.LayoutSlots) (Object) layout).polydium$slots(), this.polydium$textureSlots, this.polydium$uniformSlots);
+            *///?}
+            if (changed) {
                 return true;
             }
             this.anyDescriptorDirty = false;
@@ -74,22 +115,6 @@ public abstract class MixinVulkanDescriptorPushSkip {
         }
         VulkanDynamicState.forgetDescriptors();
         return true;
-    }
-
-    @Unique
-    private ReferenceList<Object> polydium$values(VulkanRenderPipeline pipeline) {
-        //? if >= 26.3 {
-        return this.uniforms;
-        //?} else {
-        /*ReferenceArrayList<Object> values = POLYDIUM$VALUES;
-        List<VulkanBindGroupLayout.Entry> entries = pipeline.layout().entries();
-        values.clear();
-        for (int index = 0; index < entries.size(); index++) {
-            VulkanBindGroupLayout.Entry entry = entries.get(index);
-            values.add(entry.type() == VulkanBindGroupLayout.VulkanBindGroupEntryType.SAMPLED_IMAGE ? this.textures.get(entry.name()) : this.uniforms.get(entry.name()));
-        }
-        return values;
-        *///?}
     }
 }
 //?}

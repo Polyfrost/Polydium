@@ -17,13 +17,7 @@ public abstract class MixinVulkanDynamicState {
         at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/VK12;vkCmdSetViewport(Lorg/lwjgl/vulkan/VkCommandBuffer;ILorg/lwjgl/vulkan/VkViewport$Buffer;)V")
     )
     private boolean polydium$setChangedViewport(VkCommandBuffer commandBuffer, int firstViewport, VkViewport.Buffer viewports) {
-        if (firstViewport != 0 || viewports.remaining() != 1) {
-            VulkanDynamicState.reset();
-            return true;
-        }
-        VkViewport viewport = viewports.get(viewports.position());
-        return VulkanDynamicState.changesViewport(commandBuffer.address(), viewport.x(), viewport.y(), viewport.width(),
-            viewport.height(), viewport.minDepth(), viewport.maxDepth());
+        return VulkanDynamicState.changesViewport(commandBuffer, firstViewport, viewports);
     }
 
     @WrapWithCondition(
@@ -31,13 +25,7 @@ public abstract class MixinVulkanDynamicState {
         at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/VK12;vkCmdSetScissor(Lorg/lwjgl/vulkan/VkCommandBuffer;ILorg/lwjgl/vulkan/VkRect2D$Buffer;)V")
     )
     private static boolean polydium$setChangedScissor(VkCommandBuffer commandBuffer, int firstScissor, VkRect2D.Buffer scissors) {
-        if (firstScissor != 0 || scissors.remaining() != 1) {
-            VulkanDynamicState.reset();
-            return true;
-        }
-        VkRect2D scissor = scissors.get(scissors.position());
-        return VulkanDynamicState.changesScissor(commandBuffer.address(), scissor.offset().x(), scissor.offset().y(),
-            scissor.extent().width(), scissor.extent().height());
+        return VulkanDynamicState.changesScissor(commandBuffer, firstScissor, scissors);
     }
 }
 //?}

@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
-//? if >= 26.2 {
+//? if >= 1.21.11 {
 import org.polyfrost.polydium.client.perf.PresentThread;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;

@@ -97,6 +97,40 @@ if (stonecutter.current.parsed < "26.3") {
     sourceSets.test { kotlin.exclude("**/TxTextFastPathTest.kt") }
 }
 
+val vulkanBackport = stonecutter.current.parsed >= "1.21.11" && stonecutter.current.parsed < "26.2"
+if (!vulkanBackport) sourceSets.main {
+    java.exclude(
+        "org/polyfrost/polydium/vulkan/**",
+        "org/polyfrost/polydium/mixin/client/perf/vulkan/backport/**",
+        "org/polyfrost/polydium/mixin/client/perf/sodium/vulkan/**",
+        "org/polyfrost/polydium/mixin/late/**",
+        "org/polyfrost/oneconfig/internal/ui/services/**",
+    )
+    resources.exclude(
+        "mixins.polydium.late.json",
+        "assets/polydium/shaders/core/imgui.*",
+        "assets/polydium/shaders/core/odin_*",
+        "assets/polydium/shaders/include/odin_*",
+        "assets/polydium/shaders/include/sodium/**",
+        "assets/polydium/shaders/sodium/**",
+    )
+}
+
+if (vulkanBackport && stonecutter.current.parsed < "26.1") sourceSets.main {
+    resources.exclude("assets/polydium/shaders/core/odin_*", "assets/polydium/shaders/include/odin_*")
+}
+
+if (vulkanBackport) {
+    val moltenVk = configurations.detachedConfiguration(*listOf("macos", "macos-arm64").map {
+        dependencies.create("org.lwjgl:lwjgl-vulkan:${findProperty("deps.moltenvk") ?: property("deps.lwjgl")}:natives-$it")
+    }.toTypedArray())
+    val moltenVkResources = tasks.register<Sync>("moltenVkResources") {
+        from({ moltenVk.map { zipTree(it) } }) { include("macos/**", "META-INF/macos/**") }
+        into(layout.buildDirectory.dir("generated/moltenvk"))
+    }
+    sourceSets.main { resources.srcDir(moltenVkResources) }
+}
+
 val loomExt = extensions.getByName<LoomGradleExtensionAPI>("loom")
 
 dependencies {
@@ -135,6 +169,16 @@ dependencies {
         modCompileOnly("maven.modrinth:skyboxify:$it") { isTransitive = false }
     }
 
+    if (vulkanBackport) {
+        val lwjgl = property("deps.lwjgl") as String
+        val platforms = listOf("windows", "windows-arm64", "linux", "macos", "macos-arm64")
+        include(implementation("org.lwjgl:lwjgl-vulkan:$lwjgl")!!)
+        for (module in listOf("vma", "shaderc", "spvc")) {
+            include(implementation("org.lwjgl:lwjgl-$module:$lwjgl")!!)
+            for (os in platforms) include(runtimeOnly("org.lwjgl:lwjgl-$module:$lwjgl:natives-$os")!!)
+        }
+    }
+
     testImplementation("org.junit.jupiter:junit-jupiter:${property("deps.junit")}")
     testImplementation("net.fabricmc:fabric-loader-junit:$fabricLoaderVersion")
 }
@@ -151,6 +195,7 @@ loomExt.runs.configureEach {
     ideConfigGenerated(true)
     runDir("../../run")
     vmArg("-Dfabric.classPathGroups=$modOutputGroup")
+    optionalProperty("polydium.quickPlay")?.let { programArgs("--quickPlaySingleplayer", it) }
 }
 
 tasks.test {

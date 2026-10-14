@@ -76,6 +76,13 @@ stonecutter parameters {
         string(eval(current.version, ">= 1.21.11"), "identifier") {
             replace("ResourceLocation", "Identifier")
         }
+        string(eval(current.version, "< 26.1")) {
+            for (name in listOf(
+                "GLFWErrorCapture", "pipeline.ColorTargetState", "pipeline.DepthStencilState", "platform.CompareOp",
+                "shaders.GpuDebugOptions", "systems.BackendCreationException", "systems.CommandEncoderBackend",
+                "systems.GpuBackend", "systems.GpuDeviceBackend", "systems.RenderPassBackend",
+            )) replace("com.mojang.blaze3d.$name", "org.polyfrost.polydium.vulkan.compat.${name.substringAfterLast('.')}")
+        }
         string(eval(current.version, "< 26.3")) {
             for ((new, old) in renderpearlRenames) {
                 replace("com.mojang.$new", "com.mojang.$old")
