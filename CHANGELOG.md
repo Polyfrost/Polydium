@@ -1,3 +1,2 @@
-## 1.0.6
-- Stop spark from running background profiles in singleplayer
-- Add uppercase paths fix from Iris
+## 1.1.0
+- Retroactively add Vulkan support to 1.21.11 / 26.1.2
