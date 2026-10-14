@@ -1,5 +1,8 @@
 # Polydium
 
+[![Modrinth downloads](https://img.shields.io/modrinth/dt/hbSfT032?style=flat&logo=modrinth&label=Modrinth&color=1bd96a)](https://modrinth.com/mod/hbSfT032)
+[![CurseForge downloads](https://img.shields.io/curseforge/dt/1740837?style=flat&logo=curseforge&label=CurseForge&color=f16436)](https://www.curseforge.com/minecraft/mc-mods/polydium)
+
 Miscellaneous client-side optimization mod built by Polyfrost. On average, adding Polydium alongside the [OneClient modpack](https://modrinth.com/modpack/oneclient-modpack) **improves average FPS by 20%.**
 
 The magic of this mod is how it works with other mods. Polydium works the best alongside Sodium, using its infrastructure to improve performance in mods such as 3D Skin Layers.
