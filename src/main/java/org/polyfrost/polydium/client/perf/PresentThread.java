@@ -1,8 +1,18 @@
 package org.polyfrost.polydium.client.perf;
 
+//? if >= 1.21.11 {
 //? if >= 26.2 {
 import com.mojang.renderpearl.api.device.GpuSurface;
 import com.mojang.renderpearl.backend.vulkan.VulkanQueue;
+//?} else {
+/*import org.polyfrost.polydium.vulkan.VulkanQueue;
+import org.polyfrost.polydium.vulkan.compat.GpuSurface;
+*///?}
+import org.lwjgl.system.MemoryStack;
+import org.lwjgl.vulkan.KHRSwapchain;
+import org.lwjgl.vulkan.VkPresentInfoKHR;
+import org.lwjgl.vulkan.VkQueue;
+
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.util.Optional;
@@ -116,6 +126,17 @@ public final class PresentThread {
             throw new IllegalStateException("A present was already captured for this frame");
 
         captured = present;
+    }
+
+    public static int queuePresent(VkQueue queue, long semaphore, long swapchain, int imageIndex) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            VkPresentInfoKHR presentInfo = VkPresentInfoKHR.calloc(stack).sType$Default();
+            presentInfo.pWaitSemaphores(stack.longs(semaphore));
+            presentInfo.swapchainCount(1);
+            presentInfo.pSwapchains(stack.longs(swapchain));
+            presentInfo.pImageIndices(stack.ints(imageIndex));
+            return KHRSwapchain.vkQueuePresentKHR(queue, presentInfo);
+        }
     }
 
     public static void drain() {

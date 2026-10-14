@@ -28,8 +28,10 @@ public final class EarlyVulkan implements LanguageAdapter {
     private static final Pattern DISCRETE_RADEON = Pattern.compile("radeont? rx(?! ?vega)|radeont? rx vega( 56| 64|$)"
             + "|radeon vii|vega frontier|radeon (ai )?pro (wx? ?\\d{4}|r\\d{4})");
 
+    private static Boolean vulkanAtStartup;
+
     public EarlyVulkan() {
-        //? if >= 26.2 {
+        //? if >= 1.21.11 {
         try {
             preferVulkan();
         } catch (Throwable ignored) {
@@ -49,7 +51,42 @@ public final class EarlyVulkan implements LanguageAdapter {
         }
     }
 
-    //? if >= 26.2 {
+    private static Path graphicsApiFile() {
+        return FabricLoader.getInstance().getGameDir().resolve("polydium").resolve("graphics-api");
+    }
+
+    public static String graphicsApi() {
+        try {
+            return Files.readString(graphicsApiFile()).strip();
+        } catch (IOException e) {
+            return "default";
+        }
+    }
+
+    public static void setGraphicsApi(String api) {
+        try {
+            Files.createDirectories(graphicsApiFile().getParent());
+            Files.writeString(graphicsApiFile(), api);
+        } catch (IOException ignored) {
+        }
+    }
+
+    public static boolean vulkanAtStartup() {
+        if (vulkanAtStartup == null) {
+            boolean vulkan = "vulkan".equals(graphicsApi());
+            boolean clean = true;
+            try {
+                clean = !Files.readAllLines(FabricLoader.getInstance().getGameDir().resolve("options.txt")).contains("startedCleanly:false");
+            } catch (IOException ignored) {
+            }
+            if (vulkan && !clean)
+                setGraphicsApi("default");
+            vulkanAtStartup = vulkan && clean;
+        }
+        return vulkanAtStartup;
+    }
+
+    //? if >= 1.21.11 {
     private static void preferVulkan() throws IOException {
         if (Files.exists(marker()) && (switched()
                 || Files.getLastModifiedTime(marker()).toInstant().isAfter(Instant.now().minus(Duration.ofDays(30)))))
@@ -75,8 +112,13 @@ public final class EarlyVulkan implements LanguageAdapter {
             else if (line.trim().equals("startedCleanly:false"))
                 return;
         }
+        //? if >= 26.2 {
         if (version < BACKEND_FIX_VERSION || index >= 0 && !lines.get(index).contains("default"))
             return;
+        //?} else {
+        /*if (!"default".equals(graphicsApi()))
+            return;
+        *///?}
 
         boolean appleArm = System.getProperty("os.name", "").startsWith("Mac") && "aarch64".equals(System.getProperty("os.arch"));
         boolean vulkan = appleArm || hasDiscreteGpu();
@@ -86,6 +128,9 @@ public final class EarlyVulkan implements LanguageAdapter {
         if (!vulkan)
             return;
 
+        //? if < 26.2 {
+        /*setGraphicsApi("vulkan");
+        *///?} else {
         if (index >= 0)
             lines.remove(index);
         lines.add(KEY + "\"vulkan\"");
@@ -96,6 +141,7 @@ public final class EarlyVulkan implements LanguageAdapter {
         } finally {
             Files.deleteIfExists(temp);
         }
+        //?}
     }
 
     private static boolean hasDiscreteGpu() {
