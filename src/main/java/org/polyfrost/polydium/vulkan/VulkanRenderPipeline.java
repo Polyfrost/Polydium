@@ -42,6 +42,7 @@ import org.lwjgl.vulkan.VkPipelineShaderStageCreateInfo.Buffer;
 
 public record VulkanRenderPipeline(
   RenderPipeline info,
+  @Nullable DepthStencilState depth,
   VulkanDevice device,
   long withDepthPipeline,
   long withoutDepthPipeline,
@@ -120,8 +121,8 @@ public record VulkanRenderPipeline(
   }
 
   public static VulkanRenderPipeline compile(
-    final VulkanDevice device, final VulkanBindGroupLayout layout, final RenderPipeline pipeline, final long vertexModule, final long fragmentModule,
-    final Map<String, Integer> inputTypes
+    final VulkanDevice device, final VulkanBindGroupLayout layout, final RenderPipeline pipeline, final @Nullable DepthStencilState depth,
+    final long vertexModule, final long fragmentModule, final Map<String, Integer> inputTypes
   ) {
     MemoryStack stack = MemoryStack.stackPush();
 
@@ -200,7 +201,6 @@ public record VulkanRenderPipeline(
         .frontFace(MoulberryVulkan.cullFront(pipeline) ? 0 : 1)
         .lineWidth(1.0F);
       VkPipelineDepthStencilStateCreateInfo depthStencilState = VkPipelineDepthStencilStateCreateInfo.calloc(stack).sType$Default();
-      DepthStencilState depth = depthState(pipeline);
       if (depth != null) {
         rasterizationState.depthBiasEnable(depth.depthBiasConstant() != 0.0F || depth.depthBiasScaleFactor() != 0.0F);
         rasterizationState.depthBiasConstantFactor(depth.depthBiasConstant());
@@ -261,7 +261,7 @@ public record VulkanRenderPipeline(
       long withoutDepthPipeline = pointer.get(0);
       device.instance().debug().setObjectName(device.vkDevice(), 19, withoutDepthPipeline, () -> "Pipeline " + pipeline.getLocation());
 
-      var38 = new VulkanRenderPipeline(pipeline, device, withDepthPipeline, withoutDepthPipeline, pipelineLayout, layout, vertexModule, fragmentModule);
+      var38 = new VulkanRenderPipeline(pipeline, depth, device, withDepthPipeline, withoutDepthPipeline, pipelineLayout, layout, vertexModule, fragmentModule);
     } catch (Throwable var42) {
       if (stack != null) {
         try {

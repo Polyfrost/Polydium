@@ -4,6 +4,7 @@ import org.polyfrost.polydium.vulkan.compat.SurfaceException;
 import org.polyfrost.polydium.vulkan.compat.GpuSurface;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.CompiledRenderPipeline;
+import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.preprocessor.GlslPreprocessor;
 import com.mojang.blaze3d.shaders.ShaderSource;
@@ -25,6 +26,7 @@ import org.polyfrost.polydium.vulkan.checkpoints.CheckpointExtension;
 import org.polyfrost.polydium.vulkan.glsl.GlslCompiler;
 import org.polyfrost.polydium.vulkan.glsl.IntermediaryShaderModule;
 import org.polyfrost.polydium.vulkan.glsl.ShaderCompileException;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import java.nio.ByteBuffer;
@@ -34,6 +36,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -61,6 +64,7 @@ public class VulkanDevice implements GpuDeviceBackend {
   private static final Logger LOGGER = LogUtils.getLogger();
   private final ShaderSource defaultShaderSource;
   private final Map<RenderPipeline, VulkanRenderPipeline> pipelineCache = new IdentityHashMap<>();
+  private final Map<Pair<RenderPipeline, @Nullable DepthStencilState>, VulkanRenderPipeline> depthVariantCache = new HashMap<>();
   private final Map<VulkanDevice.ShaderCompilationKey, IntermediaryShaderModule> shaderCache = new HashMap<>();
   private final VulkanInstance instance;
   private final VkDevice vkDevice;
@@ -297,7 +301,12 @@ public class VulkanDevice implements GpuDeviceBackend {
   }
 
   protected VulkanRenderPipeline getOrCompilePipeline(final RenderPipeline pipeline) {
-    return this.pipelineCache.computeIfAbsent(pipeline, ignored -> this.compilePipeline(pipeline, this.defaultShaderSource));
+    VulkanRenderPipeline compiled = this.pipelineCache.computeIfAbsent(pipeline, ignored -> this.compilePipeline(pipeline, this.defaultShaderSource));
+    DepthStencilState depth = VulkanRenderPipeline.depthState(pipeline);
+    // GL reads depth state per draw, so mods may override it while drawing (e.g. depth-tested entity outlines)
+    return Objects.equals(depth, compiled.depth())
+      ? compiled
+      : this.depthVariantCache.computeIfAbsent(Pair.of(pipeline, depth), ignored -> this.compilePipeline(pipeline, this.defaultShaderSource));
   }
 
   protected IntermediaryShaderModule getOrCompileShader(
@@ -344,23 +353,24 @@ public class VulkanDevice implements GpuDeviceBackend {
   }
 
   private VulkanRenderPipeline compilePipeline(final RenderPipeline pipeline, final ShaderSource shaderSource) {
+    DepthStencilState depth = VulkanRenderPipeline.depthState(pipeline);
     IntermediaryShaderModule vertexShader = this.getOrCompileShader(pipeline.getVertexShader(), ShaderType.VERTEX, pipeline.getShaderDefines(), shaderSource);
     IntermediaryShaderModule fragmentShader = this.getOrCompileShader(
       pipeline.getFragmentShader(), ShaderType.FRAGMENT, pipeline.getShaderDefines(), shaderSource
     );
     if (vertexShader == IntermediaryShaderModule.INVALID) {
       LOGGER.error("Couldn't compile pipeline {}: vertex shader {} was invalid", pipeline.getLocation(), pipeline.getVertexShader());
-      return new VulkanRenderPipeline(pipeline, this, 0L, 0L, 0L, VulkanBindGroupLayout.INVALID_LAYOUT, 0L, 0L);
+      return new VulkanRenderPipeline(pipeline, depth, this, 0L, 0L, 0L, VulkanBindGroupLayout.INVALID_LAYOUT, 0L, 0L);
     } else if (fragmentShader == IntermediaryShaderModule.INVALID) {
       LOGGER.error("Couldn't compile pipeline {}: fragment shader {} was invalid", pipeline.getLocation(), pipeline.getFragmentShader());
-      return new VulkanRenderPipeline(pipeline, this, 0L, 0L, 0L, VulkanBindGroupLayout.INVALID_LAYOUT, 0L, 0L);
+      return new VulkanRenderPipeline(pipeline, depth, this, 0L, 0L, 0L, VulkanBindGroupLayout.INVALID_LAYOUT, 0L, 0L);
     } else {
       try {
         GlslCompiler.CompiledModules modules = this.glslCompiler.compile(this, pipeline, vertexShader, fragmentShader);
-        return VulkanRenderPipeline.compile(this, modules.layout(), pipeline, modules.vertex(), modules.fragment(), modules.inputTypes());
+        return VulkanRenderPipeline.compile(this, modules.layout(), pipeline, depth, modules.vertex(), modules.fragment(), modules.inputTypes());
       } catch (ShaderCompileException var6) {
         LOGGER.error("Couldn't compile pipeline {}: {}", pipeline.getLocation(), var6.getMessage());
-        return new VulkanRenderPipeline(pipeline, this, 0L, 0L, 0L, VulkanBindGroupLayout.INVALID_LAYOUT, 0L, 0L);
+        return new VulkanRenderPipeline(pipeline, depth, this, 0L, 0L, 0L, VulkanBindGroupLayout.INVALID_LAYOUT, 0L, 0L);
       }
     }
   }
@@ -370,6 +380,8 @@ public class VulkanDevice implements GpuDeviceBackend {
     this.graphicsQueue.waitIdle();
     this.pipelineCache.values().forEach(VulkanRenderPipeline::destroy);
     this.pipelineCache.clear();
+    this.depthVariantCache.values().forEach(VulkanRenderPipeline::destroy);
+    this.depthVariantCache.clear();
     this.shaderCache.values().forEach(IntermediaryShaderModule::close);
     this.shaderCache.clear();
   }
