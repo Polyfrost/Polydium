@@ -244,17 +244,13 @@ public record VulkanRenderPipeline(
       );
       long withDepthPipeline = pointer.get(0);
       device.instance().debug().setObjectName(device.vkDevice(), 19, withDepthPipeline, () -> "Pipeline " + pipeline.getLocation());
-      long withoutDepthPipeline;
-      if (depth == null) {
-        renderingInfo.depthAttachmentFormat(0);
-        VulkanUtils.crashIfFailure(
-          device, VK12.vkCreateGraphicsPipelines(device.vkDevice(), 0L, createInfo, null, pointer), "Can't compile pipeline " + pipeline.getLocation()
-        );
-        withoutDepthPipeline = pointer.get(0);
-        device.instance().debug().setObjectName(device.vkDevice(), 19, withoutDepthPipeline, () -> "Pipeline " + pipeline.getLocation());
-      } else {
-        withoutDepthPipeline = 0L;
-      }
+      // Built even for depth-tested pipelines: mods written against GL may use them in passes without a depth attachment
+      renderingInfo.depthAttachmentFormat(0);
+      VulkanUtils.crashIfFailure(
+        device, VK12.vkCreateGraphicsPipelines(device.vkDevice(), 0L, createInfo, null, pointer), "Can't compile pipeline " + pipeline.getLocation()
+      );
+      long withoutDepthPipeline = pointer.get(0);
+      device.instance().debug().setObjectName(device.vkDevice(), 19, withoutDepthPipeline, () -> "Pipeline " + pipeline.getLocation());
 
       var38 = new VulkanRenderPipeline(pipeline, device, withDepthPipeline, withoutDepthPipeline, pipelineLayout, layout, vertexModule, fragmentModule);
     } catch (Throwable var42) {
