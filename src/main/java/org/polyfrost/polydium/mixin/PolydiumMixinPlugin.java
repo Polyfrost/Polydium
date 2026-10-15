@@ -112,6 +112,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
                 .map(mod -> mod.getMetadata().getVersion().getFriendlyString().startsWith("2.")).orElse(false))
             return true;
 
+        if (mixinClassName.contains("PresentThread") && Mods.loaded("slipstream") && System.getProperty("os.name", "").startsWith("Mac"))
+            return true;
+
         for (Map.Entry<String, String[]> entry : STAND_DOWN.entrySet()) {
             if (!mixinClassName.contains(entry.getKey()))
                 continue;
