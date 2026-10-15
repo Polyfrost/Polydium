@@ -8,9 +8,17 @@ import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormatElement;
+//? if < 26.1 {
+/*import com.mojang.blaze3d.platform.CompareOp;
+import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.platform.LogicOp;
+*///?}
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VK12;
@@ -27,6 +35,7 @@ import org.lwjgl.vulkan.VkPipelineRenderingCreateInfoKHR;
 import org.lwjgl.vulkan.VkPipelineShaderStageCreateInfo;
 import org.lwjgl.vulkan.VkPipelineVertexInputStateCreateInfo;
 import org.lwjgl.vulkan.VkPipelineViewportStateCreateInfo;
+import org.lwjgl.vulkan.VkPushConstantRange;
 import org.lwjgl.vulkan.VkVertexInputAttributeDescription;
 import org.lwjgl.vulkan.VkVertexInputBindingDescription;
 import org.lwjgl.vulkan.VkPipelineShaderStageCreateInfo.Buffer;
@@ -53,12 +62,12 @@ public record VulkanRenderPipeline(
     //? if >= 26.1 {
     return pipeline.getDepthStencilState();
     //?} else {
-    /*com.mojang.blaze3d.platform.CompareOp op = switch (pipeline.getDepthTestFunction()) {
+    /*CompareOp op = switch (pipeline.getDepthTestFunction()) {
       case NO_DEPTH_TEST -> null;
-      case EQUAL_DEPTH_TEST -> com.mojang.blaze3d.platform.CompareOp.EQUAL;
-      case LEQUAL_DEPTH_TEST -> com.mojang.blaze3d.platform.CompareOp.LESS_THAN_OR_EQUAL;
-      case LESS_DEPTH_TEST -> com.mojang.blaze3d.platform.CompareOp.LESS_THAN;
-      case GREATER_DEPTH_TEST -> com.mojang.blaze3d.platform.CompareOp.GREATER_THAN;
+      case EQUAL_DEPTH_TEST -> CompareOp.EQUAL;
+      case LEQUAL_DEPTH_TEST -> CompareOp.LESS_THAN_OR_EQUAL;
+      case LESS_DEPTH_TEST -> CompareOp.LESS_THAN;
+      case GREATER_DEPTH_TEST -> CompareOp.GREATER_THAN;
     };
     return op == null ? null : new DepthStencilState(op, pipeline.isWriteDepth(), pipeline.getDepthBiasScaleFactor(), pipeline.getDepthBiasConstant());
     *///?}
@@ -68,8 +77,8 @@ public record VulkanRenderPipeline(
     //? if >= 26.1 {
     return pipeline.getColorTargetState();
     //?} else {
-    /*java.util.Optional<BlendFunction> blend = pipeline.getColorLogic() == com.mojang.blaze3d.platform.LogicOp.OR_REVERSE
-      ? java.util.Optional.of(BlendFunction.INVERT)
+    /*Optional<BlendFunction> blend = pipeline.getColorLogic() == LogicOp.OR_REVERSE
+      ? Optional.of(BlendFunction.INVERT)
       : pipeline.getBlendFunction();
     int writeMask = (pipeline.isWriteColor() ? ColorTargetState.WRITE_COLOR : 0) | (pipeline.isWriteAlpha() ? ColorTargetState.WRITE_ALPHA : 0);
     return new ColorTargetState(blend, writeMask);
@@ -78,16 +87,16 @@ public record VulkanRenderPipeline(
 
   public static RenderPipeline.Builder withDepth(final RenderPipeline.Builder builder, final @Nullable DepthStencilState depth) {
     //? if >= 26.1 {
-    return builder.withDepthStencilState(java.util.Optional.ofNullable(depth));
+    return builder.withDepthStencilState(Optional.ofNullable(depth));
     //?} else {
     /*if (depth == null) {
-      return builder.withDepthTestFunction(com.mojang.blaze3d.platform.DepthTestFunction.NO_DEPTH_TEST).withDepthWrite(false);
+      return builder.withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST).withDepthWrite(false);
     }
     builder.withDepthTestFunction(switch (depth.depthTest()) {
-      case EQUAL -> com.mojang.blaze3d.platform.DepthTestFunction.EQUAL_DEPTH_TEST;
-      case LESS_THAN_OR_EQUAL -> com.mojang.blaze3d.platform.DepthTestFunction.LEQUAL_DEPTH_TEST;
-      case LESS_THAN -> com.mojang.blaze3d.platform.DepthTestFunction.LESS_DEPTH_TEST;
-      case GREATER_THAN -> com.mojang.blaze3d.platform.DepthTestFunction.GREATER_DEPTH_TEST;
+      case EQUAL -> DepthTestFunction.EQUAL_DEPTH_TEST;
+      case LESS_THAN_OR_EQUAL -> DepthTestFunction.LEQUAL_DEPTH_TEST;
+      case LESS_THAN -> DepthTestFunction.LESS_DEPTH_TEST;
+      case GREATER_THAN -> DepthTestFunction.GREATER_DEPTH_TEST;
       default -> throw new IllegalArgumentException("1.21.11 pipelines have no depth test " + depth.depthTest());
     }).withDepthWrite(depth.writeDepth());
     if (depth.depthBiasScaleFactor() != 0.0F || depth.depthBiasConstant() != 0.0F) {
@@ -112,7 +121,7 @@ public record VulkanRenderPipeline(
 
   public static VulkanRenderPipeline compile(
     final VulkanDevice device, final VulkanBindGroupLayout layout, final RenderPipeline pipeline, final long vertexModule, final long fragmentModule,
-    final java.util.Map<String, Integer> inputTypes
+    final Map<String, Integer> inputTypes
   ) {
     MemoryStack stack = MemoryStack.stackPush();
 
@@ -120,7 +129,7 @@ public record VulkanRenderPipeline(
     try {
       VkPipelineLayoutCreateInfo createInfo = VkPipelineLayoutCreateInfo.calloc(stack).sType$Default().pSetLayouts(stack.longs(layout.handle()));
       if (pipeline.getLocation().getNamespace().equals("sodium")) {
-        createInfo.pPushConstantRanges(org.lwjgl.vulkan.VkPushConstantRange.calloc(1, stack).offset(0).size(SODIUM_PUSH_CONSTANT_RANGE).stageFlags(VK12.VK_SHADER_STAGE_ALL));
+        createInfo.pPushConstantRanges(VkPushConstantRange.calloc(1, stack).offset(0).size(SODIUM_PUSH_CONSTANT_RANGE).stageFlags(VK12.VK_SHADER_STAGE_ALL));
       }
       LongBuffer pointer = stack.callocLong(1);
       VulkanUtils.crashIfFailure(
@@ -158,15 +167,15 @@ public record VulkanRenderPipeline(
         .pName(nameMain);
       ((Buffer)((Buffer)shaderStages.put(vertexStage)).put(fragmentStage)).flip();
       VertexFormat vertexFormat = pipeline.getVertexFormat();
-      org.lwjgl.vulkan.VkVertexInputAttributeDescription.Buffer vertexAttributeDescriptions = VkVertexInputAttributeDescription.calloc(
+      VkVertexInputAttributeDescription.Buffer vertexAttributeDescriptions = VkVertexInputAttributeDescription.calloc(
         vertexFormat.getElements().size(), stack
       );
-      org.lwjgl.vulkan.VkVertexInputBindingDescription.Buffer vertexBindingDescriptions = VkVertexInputBindingDescription.calloc(1, stack)
+      VkVertexInputBindingDescription.Buffer vertexBindingDescriptions = VkVertexInputBindingDescription.calloc(1, stack)
         .binding(0)
         .stride(vertexFormat.getVertexSize())
         .inputRate(0);
       int attribLocation = 0;
-      java.util.List<String> attribNames = vertexFormat.getElementAttributeNames();
+      List<String> attribNames = vertexFormat.getElementAttributeNames();
 
       for (VertexFormatElement element : vertexFormat.getElements()) {
         vertexAttributeDescriptions.get(attribLocation)
@@ -202,7 +211,7 @@ public record VulkanRenderPipeline(
       }
 
       ColorTargetState[] colorTargetStates = VulkanActive.COLOR_TARGETS.getOrDefault(pipeline, new ColorTargetState[]{colorState(pipeline)});
-      org.lwjgl.vulkan.VkPipelineColorBlendAttachmentState.Buffer blendAttachments = VkPipelineColorBlendAttachmentState.calloc(colorTargetStates.length, stack);
+      VkPipelineColorBlendAttachmentState.Buffer blendAttachments = VkPipelineColorBlendAttachmentState.calloc(colorTargetStates.length, stack);
       IntBuffer colorAttachmentFormats = stack.mallocInt(colorTargetStates.length);
       for (int i = 0; i < colorTargetStates.length; i++) {
         blendAttachments.position(i);
@@ -224,7 +233,7 @@ public record VulkanRenderPipeline(
       VkPipelineRenderingCreateInfoKHR renderingInfo = VkPipelineRenderingCreateInfoKHR.calloc(stack).sType$Default();
       renderingInfo.pColorAttachmentFormats(colorAttachmentFormats);
       renderingInfo.depthAttachmentFormat(126);
-      org.lwjgl.vulkan.VkGraphicsPipelineCreateInfo.Buffer createInfo = VkGraphicsPipelineCreateInfo.calloc(1, stack)
+      VkGraphicsPipelineCreateInfo.Buffer createInfo = VkGraphicsPipelineCreateInfo.calloc(1, stack)
         .sType$Default()
         .flags(0)
         .pStages(shaderStages)
@@ -285,7 +294,7 @@ public record VulkanRenderPipeline(
   }
 
   private static void applyBlendInformation(
-    final org.lwjgl.vulkan.VkPipelineColorBlendAttachmentState.Buffer blendAttachments, final BlendFunction blendFunction
+    final VkPipelineColorBlendAttachmentState.Buffer blendAttachments, final BlendFunction blendFunction
   ) {
     blendAttachments.blendEnable(true)
       .colorBlendOp(0)
