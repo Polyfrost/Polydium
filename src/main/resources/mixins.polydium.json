@@ -167,6 +167,7 @@
     /*"client.perf.vulkan.backport.MixinVulkanBackendListOneConfig",
     "client.perf.vulkan.backport.MixinVulkanBackendListRenderSystem",
     "client.perf.vulkan.backport.MixinVulkanBackendListWindow",
+    "client.perf.vulkan.backport.MixinVkInstanceDeviceExtensions",
     *///?}
     //? if >= 1.21.11 && < 26.2 {
     /*"client.perf.vulkan.backport.MixinGraphicsApiOption",
