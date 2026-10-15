@@ -33,6 +33,13 @@ public abstract class MixinSkinLayersBatchWrite {
             original.call(vanillaModel, pose, consumer, light, overlay, color);
             return;
         }
+        writePolygons(data, pointer, pose, light, overlay, color);
+        for (Object cube : SkinLayerMeshes.cubes(this)) {
+            ((ModelPart.Cube) cube).compile(pose, consumer, light, overlay, color);
+        }
+    }
+
+    private static void writePolygons(float[] data, long pointer, PoseStack.Pose pose, int light, int overlay, int color) {
 
         Matrix4f matrix = pose.pose();
         float m00 = matrix.m00(), m01 = matrix.m01(), m02 = matrix.m02();
