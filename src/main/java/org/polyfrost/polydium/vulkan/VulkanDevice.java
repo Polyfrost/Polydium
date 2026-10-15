@@ -21,6 +21,7 @@ import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.textures.TextureFormat;
 import org.polyfrost.polydium.vulkan.checkpoints.CheckpointExtension;
 import org.polyfrost.polydium.vulkan.glsl.GlslCompiler;
 import org.polyfrost.polydium.vulkan.glsl.IntermediaryShaderModule;
@@ -37,13 +38,20 @@ import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
+//? if < 26.1 {
+/*import java.util.regex.Matcher;
+import net.minecraft.util.Mth;
+*///?}
 import net.minecraft.client.renderer.ShaderDefines;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;
+import org.lwjgl.glfw.GLFW;
 import org.lwjgl.util.vma.Vma;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VK12;
+import org.lwjgl.vulkan.VkBufferCopy;
 import org.lwjgl.vulkan.VkDevice;
 import org.lwjgl.vulkan.VkPhysicalDeviceLimits;
 import org.lwjgl.vulkan.VkPhysicalDeviceVulkan11Properties;
@@ -217,7 +225,7 @@ public class VulkanDevice implements GpuDeviceBackend {
   public GpuTexture createTexture(
     final @Nullable Supplier<String> label,
     final @GpuTexture.Usage int usage,
-    final com.mojang.blaze3d.textures.TextureFormat format,
+    final TextureFormat format,
     final int width,
     final int height,
     final int depthOrLayers,
@@ -230,7 +238,7 @@ public class VulkanDevice implements GpuDeviceBackend {
   public GpuTexture createTexture(
     final @Nullable String label,
     final @GpuTexture.Usage int usage,
-    final com.mojang.blaze3d.textures.TextureFormat format,
+    final TextureFormat format,
     final int width,
     final int height,
     final int depthOrLayers,
@@ -243,7 +251,7 @@ public class VulkanDevice implements GpuDeviceBackend {
     //? if >= 26.1 {
     return mipLevels;
     //?} else {
-    /*return Math.min(mipLevels, net.minecraft.util.Mth.log2(Math.max(width, height)) + 1);
+    /*return Math.min(mipLevels, Mth.log2(Math.max(width, height)) + 1);
     *///?}
   }
 
@@ -267,7 +275,7 @@ public class VulkanDevice implements GpuDeviceBackend {
     VulkanCommandEncoder encoder = (VulkanCommandEncoder)this.createCommandEncoder();
     GpuBufferSlice stagingBuffer = encoder.transientMemory().uploadStaging(data, 1L, 16);
     try (MemoryStack stack = MemoryStack.stackPush()) {
-      org.lwjgl.vulkan.VkBufferCopy.Buffer regions = org.lwjgl.vulkan.VkBufferCopy.calloc(1, stack).srcOffset(stagingBuffer.offset()).dstOffset(0L).size(data.remaining());
+      VkBufferCopy.Buffer regions = VkBufferCopy.calloc(1, stack).srcOffset(stagingBuffer.offset()).dstOffset(0L).size(data.remaining());
       VK12.vkCmdCopyBuffer(encoder.objectInitCommandBuffer(), ((VulkanGpuBuffer)stagingBuffer.buffer()).vkBuffer(), buffer.vkBuffer(), regions);
     }
     return buffer;
@@ -300,12 +308,12 @@ public class VulkanDevice implements GpuDeviceBackend {
     return this.shaderCache.computeIfAbsent(key, ignored -> this.compileShader(key, shaderSource));
   }
 
-  private static final java.util.regex.Pattern RESERVED_SAMPLER = java.util.regex.Pattern.compile("\\bsampler\\b");
+  private static final Pattern RESERVED_SAMPLER = Pattern.compile("\\bsampler\\b");
   //? if < 26.1 {
-  /*private static final java.util.regex.Pattern VERTEX_MAIN = java.util.regex.Pattern.compile("\\bvoid\\s+main\\s*\\(\\s*(void)?\\s*\\)");
+  /*private static final Pattern VERTEX_MAIN = Pattern.compile("\\bvoid\\s+main\\s*\\(\\s*(void)?\\s*\\)");
 
   private static String glToVulkanDepth(final String source) {
-    java.util.regex.Matcher main = VERTEX_MAIN.matcher(source);
+    Matcher main = VERTEX_MAIN.matcher(source);
     if (!main.find()) {
       return source;
     }
@@ -398,7 +406,7 @@ public class VulkanDevice implements GpuDeviceBackend {
   void presentTexture(final GpuTextureView texture) {
     int[] width = new int[1];
     int[] height = new int[1];
-    org.lwjgl.glfw.GLFW.glfwGetFramebufferSize(this.window, width, height);
+    GLFW.glfwGetFramebufferSize(this.window, width, height);
     if (width[0] == 0 || height[0] == 0) {
       return;
     }
