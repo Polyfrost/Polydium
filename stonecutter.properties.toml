@@ -1,6 +1,6 @@
 mod.name = "Polydium"
 mod.id = "polydium"
-mod.version = "1.1.0-beta.2"
+mod.version = "1.1.0"
 mod.group = "org.polyfrost"
 
 deps.fabric_loader = "0.19.5"
@@ -14,7 +14,8 @@ deps.junit = "6.1.3"
 
 loomx.loom_version = "1.17-SNAPSHOT"
 
-publish.modrinth = "hbSfT032"
+# TODO: re-enable Modrinth publishing
+# publish.modrinth = "hbSfT032"
 publish.curseforge = "1740837"
 
 ["1.21.1"]
