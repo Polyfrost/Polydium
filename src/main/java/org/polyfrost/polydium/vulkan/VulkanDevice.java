@@ -2,7 +2,6 @@ package org.polyfrost.polydium.vulkan;
 
 import org.polyfrost.polydium.vulkan.compat.SurfaceException;
 import org.polyfrost.polydium.vulkan.compat.GpuSurface;
-import org.polyfrost.polydium.vulkan.compat.GpuFormat;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.CompiledRenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
@@ -231,7 +230,7 @@ public class VulkanDevice implements GpuDeviceBackend {
     final int depthOrLayers,
     final int mipLevels
   ) {
-    return new VulkanGpuTexture(this, usage, this.isDebuggingEnabled() && label != null ? label.get() : "", VulkanConst.toGpuFormat(format), width, height, depthOrLayers, maxMipLevels(width, height, mipLevels));
+    return new VulkanGpuTexture(this, usage, this.isDebuggingEnabled() && label != null ? label.get() : "", format, width, height, depthOrLayers, maxMipLevels(width, height, mipLevels));
   }
 
   @Override
@@ -244,7 +243,7 @@ public class VulkanDevice implements GpuDeviceBackend {
     final int depthOrLayers,
     final int mipLevels
   ) {
-    return new VulkanGpuTexture(this, usage, this.isDebuggingEnabled() && label != null ? label : "", VulkanConst.toGpuFormat(format), width, height, depthOrLayers, maxMipLevels(width, height, mipLevels));
+    return new VulkanGpuTexture(this, usage, this.isDebuggingEnabled() && label != null ? label : "", format, width, height, depthOrLayers, maxMipLevels(width, height, mipLevels));
   }
 
   private static int maxMipLevels(final int width, final int height, final int mipLevels) {

@@ -1,2 +1,2 @@
-## 1.1.2
-- Fix sodium extra macOS reduced resolution
+## Unreleased changes
+- Fixed crashes and title screen hangs on Vulkan with mods that add custom texture formats, such as Skyblocker
