@@ -540,6 +540,7 @@
     //"client.perf.MixinSinglePassTextShadowOutput",
     "client.perf.wwaypoints.MixinClientDimensionUtils",
     "client.perf.wwaypoints.MixinHideWaypointCycle",
+    "client.perf.punchy.MixinPunchyBlacklistCache",
     "client.perf.MixinPerfClockFrame"
   ]
 }
