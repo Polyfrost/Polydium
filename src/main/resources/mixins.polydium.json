@@ -170,6 +170,8 @@
     *///?}
     //? if >= 1.21.11 && < 26.2 {
     /*"client.perf.vulkan.backport.MixinGraphicsApiOption",
+    "client.perf.vulkan.backport.MixinIrisVulkanConfig",
+    "client.perf.vulkan.backport.MixinIrisVulkanModMenu",
     "client.perf.sodium.vulkan.MixinGraphicsApiOptionSodium",
     "client.perf.sodium.vulkan.MixinVulkanBufferStorage",
     "client.perf.sodium.vulkan.MixinVulkanChunkRendererInvoker",

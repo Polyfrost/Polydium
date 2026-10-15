@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class IrisVulkanGate {
+  public static boolean applied;
+
   private IrisVulkanGate() {
   }
 
@@ -28,6 +30,7 @@ public final class IrisVulkanGate {
           if (field.get(config) != null) field.set(config, new ArrayList<String>());
         }
       }
+      applied = true;
     } catch (ReflectiveOperationException e) {
       throw new IllegalStateException("Cannot switch Iris off for the Vulkan backend", e);
     }

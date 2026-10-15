@@ -12,5 +12,7 @@ class PolydiumClient : ClientModInitializer {
         }
 
         PolydiumConfig.preload()
+        //? if >= 1.21.11 && < 26.2
+        /*org.polyfrost.polydium.vulkan.IrisVulkan.init()*/
     }
 }

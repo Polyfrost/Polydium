@@ -9,6 +9,7 @@ import net.caffeinemc.mods.sodium.client.gui.SodiumConfigBuilder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.polyfrost.polydium.vulkan.GraphicsApi;
+import org.polyfrost.polydium.vulkan.IrisVulkan;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -36,6 +37,6 @@ public class MixinGraphicsApiOptionSodium {
                                 Component.translatable("options.graphicsApi.vulkan")))
                         .setDefaultValue(GraphicsApi.DEFAULT)
                         .setFlags(OptionFlag.REQUIRES_GAME_RESTART)
-                        .setBinding(GraphicsApi.OPTION::set, GraphicsApi.OPTION::get)));
+                        .setBinding(IrisVulkan::selectGraphicsApi, GraphicsApi.OPTION::get)));
     }
 }
