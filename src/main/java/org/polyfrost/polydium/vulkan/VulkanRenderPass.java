@@ -202,7 +202,15 @@ public class VulkanRenderPass implements RenderPassBackend {
     }
   }
 
-  private static void setScissor(final MemoryStack stack, final VkCommandBuffer commandBuffer, final int x, final int y, final int width, final int height) {
+  private static void setScissor(final MemoryStack stack, final VkCommandBuffer commandBuffer, int x, int y, int width, int height) {
+    if (x < 0) {
+      width = Math.max(0, width + x);
+      x = 0;
+    }
+    if (y < 0) {
+      height = Math.max(0, height + y);
+      y = 0;
+    }
     org.lwjgl.vulkan.VkRect2D.Buffer scissor = VkRect2D.calloc(1, stack);
     scissor.offset().set(x, y);
     scissor.extent().set(width, height);
