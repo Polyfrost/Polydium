@@ -6,7 +6,10 @@ import org.polyfrost.polydium.client.perf.PerfClock
 
 class PolydiumClient : ClientModInitializer {
     override fun onInitializeClient() {
-        ClientTickEvents.END_CLIENT_TICK.register { PerfClock.tick += 1 }
+        ClientTickEvents.END_CLIENT_TICK.register {
+            PerfClock.tick += 1
+            VulkanPrompt.tick(it)
+        }
 
         PolydiumConfig.preload()
     }
