@@ -402,6 +402,7 @@ public class VulkanDevice implements GpuDeviceBackend {
     if (width[0] == 0 || height[0] == 0) {
       return;
     }
+    SodiumExtraMac.reduceSwapchain(this.window, width, height);
 
     GpuSurface.Configuration current = this.surface.currentConfiguration().orElse(null);
     if (this.surfaceNeedsReconfiguring || current == null || current.width() != width[0] || current.height() != height[0] || this.surface.isSuboptimal()) {

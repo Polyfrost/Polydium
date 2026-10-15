@@ -405,10 +405,13 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
         srcOffsets.position(1);
         srcOffsets.x(copyWidth).y(copyHeight).z(1);
         srcOffsets.position(0);
+        boolean stretch = (copyWidth < this.swapchainWidth || copyHeight < this.swapchainHeight) && SodiumExtraMac.enabled();
+        int dstWidth = stretch ? this.swapchainWidth : copyWidth;
+        int dstHeight = stretch ? this.swapchainHeight : copyHeight;
         org.lwjgl.vulkan.VkOffset3D.Buffer dstOffsets = VkOffset3D.calloc(2, stack);
-        dstOffsets.x(0).y(copyHeight).z(0);
+        dstOffsets.x(0).y(dstHeight).z(0);
         dstOffsets.position(1);
-        dstOffsets.x(copyWidth).y(0).z(1);
+        dstOffsets.x(dstWidth).y(0).z(1);
         dstOffsets.position(0);
         VkImageSubresourceLayers srcSubresource = VkImageSubresourceLayers.calloc(stack);
         srcSubresource.aspectMask(1);
