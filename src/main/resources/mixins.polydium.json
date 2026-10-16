@@ -193,6 +193,7 @@
     "client.perf.vulkan.backport.MixinVulkanBufferMappingBackport",
     "client.perf.vulkan.backport.MixinVulkanBufferMappingUnmapBackport",
     "client.perf.vulkan.backport.MixinVulkanCommandEncoderPresentThreadBackport",
+    "client.perf.vulkan.backport.MixinVulkanCubesWithoutBorders",
     "client.perf.vulkan.backport.MixinVulkanDeferralBackport",
     "client.perf.vulkan.backport.MixinVulkanDescriptorPushSkipBackport",
     "client.perf.vulkan.backport.MixinVulkanDhLightmap",

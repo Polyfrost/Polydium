@@ -1,3 +1,2 @@
-## 1.1.4
-- Improved compatibility with other mods that modify the same game, Sodium or Iris code as Polydium
-- Fixed a crash on launch with Vulkan on 26.1 when using Sodium 0.8
+## Unreleased changes
+- Fixed a crash with Cubes Without Borders when using a custom fullscreen resolution with Vulkan
