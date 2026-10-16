@@ -1,7 +1,8 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan.backport;
 
 //? if < 26.1 {
-/*import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+/*import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.shaders.GpuDebugOptions;
@@ -36,6 +37,13 @@ public class MixinVulkanBackendListRenderSystem {
         apiDescription = DEVICE.getImplementationInformation();
         dynamicUniforms = new DynamicUniforms();
         samplerCache.initialize();
+    }
+
+    // input handlers can render a nested frame (e.g. setScreenAndShow), which can't acquire the surface while this frame still holds it
+    // events are still polled right after presenting, matching where 26.1+ polls them
+    @WrapWithCondition(method = "flipFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;pollEvents()V", ordinal = 0))
+    private static boolean polydium$pollAfterPresent() {
+        return VulkanDevice.active == null;
     }
 
     @WrapOperation(method = "flipFrame", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwSwapBuffers(J)V", remap = false))
