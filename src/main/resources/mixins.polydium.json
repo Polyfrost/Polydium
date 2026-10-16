@@ -132,8 +132,6 @@
     //"client.perf.sodium.v08.MixinSpriteSetRegion",
     //? if >= 26.1 && < 26.2
     //"client.perf.sodium.v08.MixinSpriteSetSection",
-    //? if >= 26.1 && < 26.2
-    //"client.perf.sodium.v08.MixinRegionList",
     "client.perf.sodium.MixinCuboidNormals",
     "client.perf.sodium.MixinDirectVertexCuboid",
     "client.perf.sodium.MixinDirectVertexGlyph",

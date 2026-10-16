@@ -61,8 +61,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final String SODIUM_08_PACKAGE = SODIUM_PERF_PACKAGE + "v08.";
     private static final Set<String> SODIUM_09_ONLY = Set.of(
             SODIUM_PERF_PACKAGE + "MixinAnimatedSpriteMarksRegion",
-            SODIUM_PERF_PACKAGE + "MixinSpriteSetRegion",
-            SODIUM_PERF_PACKAGE + "MixinRegionList"
+            SODIUM_PERF_PACKAGE + "MixinSpriteSetRegion"
     );
     //? if >= 26.1 && < 26.2 {
     /*private static final boolean SODIUM_08 = SODIUM_VERSION.startsWith("0.8.");

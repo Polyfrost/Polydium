@@ -1,7 +1,8 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan.backport;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.textures.GpuTexture;
-import org.lwjgl.opengl.GL11;
 import org.polyfrost.polydium.vulkan.VulkanActive;
 import org.polyfrost.polydium.vulkan.VulkanRenderPass;
 import org.polyfrost.polydium.vulkan.XaeroVulkan;
@@ -9,7 +10,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Pseudo
@@ -38,9 +38,9 @@ public class MixinVulkanXaero {
         ci.cancel();
     }
 
-    @Redirect(method = {"get", "renderPart", "trace"}, at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glGetError()I"), require = 0)
-    private int polydium$noGlError() {
-        return VulkanActive.active ? 0 : GL11.glGetError();
+    @WrapOperation(method = {"get", "renderPart", "trace"}, at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glGetError()I"), require = 0)
+    private int polydium$noGlError(Operation<Integer> original) {
+        return VulkanActive.active ? 0 : original.call();
     }
 
     @Inject(method = "defaultTextureBind", at = @At("HEAD"), cancellable = true, require = 0)
