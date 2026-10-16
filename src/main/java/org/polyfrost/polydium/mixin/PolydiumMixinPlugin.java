@@ -223,7 +223,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     public void preApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
     }
 
-    private static final String[] SODIUM_GL_HANDLERS = {"sodium$preRender", "sodium$postRender", "sodium$preSwapBuffers"};
+    private static final String[] SODIUM_GL_HANDLERS = {"sodium$preRender", "sodium$postRender", "sodium$preSwapBuffers", "sodium$postContextReady"};
 
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
