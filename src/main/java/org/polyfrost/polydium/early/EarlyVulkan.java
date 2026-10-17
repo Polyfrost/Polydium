@@ -71,6 +71,29 @@ public final class EarlyVulkan implements LanguageAdapter {
         }
     }
 
+    public static boolean renderCrash(Throwable t) {
+        for (int depth = 0; t != null && depth < 32; t = t.getCause(), depth++)
+            for (StackTraceElement frame : t.getStackTrace()) {
+                String cls = frame.getClassName().toLowerCase(Locale.ROOT);
+                if (cls.contains("vulkan") || cls.contains("blaze3d") || cls.contains("renderpearl"))
+                    return true;
+            }
+        return false;
+    }
+
+    public static void markStartClean() {
+        try {
+            Path options = FabricLoader.getInstance().getGameDir().resolve("options.txt");
+            List<String> lines = Files.readAllLines(options);
+            int index = lines.indexOf("startedCleanly:false");
+            if (index < 0)
+                return;
+            lines.set(index, "startedCleanly:true");
+            Files.write(options, lines);
+        } catch (Throwable ignored) {
+        }
+    }
+
     public static boolean vulkanAtStartup() {
         if (vulkanAtStartup == null) {
             boolean vulkan = "vulkan".equals(graphicsApi());
