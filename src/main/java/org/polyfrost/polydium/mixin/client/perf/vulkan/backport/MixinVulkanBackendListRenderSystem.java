@@ -1,22 +1,22 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan.backport;
 
 //? if < 26.1 {
-/*import com.mojang.blaze3d.shaders.GpuDebugOptions;
+/*import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.mojang.blaze3d.shaders.GpuDebugOptions;
 import com.mojang.blaze3d.shaders.ShaderSource;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.systems.SamplerCache;
 import net.minecraft.client.renderer.DynamicUniforms;
 import org.jspecify.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 import org.polyfrost.polydium.vulkan.VulkanActive;
 import org.polyfrost.polydium.vulkan.VulkanDevice;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(RenderSystem.class)
 public class MixinVulkanBackendListRenderSystem {
@@ -25,25 +25,33 @@ public class MixinVulkanBackendListRenderSystem {
     @Shadow private static @Nullable DynamicUniforms dynamicUniforms;
     @Shadow private static SamplerCache samplerCache;
 
-    @Inject(method = "initRenderer", at = @At("HEAD"), cancellable = true)
+    @WrapMethod(method = "initRenderer")
     private static void polydium$vulkanDevice(long window, int debugVerbosity, boolean synchronousLogs, ShaderSource defaultShaderSource,
-                                              boolean renderDebugLabels, CallbackInfo ci) {
-        if (VulkanActive.backend == null)
+                                              boolean renderDebugLabels, Operation<Void> original) {
+        if (VulkanActive.backend == null) {
+            original.call(window, debugVerbosity, synchronousLogs, defaultShaderSource, renderDebugLabels);
             return;
+        }
 
         DEVICE = VulkanActive.backend.createDevice(window, defaultShaderSource, new GpuDebugOptions(debugVerbosity, synchronousLogs, renderDebugLabels));
         apiDescription = DEVICE.getImplementationInformation();
         dynamicUniforms = new DynamicUniforms();
         samplerCache.initialize();
-        ci.cancel();
     }
 
-    @Redirect(method = "flipFrame", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwSwapBuffers(J)V", remap = false))
-    private static void polydium$present(long window) {
+    // input handlers can render a nested frame (e.g. setScreenAndShow), which can't acquire the surface while this frame still holds it
+    // events are still polled right after presenting, matching where 26.1+ polls them
+    @WrapWithCondition(method = "flipFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;pollEvents()V", ordinal = 0))
+    private static boolean polydium$pollAfterPresent() {
+        return VulkanDevice.active == null;
+    }
+
+    @WrapOperation(method = "flipFrame", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwSwapBuffers(J)V", remap = false))
+    private static void polydium$present(long window, Operation<Void> original) {
         if (VulkanDevice.active != null) {
             VulkanDevice.active.presentFrame();
         } else {
-            GLFW.glfwSwapBuffers(window);
+            original.call(window);
         }
     }
 }

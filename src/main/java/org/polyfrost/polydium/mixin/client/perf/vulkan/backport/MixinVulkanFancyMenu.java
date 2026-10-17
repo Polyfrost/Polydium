@@ -1,11 +1,12 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan.backport;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import org.polyfrost.polydium.vulkan.VulkanActive;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Pseudo
@@ -26,15 +27,15 @@ public class MixinVulkanFancyMenu {
         if (VulkanActive.active) cir.setReturnValue(false);
     }
 
-    @Redirect(method = {"executeQueuedBlurArea_FancyMenu", "_renderBlurArea"}, at = @At(value = "INVOKE", target = "Ljava/lang/ThreadLocal;set(Ljava/lang/Object;)V"), require = 0)
-    private static void polydium$setScissor(ThreadLocal<Object> local, Object scissor) {
-        local.set(scissor);
+    @WrapOperation(method = {"executeQueuedBlurArea_FancyMenu", "_renderBlurArea"}, at = @At(value = "INVOKE", target = "Ljava/lang/ThreadLocal;set(Ljava/lang/Object;)V"), require = 0)
+    private static void polydium$setScissor(ThreadLocal<Object> local, Object scissor, Operation<Void> original) {
+        original.call(local, scissor);
         if (VulkanActive.active && scissor instanceof VulkanActive.Scissor s) VulkanActive.postPassScissor = s;
     }
 
-    @Redirect(method = {"executeQueuedBlurArea_FancyMenu", "_renderBlurArea"}, at = @At(value = "INVOKE", target = "Ljava/lang/ThreadLocal;remove()V"), require = 0)
-    private static void polydium$clearScissor(ThreadLocal<Object> local) {
-        local.remove();
+    @WrapOperation(method = {"executeQueuedBlurArea_FancyMenu", "_renderBlurArea"}, at = @At(value = "INVOKE", target = "Ljava/lang/ThreadLocal;remove()V"), require = 0)
+    private static void polydium$clearScissor(ThreadLocal<Object> local, Operation<Void> original) {
+        original.call(local);
         VulkanActive.postPassScissor = null;
     }
 }

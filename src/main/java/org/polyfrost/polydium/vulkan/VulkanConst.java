@@ -3,6 +3,7 @@ package org.polyfrost.polydium.vulkan;
 import org.polyfrost.polydium.vulkan.compat.GpuFormat;
 import org.polyfrost.polydium.vulkan.compat.PrimitiveTopology;
 import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.opengl.GlConst;
 import com.mojang.blaze3d.pipeline.ColorTargetState;
 import org.polyfrost.polydium.vulkan.compat.BlendFactor;
 import org.polyfrost.polydium.vulkan.compat.BlendOp;
@@ -12,6 +13,11 @@ import org.polyfrost.polydium.vulkan.compat.GpuSurface;
 import com.mojang.blaze3d.textures.AddressMode;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
+import com.mojang.blaze3d.textures.TextureFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormatElement;
+import org.lwjgl.opengl.GL33;
+import org.lwjgl.util.spvc.Spvc;
 
 public final class VulkanConst {
   public VulkanConst() {
@@ -109,29 +115,67 @@ public final class VulkanConst {
     };
   }
 
-  private static final com.mojang.blaze3d.textures.TextureFormat FLASHBACK_R32_FLOAT = java.util.Arrays.stream(com.mojang.blaze3d.textures.TextureFormat.values())
-    .filter(format -> format.name().equals("FLASHBACK_R32_FLOAT")).findFirst().orElse(null);
-
-  public static GpuFormat toGpuFormat(final com.mojang.blaze3d.textures.TextureFormat format) {
+  public static GpuFormat toGpuFormat(final TextureFormat format) {
     return switch (format) {
       case RGBA8 -> GpuFormat.RGBA8_UNORM;
       case RED8 -> GpuFormat.R8_UNORM;
       case RED8I -> GpuFormat.R8_SINT;
       case DEPTH32 -> GpuFormat.D32_FLOAT;
-      default -> {
-        if (format == FLASHBACK_R32_FLOAT) yield GpuFormat.R32_FLOAT;
-        throw new IllegalArgumentException("Unsupported texture format " + format);
-      }
+      // Mods extending TextureFormat (e.g. Flashback, Skyblocker) map it in GlConst for the OpenGL backend
+      default -> fromGlInternalId(GlConst.toGlInternalId(format), format);
     };
   }
 
-  public static com.mojang.blaze3d.textures.TextureFormat toTextureFormat(final GpuFormat format) {
-    return switch (format) {
-      case R8_UNORM -> com.mojang.blaze3d.textures.TextureFormat.RED8;
-      case R8_SINT -> com.mojang.blaze3d.textures.TextureFormat.RED8I;
-      case D32_FLOAT -> com.mojang.blaze3d.textures.TextureFormat.DEPTH32;
-      case R32_FLOAT -> FLASHBACK_R32_FLOAT != null ? FLASHBACK_R32_FLOAT : com.mojang.blaze3d.textures.TextureFormat.RGBA8;
-      default -> com.mojang.blaze3d.textures.TextureFormat.RGBA8;
+  // Inverse of GlConst.toGlInternalId(GpuFormat) on 26.2+
+  private static GpuFormat fromGlInternalId(final int glInternalId, final TextureFormat format) {
+    return switch (glInternalId) {
+      case GL33.GL_R8 -> GpuFormat.R8_UNORM;
+      case GL33.GL_R8_SNORM -> GpuFormat.R8_SNORM;
+      case GL33.GL_R16 -> GpuFormat.R16_UNORM;
+      case GL33.GL_R16_SNORM -> GpuFormat.R16_SNORM;
+      case GL33.GL_RG8 -> GpuFormat.RG8_UNORM;
+      case GL33.GL_RG8_SNORM -> GpuFormat.RG8_SNORM;
+      case GL33.GL_RG16 -> GpuFormat.RG16_UNORM;
+      case GL33.GL_RG16_SNORM -> GpuFormat.RG16_SNORM;
+      case GL33.GL_RGBA8 -> GpuFormat.RGBA8_UNORM;
+      case GL33.GL_RGBA8_SNORM -> GpuFormat.RGBA8_SNORM;
+      case GL33.GL_RGBA16 -> GpuFormat.RGBA16_UNORM;
+      case GL33.GL_RGBA16_SNORM -> GpuFormat.RGBA16_SNORM;
+      case GL33.GL_RGB10_A2 -> GpuFormat.RGB10A2_UNORM;
+      case GL33.GL_R8UI -> GpuFormat.R8_UINT;
+      case GL33.GL_R8I -> GpuFormat.R8_SINT;
+      case GL33.GL_RG8UI -> GpuFormat.RG8_UINT;
+      case GL33.GL_RG8I -> GpuFormat.RG8_SINT;
+      case GL33.GL_RGBA8UI -> GpuFormat.RGBA8_UINT;
+      case GL33.GL_RGBA8I -> GpuFormat.RGBA8_SINT;
+      case GL33.GL_R16UI -> GpuFormat.R16_UINT;
+      case GL33.GL_R16I -> GpuFormat.R16_SINT;
+      case GL33.GL_RG16UI -> GpuFormat.RG16_UINT;
+      case GL33.GL_RG16I -> GpuFormat.RG16_SINT;
+      case GL33.GL_RGBA16UI -> GpuFormat.RGBA16_UINT;
+      case GL33.GL_RGBA16I -> GpuFormat.RGBA16_SINT;
+      case GL33.GL_R32UI -> GpuFormat.R32_UINT;
+      case GL33.GL_R32I -> GpuFormat.R32_SINT;
+      case GL33.GL_RG32UI -> GpuFormat.RG32_UINT;
+      case GL33.GL_RG32I -> GpuFormat.RG32_SINT;
+      case GL33.GL_RGB32UI -> GpuFormat.RGB32_UINT;
+      case GL33.GL_RGB32I -> GpuFormat.RGB32_SINT;
+      case GL33.GL_RGBA32UI -> GpuFormat.RGBA32_UINT;
+      case GL33.GL_RGBA32I -> GpuFormat.RGBA32_SINT;
+      case GL33.GL_R16F -> GpuFormat.R16_FLOAT;
+      case GL33.GL_RG16F -> GpuFormat.RG16_FLOAT;
+      case GL33.GL_RGBA16F -> GpuFormat.RGBA16_FLOAT;
+      case GL33.GL_R32F -> GpuFormat.R32_FLOAT;
+      case GL33.GL_RG32F -> GpuFormat.RG32_FLOAT;
+      case GL33.GL_RGBA32F -> GpuFormat.RGBA32_FLOAT;
+      case GL33.GL_RGB10_A2UI -> GpuFormat.RGB10A2_UINT;
+      case GL33.GL_R11F_G11F_B10F -> GpuFormat.RG11B10_FLOAT;
+      case GL33.GL_DEPTH_COMPONENT16 -> GpuFormat.D16_UNORM;
+      case GL33.GL_DEPTH_COMPONENT32, GL33.GL_DEPTH_COMPONENT32F -> GpuFormat.D32_FLOAT;
+      case GL33.GL_DEPTH32F_STENCIL8 -> GpuFormat.D32_FLOAT_S8_UINT;
+      case GL33.GL_DEPTH24_STENCIL8 -> GpuFormat.D24_UNORM_S8_UINT;
+      case GL33.GL_STENCIL_INDEX8 -> GpuFormat.S8_UINT;
+      default -> throw new IllegalArgumentException("Unsupported texture format " + format + " (GL internal format " + glInternalId + ")");
     };
   }
 
@@ -216,19 +260,19 @@ public final class VulkanConst {
     };
   }
 
-  public static int toVk(final com.mojang.blaze3d.vertex.VertexFormatElement element, final int shaderType) {
+  public static int toVk(final VertexFormatElement element, final int shaderType) {
     int n = element.count() - 1;
     //? if >= 26.1 {
     boolean norm = element.normalized();
     //?} else {
-    /*boolean norm = element.usage() == com.mojang.blaze3d.vertex.VertexFormatElement.Usage.NORMAL
-      || element.usage() == com.mojang.blaze3d.vertex.VertexFormatElement.Usage.COLOR;
+    /*boolean norm = element.usage() == VertexFormatElement.Usage.NORMAL
+      || element.usage() == VertexFormatElement.Usage.COLOR;
     *///?}
-    boolean unsignedIn = shaderType == org.lwjgl.util.spvc.Spvc.SPVC_BASETYPE_UINT8 || shaderType == org.lwjgl.util.spvc.Spvc.SPVC_BASETYPE_UINT16
-      || shaderType == org.lwjgl.util.spvc.Spvc.SPVC_BASETYPE_UINT32;
-    boolean signedIn = shaderType == org.lwjgl.util.spvc.Spvc.SPVC_BASETYPE_INT8 || shaderType == org.lwjgl.util.spvc.Spvc.SPVC_BASETYPE_INT16
-      || shaderType == org.lwjgl.util.spvc.Spvc.SPVC_BASETYPE_INT32;
-    if (!norm && (unsignedIn || signedIn) && element.type() != com.mojang.blaze3d.vertex.VertexFormatElement.Type.FLOAT) {
+    boolean unsignedIn = shaderType == Spvc.SPVC_BASETYPE_UINT8 || shaderType == Spvc.SPVC_BASETYPE_UINT16
+      || shaderType == Spvc.SPVC_BASETYPE_UINT32;
+    boolean signedIn = shaderType == Spvc.SPVC_BASETYPE_INT8 || shaderType == Spvc.SPVC_BASETYPE_INT16
+      || shaderType == Spvc.SPVC_BASETYPE_INT32;
+    if (!norm && (unsignedIn || signedIn) && element.type() != VertexFormatElement.Type.FLOAT) {
       return (switch (element.type().size()) {
         case 1 -> unsignedIn ? new int[]{13, 20, 27, 41} : new int[]{14, 21, 28, 42};
         case 2 -> unsignedIn ? new int[]{74, 81, 88, 95} : new int[]{75, 82, 89, 96};
@@ -276,7 +320,7 @@ public final class VulkanConst {
     };
   }
 
-  public static int toVk(final com.mojang.blaze3d.vertex.VertexFormat.Mode primitiveTopology) {
+  public static int toVk(final VertexFormat.Mode primitiveTopology) {
     return switch (primitiveTopology) {
       case LINES -> 3;
       case DEBUG_LINES -> 1;
@@ -319,13 +363,13 @@ public final class VulkanConst {
     };
   }
 
-  public static com.mojang.blaze3d.vertex.VertexFormatElement vertexElement(com.mojang.blaze3d.vertex.VertexFormatElement.Type type, int count) {
-    for (int id = 0; id < com.mojang.blaze3d.vertex.VertexFormatElement.MAX_COUNT; id++) {
-      if (com.mojang.blaze3d.vertex.VertexFormatElement.byId(id) == null) {
+  public static VertexFormatElement vertexElement(VertexFormatElement.Type type, int count) {
+    for (int id = 0; id < VertexFormatElement.MAX_COUNT; id++) {
+      if (VertexFormatElement.byId(id) == null) {
         //? if >= 26.1 {
-        return com.mojang.blaze3d.vertex.VertexFormatElement.register(id, 0, type, false, count);
+        return VertexFormatElement.register(id, 0, type, false, count);
         //?} else {
-        /*return com.mojang.blaze3d.vertex.VertexFormatElement.register(id, 0, type, com.mojang.blaze3d.vertex.VertexFormatElement.Usage.GENERIC, count);
+        /*return VertexFormatElement.register(id, 0, type, VertexFormatElement.Usage.GENERIC, count);
         *///?}
       }
     }

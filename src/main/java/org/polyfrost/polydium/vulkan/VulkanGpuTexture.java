@@ -2,6 +2,7 @@ package org.polyfrost.polydium.vulkan;
 
 import org.polyfrost.polydium.vulkan.compat.GpuFormat;
 import com.mojang.blaze3d.textures.GpuTexture;
+import com.mojang.blaze3d.textures.TextureFormat;
 import java.nio.LongBuffer;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
@@ -25,14 +26,15 @@ public class VulkanGpuTexture extends GpuTexture implements Destroyable {
     final VulkanDevice device,
     final @GpuTexture.Usage int usage,
     final String label,
-    final GpuFormat format,
+    final TextureFormat textureFormat,
     final int width,
     final int height,
     final int depthOrLayers,
     final int mipLevels
   ) {
-    super(usage, label, VulkanConst.toTextureFormat(format), width, height, depthOrLayers, mipLevels);
+    super(usage, label, textureFormat, width, height, depthOrLayers, mipLevels);
     this.device = device;
+    final GpuFormat format = VulkanConst.toGpuFormat(textureFormat);
     this.gpuFormat = format;
     MemoryStack stack = MemoryStack.stackPush();
 

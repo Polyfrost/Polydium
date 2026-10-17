@@ -1,6 +1,8 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium.vulkan;
 
 //? if >= 26.1 {
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.textures.GpuSampler;
 import net.caffeinemc.mods.sodium.client.gl.buffer.GlTexelBuffer;
@@ -17,9 +19,6 @@ import org.polyfrost.polydium.vulkan.sodium.SodiumVulkan;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(value = DefaultChunkRenderer.class, remap = false)
 public abstract class MixinVulkanChunkRenderer {
@@ -27,15 +26,17 @@ public abstract class MixinVulkanChunkRenderer {
     @Final
     private SharedQuadIndexBuffer sharedIndexBuffer;
 
-    @Inject(method = "render", at = @At("HEAD"), cancellable = true)
+    @WrapMethod(method = "render")
     private void polydium$renderVulkan(ChunkRenderMatrices matrices, CommandList commandList, ChunkRenderListIterable renderLists,
                                        TerrainRenderPass renderPass, CameraTransform camera, FogParameters parameters,
                                        boolean indexedRenderingEnabled, GpuSampler terrainSampler, GpuBufferSlice uniformBuffer,
-                                       GlTexelBuffer sectionTimeInfoTexture, CallbackInfo ci) {
-        if (!VulkanActive.active)
+                                       GlTexelBuffer sectionTimeInfoTexture, Operation<Void> original) {
+        if (!VulkanActive.active) {
+            original.call(matrices, commandList, renderLists, renderPass, camera, parameters, indexedRenderingEnabled, terrainSampler,
+                    uniformBuffer, sectionTimeInfoTexture);
             return;
+        }
 
-        ci.cancel();
         SodiumVulkan.render(commandList, renderLists, renderPass, camera, indexedRenderingEnabled, this.sharedIndexBuffer,
                 terrainSampler, uniformBuffer);
     }

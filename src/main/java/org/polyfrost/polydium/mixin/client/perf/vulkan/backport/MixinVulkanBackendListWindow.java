@@ -1,10 +1,11 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan.backport;
 
 //? if < 26.1 {
-/*import com.mojang.blaze3d.platform.Window;
+/*import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.BackendCreationException;
 import com.mojang.logging.LogUtils;
-import org.lwjgl.glfw.GLFW;
 import org.objectweb.asm.Opcodes;
 import org.polyfrost.polydium.vulkan.EssentialVulkan;
 import org.polyfrost.polydium.vulkan.SodiumExtraMac;
@@ -13,9 +14,9 @@ import org.polyfrost.polydium.vulkan.VulkanBackend;
 import org.polyfrost.polydium.vulkan.VulkanDevice;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Window.class)
@@ -48,6 +49,7 @@ public class MixinVulkanBackendListWindow {
         this.polydium$macReduce();
     }
 
+    @Unique
     private void polydium$macReduce() {
         if (VulkanActive.backend != null && SodiumExtraMac.isHighDpi(this.framebufferWidth, this.framebufferHeight, this.width, this.height) && SodiumExtraMac.enabled()) {
             this.framebufferWidth = Math.max(1, this.framebufferWidth / 2);
@@ -55,12 +57,12 @@ public class MixinVulkanBackendListWindow {
         }
     }
 
-    @Redirect(method = "updateVsync", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwSwapInterval(I)V", remap = false))
-    private void polydium$vsync(int interval) {
+    @WrapOperation(method = "updateVsync", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwSwapInterval(I)V", remap = false))
+    private void polydium$vsync(int interval, Operation<Void> original) {
         if (VulkanDevice.active != null) {
             VulkanDevice.active.setVsync(interval != 0);
         } else {
-            GLFW.glfwSwapInterval(interval);
+            original.call(interval);
         }
     }
 }

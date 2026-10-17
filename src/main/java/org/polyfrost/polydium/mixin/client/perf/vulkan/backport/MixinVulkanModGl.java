@@ -1,16 +1,16 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan.backport;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.nio.FloatBuffer;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL11C;
 import org.polyfrost.polydium.vulkan.VulkanActive;
+import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Pseudo
@@ -31,59 +31,47 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 }, remap = false)
 public class MixinVulkanModGl {
 
-    @Redirect(method = "*", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/opengl/GlStateManager;_enableBlend()V"), require = 0)
-    private static void polydium$enableBlend() {
-        if (!VulkanActive.active) GlStateManager._enableBlend();
+    @WrapWithCondition(method = "*", at = {
+        @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/opengl/GlStateManager;_enableBlend()V"),
+        @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/opengl/GlStateManager;_disableBlend()V"),
+        @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/opengl/GlStateManager;_enableDepthTest()V"),
+        @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/opengl/GlStateManager;_disableDepthTest()V")
+    }, require = 0)
+    private static boolean polydium$glState() {
+        return !VulkanActive.active;
     }
 
-    @Redirect(method = "*", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/opengl/GlStateManager;_disableBlend()V"), require = 0)
-    private static void polydium$disableBlend() {
-        if (!VulkanActive.active) GlStateManager._disableBlend();
+    @WrapOperation(method = "accept", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glGetString(I)Ljava/lang/String;"), require = 0)
+    private static String polydium$glGetString(int name, Operation<String> original) {
+        return VulkanActive.active ? RenderSystem.getDevice().getVendor() : original.call(name);
     }
 
-    @Redirect(method = "*", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/opengl/GlStateManager;_enableDepthTest()V"), require = 0)
-    private static void polydium$enableDepthTest() {
-        if (!VulkanActive.active) GlStateManager._enableDepthTest();
+    @WrapWithCondition(method = "takeScreenshot", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glReadPixels(IIIIIILjava/nio/FloatBuffer;)V"), require = 0)
+    private static boolean polydium$glReadPixels(int x, int y, int width, int height, int format, int type, FloatBuffer pixels) {
+        return !VulkanActive.active;
     }
 
-    @Redirect(method = "*", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/opengl/GlStateManager;_disableDepthTest()V"), require = 0)
-    private static void polydium$disableDepthTest() {
-        if (!VulkanActive.active) GlStateManager._disableDepthTest();
+    @WrapWithCondition(method = "draw", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glGetIntegerv(I[I)V"), require = 0)
+    private static boolean polydium$glGetIntegerv(int pname, int[] params) {
+        return !VulkanActive.active;
     }
 
-    @Redirect(method = "accept", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glGetString(I)Ljava/lang/String;"), require = 0)
-    private static String polydium$glGetString(int name) {
-        return VulkanActive.active ? RenderSystem.getDevice().getVendor() : GL11.glGetString(name);
+    @WrapWithCondition(method = {"paint", "setGlProperty"}, at = {
+        @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glEnable(I)V"),
+        @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glDisable(I)V")
+    }, require = 0)
+    private static boolean polydium$glToggle(int cap) {
+        return !VulkanActive.active;
     }
 
-    @Redirect(method = "takeScreenshot", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glReadPixels(IIIIIILjava/nio/FloatBuffer;)V"), require = 0)
-    private static void polydium$glReadPixels(int x, int y, int width, int height, int format, int type, FloatBuffer pixels) {
-        if (!VulkanActive.active) GL11.glReadPixels(x, y, width, height, format, type, pixels);
+    @WrapWithCondition(method = "refreshScissors", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glScissor(IIII)V"), require = 0)
+    private static boolean polydium$glScissor(int x, int y, int width, int height) {
+        return !VulkanActive.active;
     }
 
-    @Redirect(method = "draw", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glGetIntegerv(I[I)V"), require = 0)
-    private static void polydium$glGetIntegerv(int pname, int[] params) {
-        if (!VulkanActive.active) GL11.glGetIntegerv(pname, params);
-    }
-
-    @Redirect(method = {"paint", "setGlProperty"}, at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glEnable(I)V"), require = 0)
-    private static void polydium$glEnable(int cap) {
-        if (!VulkanActive.active) GL11.glEnable(cap);
-    }
-
-    @Redirect(method = {"paint", "setGlProperty"}, at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glDisable(I)V"), require = 0)
-    private static void polydium$glDisable(int cap) {
-        if (!VulkanActive.active) GL11.glDisable(cap);
-    }
-
-    @Redirect(method = "refreshScissors", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glScissor(IIII)V"), require = 0)
-    private static void polydium$glScissor(int x, int y, int width, int height) {
-        if (!VulkanActive.active) GL11.glScissor(x, y, width, height);
-    }
-
-    @Redirect(method = {"begin", "end"}, at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11C;glFinish()V"), require = 0)
-    private static void polydium$glFinish() {
-        if (!VulkanActive.active) GL11C.glFinish();
+    @WrapWithCondition(method = {"begin", "end"}, at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11C;glFinish()V"), require = 0)
+    private static boolean polydium$glFinish() {
+        return !VulkanActive.active;
     }
 
     @Inject(method = {"resetState", "enableDepthTest", "disableDepthTest", "depthMask", "enableBlend", "blendFunc"}, at = @At("HEAD"), cancellable = true, require = 0)
@@ -94,7 +82,7 @@ public class MixinVulkanModGl {
     @Inject(method = "initVoxyClient", at = @At("HEAD"), cancellable = true, require = 0)
     private static void polydium$skipVoxy(CallbackInfo ci) {
         if (!VulkanActive.active) return;
-        org.slf4j.LoggerFactory.getLogger("polydium/vulkan").warn("Voxy only renders through OpenGL; disabled while the Vulkan backend is active");
+        LoggerFactory.getLogger("polydium/vulkan").warn("Voxy only renders through OpenGL; disabled while the Vulkan backend is active");
         ci.cancel();
     }
 }

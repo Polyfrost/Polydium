@@ -2,9 +2,9 @@ package org.polyfrost.polydium.vulkan;
 
 import org.polyfrost.polydium.vulkan.compat.SurfaceException;
 import org.polyfrost.polydium.vulkan.compat.GpuSurface;
-import org.polyfrost.polydium.vulkan.compat.GpuFormat;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.CompiledRenderPipeline;
+import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.preprocessor.GlslPreprocessor;
 import com.mojang.blaze3d.shaders.ShaderSource;
@@ -21,10 +21,12 @@ import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.textures.TextureFormat;
 import org.polyfrost.polydium.vulkan.checkpoints.CheckpointExtension;
 import org.polyfrost.polydium.vulkan.glsl.GlslCompiler;
 import org.polyfrost.polydium.vulkan.glsl.IntermediaryShaderModule;
 import org.polyfrost.polydium.vulkan.glsl.ShaderCompileException;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import java.nio.ByteBuffer;
@@ -34,16 +36,24 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
+//? if < 26.1 {
+/*import java.util.regex.Matcher;
+import net.minecraft.util.Mth;
+*///?}
 import net.minecraft.client.renderer.ShaderDefines;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;
+import org.lwjgl.glfw.GLFW;
 import org.lwjgl.util.vma.Vma;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VK12;
+import org.lwjgl.vulkan.VkBufferCopy;
 import org.lwjgl.vulkan.VkDevice;
 import org.lwjgl.vulkan.VkPhysicalDeviceLimits;
 import org.lwjgl.vulkan.VkPhysicalDeviceVulkan11Properties;
@@ -54,6 +64,7 @@ public class VulkanDevice implements GpuDeviceBackend {
   private static final Logger LOGGER = LogUtils.getLogger();
   private final ShaderSource defaultShaderSource;
   private final Map<RenderPipeline, VulkanRenderPipeline> pipelineCache = new IdentityHashMap<>();
+  private final Map<Pair<RenderPipeline, @Nullable DepthStencilState>, VulkanRenderPipeline> depthVariantCache = new HashMap<>();
   private final Map<VulkanDevice.ShaderCompilationKey, IntermediaryShaderModule> shaderCache = new HashMap<>();
   private final VulkanInstance instance;
   private final VkDevice vkDevice;
@@ -217,33 +228,33 @@ public class VulkanDevice implements GpuDeviceBackend {
   public GpuTexture createTexture(
     final @Nullable Supplier<String> label,
     final @GpuTexture.Usage int usage,
-    final com.mojang.blaze3d.textures.TextureFormat format,
+    final TextureFormat format,
     final int width,
     final int height,
     final int depthOrLayers,
     final int mipLevels
   ) {
-    return new VulkanGpuTexture(this, usage, this.isDebuggingEnabled() && label != null ? label.get() : "", VulkanConst.toGpuFormat(format), width, height, depthOrLayers, maxMipLevels(width, height, mipLevels));
+    return new VulkanGpuTexture(this, usage, this.isDebuggingEnabled() && label != null ? label.get() : "", format, width, height, depthOrLayers, maxMipLevels(width, height, mipLevels));
   }
 
   @Override
   public GpuTexture createTexture(
     final @Nullable String label,
     final @GpuTexture.Usage int usage,
-    final com.mojang.blaze3d.textures.TextureFormat format,
+    final TextureFormat format,
     final int width,
     final int height,
     final int depthOrLayers,
     final int mipLevels
   ) {
-    return new VulkanGpuTexture(this, usage, this.isDebuggingEnabled() && label != null ? label : "", VulkanConst.toGpuFormat(format), width, height, depthOrLayers, maxMipLevels(width, height, mipLevels));
+    return new VulkanGpuTexture(this, usage, this.isDebuggingEnabled() && label != null ? label : "", format, width, height, depthOrLayers, maxMipLevels(width, height, mipLevels));
   }
 
   private static int maxMipLevels(final int width, final int height, final int mipLevels) {
     //? if >= 26.1 {
     return mipLevels;
     //?} else {
-    /*return Math.min(mipLevels, net.minecraft.util.Mth.log2(Math.max(width, height)) + 1);
+    /*return Math.min(mipLevels, Mth.log2(Math.max(width, height)) + 1);
     *///?}
   }
 
@@ -267,7 +278,7 @@ public class VulkanDevice implements GpuDeviceBackend {
     VulkanCommandEncoder encoder = (VulkanCommandEncoder)this.createCommandEncoder();
     GpuBufferSlice stagingBuffer = encoder.transientMemory().uploadStaging(data, 1L, 16);
     try (MemoryStack stack = MemoryStack.stackPush()) {
-      org.lwjgl.vulkan.VkBufferCopy.Buffer regions = org.lwjgl.vulkan.VkBufferCopy.calloc(1, stack).srcOffset(stagingBuffer.offset()).dstOffset(0L).size(data.remaining());
+      VkBufferCopy.Buffer regions = VkBufferCopy.calloc(1, stack).srcOffset(stagingBuffer.offset()).dstOffset(0L).size(data.remaining());
       VK12.vkCmdCopyBuffer(encoder.objectInitCommandBuffer(), ((VulkanGpuBuffer)stagingBuffer.buffer()).vkBuffer(), buffer.vkBuffer(), regions);
     }
     return buffer;
@@ -290,7 +301,12 @@ public class VulkanDevice implements GpuDeviceBackend {
   }
 
   protected VulkanRenderPipeline getOrCompilePipeline(final RenderPipeline pipeline) {
-    return this.pipelineCache.computeIfAbsent(pipeline, ignored -> this.compilePipeline(pipeline, this.defaultShaderSource));
+    VulkanRenderPipeline compiled = this.pipelineCache.computeIfAbsent(pipeline, ignored -> this.compilePipeline(pipeline, this.defaultShaderSource));
+    DepthStencilState depth = VulkanRenderPipeline.depthState(pipeline);
+    // GL reads depth state per draw, so mods may override it while drawing (e.g. depth-tested entity outlines)
+    return Objects.equals(depth, compiled.depth())
+      ? compiled
+      : this.depthVariantCache.computeIfAbsent(Pair.of(pipeline, depth), ignored -> this.compilePipeline(pipeline, this.defaultShaderSource));
   }
 
   protected IntermediaryShaderModule getOrCompileShader(
@@ -300,12 +316,12 @@ public class VulkanDevice implements GpuDeviceBackend {
     return this.shaderCache.computeIfAbsent(key, ignored -> this.compileShader(key, shaderSource));
   }
 
-  private static final java.util.regex.Pattern RESERVED_SAMPLER = java.util.regex.Pattern.compile("\\bsampler\\b");
+  private static final Pattern RESERVED_SAMPLER = Pattern.compile("\\bsampler\\b");
   //? if < 26.1 {
-  /*private static final java.util.regex.Pattern VERTEX_MAIN = java.util.regex.Pattern.compile("\\bvoid\\s+main\\s*\\(\\s*(void)?\\s*\\)");
+  /*private static final Pattern VERTEX_MAIN = Pattern.compile("\\bvoid\\s+main\\s*\\(\\s*(void)?\\s*\\)");
 
   private static String glToVulkanDepth(final String source) {
-    java.util.regex.Matcher main = VERTEX_MAIN.matcher(source);
+    Matcher main = VERTEX_MAIN.matcher(source);
     if (!main.find()) {
       return source;
     }
@@ -337,23 +353,24 @@ public class VulkanDevice implements GpuDeviceBackend {
   }
 
   private VulkanRenderPipeline compilePipeline(final RenderPipeline pipeline, final ShaderSource shaderSource) {
+    DepthStencilState depth = VulkanRenderPipeline.depthState(pipeline);
     IntermediaryShaderModule vertexShader = this.getOrCompileShader(pipeline.getVertexShader(), ShaderType.VERTEX, pipeline.getShaderDefines(), shaderSource);
     IntermediaryShaderModule fragmentShader = this.getOrCompileShader(
       pipeline.getFragmentShader(), ShaderType.FRAGMENT, pipeline.getShaderDefines(), shaderSource
     );
     if (vertexShader == IntermediaryShaderModule.INVALID) {
       LOGGER.error("Couldn't compile pipeline {}: vertex shader {} was invalid", pipeline.getLocation(), pipeline.getVertexShader());
-      return new VulkanRenderPipeline(pipeline, this, 0L, 0L, 0L, VulkanBindGroupLayout.INVALID_LAYOUT, 0L, 0L);
+      return new VulkanRenderPipeline(pipeline, depth, this, 0L, 0L, 0L, VulkanBindGroupLayout.INVALID_LAYOUT, 0L, 0L);
     } else if (fragmentShader == IntermediaryShaderModule.INVALID) {
       LOGGER.error("Couldn't compile pipeline {}: fragment shader {} was invalid", pipeline.getLocation(), pipeline.getFragmentShader());
-      return new VulkanRenderPipeline(pipeline, this, 0L, 0L, 0L, VulkanBindGroupLayout.INVALID_LAYOUT, 0L, 0L);
+      return new VulkanRenderPipeline(pipeline, depth, this, 0L, 0L, 0L, VulkanBindGroupLayout.INVALID_LAYOUT, 0L, 0L);
     } else {
       try {
         GlslCompiler.CompiledModules modules = this.glslCompiler.compile(this, pipeline, vertexShader, fragmentShader);
-        return VulkanRenderPipeline.compile(this, modules.layout(), pipeline, modules.vertex(), modules.fragment(), modules.inputTypes());
+        return VulkanRenderPipeline.compile(this, modules.layout(), pipeline, depth, modules.vertex(), modules.fragment(), modules.inputTypes());
       } catch (ShaderCompileException var6) {
         LOGGER.error("Couldn't compile pipeline {}: {}", pipeline.getLocation(), var6.getMessage());
-        return new VulkanRenderPipeline(pipeline, this, 0L, 0L, 0L, VulkanBindGroupLayout.INVALID_LAYOUT, 0L, 0L);
+        return new VulkanRenderPipeline(pipeline, depth, this, 0L, 0L, 0L, VulkanBindGroupLayout.INVALID_LAYOUT, 0L, 0L);
       }
     }
   }
@@ -363,6 +380,8 @@ public class VulkanDevice implements GpuDeviceBackend {
     this.graphicsQueue.waitIdle();
     this.pipelineCache.values().forEach(VulkanRenderPipeline::destroy);
     this.pipelineCache.clear();
+    this.depthVariantCache.values().forEach(VulkanRenderPipeline::destroy);
+    this.depthVariantCache.clear();
     this.shaderCache.values().forEach(IntermediaryShaderModule::close);
     this.shaderCache.clear();
   }
@@ -398,7 +417,7 @@ public class VulkanDevice implements GpuDeviceBackend {
   void presentTexture(final GpuTextureView texture) {
     int[] width = new int[1];
     int[] height = new int[1];
-    org.lwjgl.glfw.GLFW.glfwGetFramebufferSize(this.window, width, height);
+    GLFW.glfwGetFramebufferSize(this.window, width, height);
     if (width[0] == 0 || height[0] == 0) {
       return;
     }

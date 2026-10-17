@@ -1,26 +1,22 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
 //? if >= 1.21.11 {
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
+import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Identifier.class)
 public abstract class MixinIrisUppercasePaths {
-    @Inject(method = "isValidPath", at = @At("HEAD"), cancellable = true)
-    private static void polydium$keepDummyInvalid(String path, CallbackInfoReturnable<Boolean> cir) {
-        if ("DUMMY".equals(path)) {
-            cir.setReturnValue(false);
-        }
+    @ModifyReturnValue(method = "isValidPath", at = @At("RETURN"))
+    private static boolean polydium$keepDummyInvalid(boolean valid, @Local(argsOnly = true) String path) {
+        return valid && !"DUMMY".equals(path);
     }
 
-    @Inject(method = "validPathChar", at = @At("HEAD"), cancellable = true)
-    private static void polydium$allowUppercase(char c, CallbackInfoReturnable<Boolean> cir) {
-        if (c >= 'A' && c <= 'Z') {
-            cir.setReturnValue(true);
-        }
+    @ModifyReturnValue(method = "validPathChar", at = @At("RETURN"))
+    private static boolean polydium$allowUppercase(boolean valid, @Local(argsOnly = true) char c) {
+        return valid || c >= 'A' && c <= 'Z';
     }
 }
 //?}

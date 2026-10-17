@@ -1,5 +1,8 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan.backport;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuFence;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -7,14 +10,12 @@ import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.TextureFormat;
 import java.nio.ByteBuffer;
 import java.util.List;
-import org.lwjgl.opengl.GL11;
 import org.polyfrost.polydium.vulkan.VulkanActive;
 import org.polyfrost.polydium.vulkan.XaeroVulkan;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Pseudo
@@ -67,10 +68,10 @@ public class MixinVulkanXaeroWorldMap {
         ci.cancel();
     }
 
-    @Redirect(method = {"uploadTextures", "post"}, at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glFinish()V"), require = 0)
-    private void polydium$finish() {
+    @WrapOperation(method = {"uploadTextures", "post"}, at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glFinish()V"), require = 0)
+    private void polydium$finish(Operation<Void> original) {
         if (VulkanActive.active) XaeroVulkan.finish();
-        else GL11.glFinish();
+        else original.call();
     }
 
     @Inject(method = "deleteBuffers(Ljava/util/List;I)V", at = @At("HEAD"), cancellable = true, require = 0)
@@ -85,9 +86,9 @@ public class MixinVulkanXaeroWorldMap {
         if (VulkanActive.active) ci.cancel();
     }
 
-    @Redirect(method = "deleteTextures", at = @At(value = "INVOKE", target = "Lxaero/map/graphics/OpenGlHelper;isUsingOpenGL()Z"), require = 0)
-    private static boolean polydium$deleteTexturesAnyBackend() {
-        return true;
+    @ModifyExpressionValue(method = "deleteTextures", at = @At(value = "INVOKE", target = "Lxaero/map/graphics/OpenGlHelper;isUsingOpenGL()Z"), require = 0)
+    private static boolean polydium$deleteTexturesAnyBackend(boolean usingOpenGL) {
+        return usingOpenGL || VulkanActive.active;
     }
 
     @Inject(method = "updateAvailableVRAM", at = @At("HEAD"), cancellable = true, require = 0)
@@ -95,24 +96,24 @@ public class MixinVulkanXaeroWorldMap {
         if (VulkanActive.active) ci.cancel();
     }
 
-    @Redirect(method = "export", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glGetInteger(I)I"), require = 0)
-    private int polydium$maxTextureSize(int pname) {
-        return VulkanActive.active ? RenderSystem.getDevice().getMaxTextureSize() : GL11.glGetInteger(pname);
+    @WrapOperation(method = "export", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glGetInteger(I)I"), require = 0)
+    private int polydium$maxTextureSize(int pname, Operation<Integer> original) {
+        return VulkanActive.active ? RenderSystem.getDevice().getMaxTextureSize() : original.call(pname);
     }
 
-    @Redirect(method = "export", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/buffers/GpuFence;awaitCompletion(J)Z"), require = 0)
-    private boolean polydium$submitThenAwait(GpuFence fence, long timeout) {
+    @WrapOperation(method = "export", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/buffers/GpuFence;awaitCompletion(J)Z"), require = 0)
+    private boolean polydium$submitThenAwait(GpuFence fence, long timeout, Operation<Boolean> original) {
         if (VulkanActive.active) XaeroVulkan.submit();
-        return fence.awaitCompletion(timeout);
+        return original.call(fence, timeout);
     }
 
-    @Redirect(method = {"putColour", "applyChunkHighlightColors"}, at = @At(value = "INVOKE", target = "Ljava/nio/ByteBuffer;putInt(II)Ljava/nio/ByteBuffer;"), require = 0)
-    private ByteBuffer polydium$putColour(ByteBuffer buffer, int pos, int colour) {
-        return VulkanActive.active ? XaeroVulkan.putColour(buffer, pos, colour) : buffer.putInt(pos, colour);
+    @WrapOperation(method = {"putColour", "applyChunkHighlightColors"}, at = @At(value = "INVOKE", target = "Ljava/nio/ByteBuffer;putInt(II)Ljava/nio/ByteBuffer;"), require = 0)
+    private ByteBuffer polydium$putColour(ByteBuffer buffer, int pos, int colour, Operation<ByteBuffer> original) {
+        return VulkanActive.active ? XaeroVulkan.putColour(buffer, pos, colour) : original.call(buffer, pos, colour);
     }
 
-    @Redirect(method = "applyChunkHighlightColors", at = @At(value = "INVOKE", target = "Ljava/nio/ByteBuffer;getInt(I)I"), require = 0)
-    private int polydium$getColour(ByteBuffer buffer, int pos) {
-        return VulkanActive.active ? XaeroVulkan.getColour(buffer, pos) : buffer.getInt(pos);
+    @WrapOperation(method = "applyChunkHighlightColors", at = @At(value = "INVOKE", target = "Ljava/nio/ByteBuffer;getInt(I)I"), require = 0)
+    private int polydium$getColour(ByteBuffer buffer, int pos, Operation<Integer> original) {
+        return VulkanActive.active ? XaeroVulkan.getColour(buffer, pos) : original.call(buffer, pos);
     }
 }
