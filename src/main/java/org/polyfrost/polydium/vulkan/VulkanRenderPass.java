@@ -456,7 +456,8 @@ public class VulkanRenderPass implements RenderPassBackend {
             set.pBufferInfo(bufferInfo);
           } else if (entry.type() == VulkanBindGroupLayout.VulkanBindGroupEntryType.SAMPLED_IMAGE) {
             VulkanRenderPass.TextureViewAndSampler valuex = this.textures.get(entry.name());
-            if (valuex == null && !this.textures.isEmpty() && !this.pipeline.info().getSamplers().contains(entry.name())) {
+            // OpenGL silently tolerates unbound samplers, so mods may omit some (e.g. a lightmap the fragment shader never reads)
+            if (valuex == null && !this.textures.isEmpty()) {
               valuex = this.textures.values().iterator().next();
             }
 
