@@ -38,7 +38,7 @@ public class MixinVulkanXaero {
         ci.cancel();
     }
 
-    @WrapOperation(method = {"get", "renderPart", "trace"}, at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glGetError()I"), require = 0)
+    @WrapOperation(method = {"get*", "renderPart", "trace"}, at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glGetError()I"), require = 0)
     private int polydium$noGlError(Operation<Integer> original) {
         return VulkanActive.active ? 0 : original.call();
     }
