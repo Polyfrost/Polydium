@@ -21,6 +21,7 @@
     "client.perf.MixinBufferGrowth",
     "client.perf.MixinCutoutTypeCache",
     "client.perf.MixinCutoutTypeCacheClear",
+    "client.perf.sodium.MixinModernFixModelCacheReset",
     "client.perf.MixinTaskWakeCoalesce",
     //? if >= 1.21.10
     "client.perf.MixinDebugEntryCache",
