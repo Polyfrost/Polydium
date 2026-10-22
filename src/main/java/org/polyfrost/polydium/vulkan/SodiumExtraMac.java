@@ -6,6 +6,7 @@ import java.lang.invoke.MethodType;
 
 public final class SodiumExtraMac {
   private static final MethodHandle IS_ENABLED;
+  public static long window;
 
   static {
     MethodHandle handle = null;
@@ -34,6 +35,16 @@ public final class SodiumExtraMac {
       width[0] = Math.max(1, width[0] / 2);
       height[0] = Math.max(1, height[0] / 2);
     }
+  }
+
+  public static boolean isHighDpi(long window) {
+    int[] framebufferWidth = new int[1];
+    int[] framebufferHeight = new int[1];
+    int[] windowWidth = new int[1];
+    int[] windowHeight = new int[1];
+    org.lwjgl.glfw.GLFW.glfwGetFramebufferSize(window, framebufferWidth, framebufferHeight);
+    org.lwjgl.glfw.GLFW.glfwGetWindowSize(window, windowWidth, windowHeight);
+    return isHighDpi(framebufferWidth[0], framebufferHeight[0], windowWidth[0], windowHeight[0]);
   }
 
   public static boolean isHighDpi(int framebufferWidth, int framebufferHeight, int windowWidth, int windowHeight) {

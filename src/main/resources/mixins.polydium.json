@@ -163,6 +163,10 @@
     "client.perf.sodium.MixinTerrainRgssSkip",
     //? if >= 26.1 && < 26.2
     //"client.perf.vulkan.backport.MixinVulkanBackendList",
+    //? if >= 26.1 && < 26.2
+    //"client.perf.vulkan.backport.MixinSodiumExtraMacReducedResolution",
+    //? if >= 26.1 && < 26.2
+    //"client.perf.vulkan.backport.MixinSodiumExtraMacWindow",
     //? if >= 1.21.11 && < 26.1 {
     /*"client.perf.vulkan.backport.MixinVulkanBackendListOneConfig",
     "client.perf.vulkan.backport.MixinVulkanBackendListRenderSystem",
