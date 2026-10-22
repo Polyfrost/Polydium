@@ -120,6 +120,7 @@
     //"client.perf.iris.MixinRenderRegion",
     "client.perf.skyboxify.MixinEventManager",
     "client.perf.skyboxify.MixinSkyboxManager",
+    "client.perf.skyboxify.MixinSkyFeatureRenderer",
     "client.perf.sodium.MixinAnimatedSpriteMarksAnimationState",
     "client.perf.sodium.MixinAnimatedSpriteMarksManager",
     "client.perf.sodium.MixinAnimatedSpriteMarksRegion",

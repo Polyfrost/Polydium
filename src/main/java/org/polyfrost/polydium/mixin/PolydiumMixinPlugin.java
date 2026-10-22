@@ -26,6 +26,7 @@ import org.polyfrost.polydium.compat.Mods;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -57,6 +58,8 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             .orElse("");
 
     public static final boolean SODIUM_PERF = Arrays.stream(SODIUM_PERF_VERSIONS).anyMatch(SODIUM_VERSION::startsWith);
+
+    public static volatile boolean SKYBOXIFY_FAR_SKY;
 
     private static final String SODIUM_08_PACKAGE = SODIUM_PERF_PACKAGE + "v08.";
     private static final Set<String> SODIUM_09_ONLY = Set.of(
@@ -227,6 +230,19 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
+        if (mixinClassName.endsWith(".skyboxify.MixinSkyFeatureRenderer")) {
+            Set<String> handlers = new HashSet<>(), called = new HashSet<>();
+            for (MethodNode method : targetClass.methods) {
+                if (method.name.contains("polydium$"))
+                    handlers.add(method.name);
+                for (AbstractInsnNode insn : method.instructions)
+                    if (insn instanceof MethodInsnNode call && call.owner.equals(targetClass.name))
+                        called.add(call.name);
+            }
+            SKYBOXIFY_FAR_SKY = !handlers.isEmpty() && called.containsAll(handlers);
+            return;
+        }
+
         if (mixinClassName.endsWith("MixinVulkanServerEntryGl")) {
             for (MethodNode method : targetClass.methods)
                 for (AbstractInsnNode insn : method.instructions)

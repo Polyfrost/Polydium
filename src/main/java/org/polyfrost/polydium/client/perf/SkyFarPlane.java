@@ -16,6 +16,8 @@ import com.mojang.renderpearl.api.pipeline.DepthStencilState;
 //? if >= 26.2
 import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+//? if >= 26.3
+import com.mojang.renderpearl.api.pipeline.ShaderType;
 //? if < 26.2
 /*import com.mojang.renderpearl.api.vertex.VertexFormat;*/
 import net.fabricmc.loader.api.FabricLoader;
@@ -31,16 +33,29 @@ import net.minecraft.client.renderer.state.level.SkyRenderState;
 *///?}
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.dimension.DimensionType;
+//? if >= 26.2
+import org.polyfrost.polydium.mixin.PolydiumMixinPlugin;
 
+//? if >= 26.2 {
+import java.util.IdentityHashMap;
+import java.util.Map;
+//?}
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class SkyFarPlane {
     private static final String DEFINE = "POLYDIUM_FAR_PLANE";
     private static final String POSITION = "gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);";
-    private static final Set<String> SHADERS = Set.of("shaders/core/sky.vsh", "shaders/core/stars.vsh", "shaders/core/position_color.vsh", "shaders/core/position_tex.vsh");
+    private static final Set<String> SHADERS = Set.of("minecraft:shaders/core/sky.vsh", "minecraft:shaders/core/stars.vsh", "minecraft:shaders/core/position_color.vsh", "minecraft:shaders/core/position_tex.vsh");
     private static final Set<String> PATCHED = ConcurrentHashMap.newKeySet();
-    private static final boolean SKY_MOD = java.util.stream.Stream.of("skyboxify", "optiboxes", "nuit").anyMatch(FabricLoader.getInstance()::isModLoaded);
+    //? if >= 26.2 {
+    private static final boolean SKY_MOD = java.util.stream.Stream.of("optiboxes", "nuit").anyMatch(FabricLoader.getInstance()::isModLoaded);
+    private static final boolean SKYBOXIFY = FabricLoader.getInstance().isModLoaded("skyboxify");
+    private static final String SKYBOXIFY_SHADER = "skyboxify:shaders/core/custom_skybox.vsh";
+    private static final Map<RenderPipeline, RenderPipeline> FAR = new IdentityHashMap<>();
+    //?} else {
+    /*private static final boolean SKY_MOD = java.util.stream.Stream.of("skyboxify", "optiboxes", "nuit").anyMatch(FabricLoader.getInstance()::isModLoaded);
+    *///?}
 
     public static final class Pipelines {
         //? if >= 26.2 {
@@ -166,15 +181,56 @@ public final class SkyFarPlane {
     private SkyFarPlane() {
     }
 
+    //? if >= 26.2 {
+    public static RenderPipeline far(RenderPipeline pipeline) {
+        return FAR.computeIfAbsent(pipeline, source -> {
+            RenderPipeline.Builder builder = RenderPipeline.builder()
+                .withLocation(source.getLocation().withSuffix("_polydium_far"))
+                //? if >= 26.3 {
+                .withVertexShader(source.getShaders().get(ShaderType.VERTEX))
+                .withFragmentShader(source.getShaders().get(ShaderType.FRAGMENT))
+                .withColorTargetState(source.getColorTargetStates().getFirst())
+                //?} else {
+                /*.withVertexShader(source.getVertexShader())
+                .withFragmentShader(source.getFragmentShader())
+                .withColorTargetState(source.getColorTargetState())
+                *///?}
+                .withShaderDefine(DEFINE)
+                .withVertexBinding(0, source.getVertexFormatBinding(0))
+                .withPrimitiveTopology(source.getPrimitiveTopology())
+                .withDepthStencilState(Pipelines.BEHIND_TERRAIN);
+            source.getBindGroupLayouts().forEach(builder::withBindGroupLayout);
+            return builder.build();
+        });
+    }
+    //?}
+
+    private static boolean isFarShader(String id) {
+        //? if >= 26.2 {
+        return SHADERS.contains(id) || SKYBOXIFY_SHADER.equals(id);
+        //?} else
+        /*return SHADERS.contains(id);*/
+    }
+
+    private static boolean allPatched() {
+        //? if >= 26.2 {
+        if (SKYBOXIFY && (!PolydiumMixinPlugin.SKYBOXIFY_FAR_SKY || !PATCHED.contains(SKYBOXIFY_SHADER))) {
+            return false;
+        }
+        //?}
+        return PATCHED.containsAll(SHADERS);
+    }
+
     public static String patch(Identifier location, String source) {
-        if (!location.getNamespace().equals(Identifier.DEFAULT_NAMESPACE) || !SHADERS.contains(location.getPath())) {
+        String id = location.toString();
+        if (!isFarShader(id)) {
             return source;
         }
         if (!source.contains(POSITION)) {
-            PATCHED.remove(location.getPath());
+            PATCHED.remove(id);
             return source;
         }
-        PATCHED.add(location.getPath());
+        PATCHED.add(id);
         //? if >= 26.3 {
         return source.replace(POSITION, POSITION + "\n#ifdef " + DEFINE
             + "\n#ifdef RENDERPEARL_DEPTH_IS_ZERO_TO_ONE\n    gl_Position.z = 0.0;\n#else\n    gl_Position.z = -gl_Position.w;\n#endif\n#endif");
@@ -196,7 +252,7 @@ public final class SkyFarPlane {
         *///?}
                 && !improvedTransparency
                 && !SKY_MOD
-                && PATCHED.size() == SHADERS.size();
+                && allPatched();
     }
 
     //? if >= 26.3 {
