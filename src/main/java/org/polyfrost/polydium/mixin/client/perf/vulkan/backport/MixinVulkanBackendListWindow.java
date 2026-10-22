@@ -7,6 +7,7 @@ import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.BackendCreationException;
 import com.mojang.logging.LogUtils;
 import org.objectweb.asm.Opcodes;
+import org.polyfrost.polydium.client.VulkanAvailability;
 import org.polyfrost.polydium.vulkan.EssentialVulkan;
 import org.polyfrost.polydium.vulkan.SodiumExtraMac;
 import org.polyfrost.polydium.vulkan.VulkanActive;
@@ -29,6 +30,7 @@ public class MixinVulkanBackendListWindow {
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwCreateWindow(IILjava/lang/CharSequence;JJ)J", remap = false))
     private void polydium$pickVulkan(CallbackInfo ci) {
         BackendCreationException unavailable = VulkanBackend.checkBackendAvailable();
+        VulkanAvailability.record(unavailable == null ? null : unavailable.getMessage());
         if (unavailable != null) {
             LogUtils.getLogger().info("Vulkan backend unavailable, using OpenGL: {}", unavailable.getMessage());
             return;

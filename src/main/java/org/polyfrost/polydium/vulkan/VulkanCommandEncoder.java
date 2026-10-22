@@ -17,6 +17,7 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import org.polyfrost.polydium.vulkan.checkpoints.CheckpointExtension;
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -37,16 +38,20 @@ import org.lwjgl.vulkan.VkClearValue;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.lwjgl.vulkan.VkCommandBufferBeginInfo;
 import org.lwjgl.vulkan.VkDependencyInfo;
+import org.lwjgl.vulkan.VkFramebufferCreateInfo;
 import org.lwjgl.vulkan.VkImageCopy;
 import org.lwjgl.vulkan.VkImageSubresourceLayers;
 import org.lwjgl.vulkan.VkImageSubresourceRange;
 import org.lwjgl.vulkan.VkMemoryBarrier2;
 import org.lwjgl.vulkan.VkRect2D;
+import org.lwjgl.vulkan.VkRenderPassBeginInfo;
 import org.lwjgl.vulkan.VkRenderingAttachmentInfo;
 import org.lwjgl.vulkan.VkRenderingInfo;
 import org.lwjgl.vulkan.VkSemaphoreCreateInfo;
 import org.lwjgl.vulkan.VkSemaphoreTypeCreateInfo;
 import org.lwjgl.vulkan.VkSemaphoreWaitInfo;
+import org.lwjgl.vulkan.VkSubpassBeginInfo;
+import org.lwjgl.vulkan.VkSubpassEndInfo;
 import org.lwjgl.vulkan.VkMemoryBarrier2.Buffer;
 
 public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable {
@@ -63,6 +68,10 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
   private @Nullable VkCommandBuffer currentInitCommandBuffer;
   private @Nullable VkCommandBuffer currentCommandBuffer;
   private @Nullable VulkanRenderPass currentRenderPass;
+  private final List<DescriptorPool> freeDescriptorPools = new ArrayList<>();
+  private @Nullable DescriptorPool currentDescriptorPool;
+  private @Nullable GpuTexture unusedTexture;
+  private @Nullable GpuTextureView unusedView;
 
   public VulkanCommandEncoder(final VulkanDevice device) {
     this.device = device;
@@ -108,6 +117,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
 
   @Override
   public void destroy() {
+    this.releaseUnusedAttachment();
     this.transientMemory.endSubmit();
     this.submissionBuilder.close();
     this.device.graphicsQueue().waitIdle();
@@ -119,6 +129,11 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
       this.commandPools[i].destroy();
     }
 
+    if (this.currentDescriptorPool != null) {
+      this.currentDescriptorPool.destroy();
+    }
+
+    this.freeDescriptorPools.forEach(DescriptorPool::destroy);
     VK12.vkDestroySemaphore(this.device.vkDevice(), this.submitSemaphore, null);
   }
 
@@ -253,6 +268,11 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
     this.endCommandBuffer();
     this.transientMemory.endSubmit();
     this.signalSemaphore(this.submitSemaphore, this.currentSubmitIndex, 65536L);
+    if (this.currentDescriptorPool != null) {
+      this.retireDescriptorPool(this.currentDescriptorPool);
+      this.currentDescriptorPool = null;
+    }
+
     this.submissionBuilder.close();
     this.submissionBuilder = this.device.graphicsQueue().beginSubmit();
     this.currentSubmitIndex++;
@@ -265,6 +285,34 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
       this.checkpointStorage.rotate();
       this.transientMemory.beginSubmit();
     }
+  }
+
+  private void retireDescriptorPool(final DescriptorPool pool) {
+    this.queueForDestroy(() -> {
+      pool.reset();
+      this.freeDescriptorPools.add(pool);
+    });
+  }
+
+  long allocateDescriptorSet(final long setLayout) {
+    if (this.currentDescriptorPool != null) {
+      long set = this.currentDescriptorPool.allocateSet(setLayout);
+      if (set != 0L) {
+        return set;
+      }
+
+      this.retireDescriptorPool(this.currentDescriptorPool);
+    }
+
+    this.currentDescriptorPool = this.freeDescriptorPools.isEmpty()
+      ? new DescriptorPool(this.device)
+      : this.freeDescriptorPools.remove(this.freeDescriptorPools.size() - 1);
+    long set = this.currentDescriptorPool.allocateSet(setLayout);
+    if (set == 0L) {
+      throw new IllegalStateException("Failed to allocate descriptor set from new pool");
+    }
+
+    return set;
   }
 
   public TransientMemory transientMemory() {
@@ -307,59 +355,64 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
 
       vkRenderArea.extent().set(descriptor.renderArea.width(), descriptor.renderArea.height());
       vkRenderArea.offset().set(descriptor.renderArea.x(), descriptor.renderArea.y());
-      org.lwjgl.vulkan.VkRenderingAttachmentInfo.Buffer colorAttachmentInfo = VkRenderingAttachmentInfo.calloc(colorAttachments.size(), stack);
+      if (!this.device.dynamicRendering()) {
+        this.beginLegacyRenderPass(stack, descriptor, colorTextures, depthAttachment, vkRenderArea, width, height);
+      } else {
+        org.lwjgl.vulkan.VkRenderingAttachmentInfo.Buffer colorAttachmentInfo = VkRenderingAttachmentInfo.calloc(colorAttachments.size(), stack);
 
-      for (int i = 0; i < colorAttachments.size(); i++) {
-        ((org.lwjgl.vulkan.VkRenderingAttachmentInfo.Buffer)colorAttachmentInfo.position(i)).sType$Default();
-        VulkanGpuTextureView colorTexture = colorTextures[i];
-        if (colorTexture != null) {
-          colorAttachmentInfo.imageView(colorTexture.vkImageView());
-          colorAttachmentInfo.imageLayout(1);
-          colorAttachmentInfo.storeOp(0);
-          RenderPassDescriptor.Attachment<Optional<Vector4fc>> attachment = colorAttachments.get(i);
-          Optional<Vector4fc> clearValue = attachment.clearValue();
-          if (clearValue.isPresent()) {
-            Vector4fc color = clearValue.get();
-            VkClearColorValue vkClearColor = VulkanUtils.putArgb(VkClearColorValue.calloc(stack), color);
-            colorAttachmentInfo.loadOp(1);
-            colorAttachmentInfo.clearValue(VkClearValue.calloc(stack).color(vkClearColor));
+        for (int i = 0; i < colorAttachments.size(); i++) {
+          ((org.lwjgl.vulkan.VkRenderingAttachmentInfo.Buffer)colorAttachmentInfo.position(i)).sType$Default();
+          VulkanGpuTextureView colorTexture = colorTextures[i];
+          if (colorTexture != null) {
+            colorAttachmentInfo.imageView(colorTexture.vkImageView());
+            colorAttachmentInfo.imageLayout(1);
+            colorAttachmentInfo.storeOp(0);
+            RenderPassDescriptor.Attachment<Optional<Vector4fc>> attachment = colorAttachments.get(i);
+            Optional<Vector4fc> clearValue = attachment.clearValue();
+            if (clearValue.isPresent()) {
+              Vector4fc color = clearValue.get();
+              VkClearColorValue vkClearColor = VulkanUtils.putArgb(VkClearColorValue.calloc(stack), color);
+              colorAttachmentInfo.loadOp(1);
+              colorAttachmentInfo.clearValue(VkClearValue.calloc(stack).color(vkClearColor));
+            } else {
+              colorAttachmentInfo.loadOp(0);
+            }
           } else {
-            colorAttachmentInfo.loadOp(0);
+            colorAttachmentInfo.imageView(0L);
+            colorAttachmentInfo.imageLayout(0);
+            colorAttachmentInfo.storeOp(1);
+            colorAttachmentInfo.loadOp(2);
           }
-        } else {
-          colorAttachmentInfo.imageView(0L);
-          colorAttachmentInfo.imageLayout(0);
-          colorAttachmentInfo.storeOp(1);
-          colorAttachmentInfo.loadOp(2);
-        }
-      }
-
-      colorAttachmentInfo.position(0);
-      VkRenderingInfo renderingInfo = VkRenderingInfo.calloc(stack).sType$Default();
-      renderingInfo.renderArea(vkRenderArea);
-      renderingInfo.layerCount(1);
-      renderingInfo.viewMask(0);
-      renderingInfo.pColorAttachments(colorAttachmentInfo);
-      if (depthAttachment != null) {
-        VkRenderingAttachmentInfo depthAttachmentInfo = VkRenderingAttachmentInfo.calloc(stack).sType$Default();
-        VulkanGpuTextureView vulkanDepthAttachment = (VulkanGpuTextureView)depthAttachment.textureView();
-        depthAttachmentInfo.imageView(vulkanDepthAttachment.vkImageView());
-        depthAttachmentInfo.imageLayout(1);
-        depthAttachmentInfo.storeOp(0);
-        OptionalDouble clearValue = depthAttachment.clearValue();
-        if (clearValue.isPresent()) {
-          double color = clearValue.getAsDouble();
-          VkClearDepthStencilValue vkClearColor = VkClearDepthStencilValue.calloc(stack).depth((float)color);
-          depthAttachmentInfo.loadOp(1);
-          depthAttachmentInfo.clearValue(VkClearValue.calloc(stack).depthStencil(vkClearColor));
-        } else {
-          depthAttachmentInfo.loadOp(0);
         }
 
-        renderingInfo.pDepthAttachment(depthAttachmentInfo);
+        colorAttachmentInfo.position(0);
+        VkRenderingInfo renderingInfo = VkRenderingInfo.calloc(stack).sType$Default();
+        renderingInfo.renderArea(vkRenderArea);
+        renderingInfo.layerCount(1);
+        renderingInfo.viewMask(0);
+        renderingInfo.pColorAttachments(colorAttachmentInfo);
+        if (depthAttachment != null) {
+          VkRenderingAttachmentInfo depthAttachmentInfo = VkRenderingAttachmentInfo.calloc(stack).sType$Default();
+          VulkanGpuTextureView vulkanDepthAttachment = (VulkanGpuTextureView)depthAttachment.textureView();
+          depthAttachmentInfo.imageView(vulkanDepthAttachment.vkImageView());
+          depthAttachmentInfo.imageLayout(1);
+          depthAttachmentInfo.storeOp(0);
+          OptionalDouble clearValue = depthAttachment.clearValue();
+          if (clearValue.isPresent()) {
+            double color = clearValue.getAsDouble();
+            VkClearDepthStencilValue vkClearColor = VkClearDepthStencilValue.calloc(stack).depth((float)color);
+            depthAttachmentInfo.loadOp(1);
+            depthAttachmentInfo.clearValue(VkClearValue.calloc(stack).depthStencil(vkClearColor));
+          } else {
+            depthAttachmentInfo.loadOp(0);
+          }
+
+          renderingInfo.pDepthAttachment(depthAttachmentInfo);
+        }
+
+        KHRDynamicRendering.vkCmdBeginRenderingKHR(this.commandBuffer(), renderingInfo);
       }
 
-      KHRDynamicRendering.vkCmdBeginRenderingKHR(this.commandBuffer(), renderingInfo);
       this.currentRenderPass = new VulkanRenderPass(
         this.device, this, this.commandBuffer(), this.checkpointStorage, descriptor.renderArea, width, height, depthAttachment != null, descriptor.label()
       );
@@ -386,7 +439,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
     if (this.currentRenderPass == null) {
       throw new IllegalStateException("Cannot submit a renderpass if one hasn't been started!");
     } else {
-      KHRDynamicRendering.vkCmdEndRenderingKHR(this.commandBuffer());
+      endRendering(this.device, this.commandBuffer());
       this.device.instance().debug().endDebugGroup(this.commandBuffer());
       this.checkpointStorage.recordCheckpoint(this.commandBuffer(), CheckpointExtension.CheckpointType.END_RENDER_PASS, this.currentRenderPass.getLabel());
       this.currentRenderPass = null;
@@ -408,6 +461,100 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
 
       if (stack != null) {
         stack.close();
+      }
+    }
+  }
+
+  // 26.4-snapshot-1's path for devices without VK_KHR_dynamic_rendering
+  private void beginLegacyRenderPass(
+    final MemoryStack stack,
+    final RenderPassDescriptor descriptor,
+    final @Nullable VulkanGpuTextureView[] colorTextures,
+    final RenderPassDescriptor.@Nullable Attachment<OptionalDouble> depthAttachment,
+    final VkRect2D renderArea,
+    final int width,
+    final int height
+  ) {
+    GpuTexture firstColor = null;
+    for (VulkanGpuTextureView colorTexture : colorTextures) {
+      if (colorTexture != null) {
+        firstColor = colorTexture.texture();
+        break;
+      }
+    }
+
+    LongBuffer attachments = stack.callocLong(colorTextures.length + 1);
+    VkClearValue.Buffer clearValues = VkClearValue.calloc(colorTextures.length + 1, stack);
+    List<RenderPassDescriptor.Attachment<Optional<Vector4fc>>> colorAttachments = descriptor.colorAttachments();
+
+    for (int i = 0; i < colorTextures.length; i++) {
+      VkClearValue clearValue = clearValues.get();
+      if (colorTextures[i] == null) {
+        // Framebuffers can't hold a null view, so unused slots write to a throwaway image
+        attachments.put(this.unusedAttachment(Objects.requireNonNull(firstColor, "Render pass has no used color attachment"), width, height));
+      } else {
+        attachments.put(colorTextures[i].vkImageView());
+        colorAttachments.get(i).clearValue().ifPresent(color -> VulkanUtils.putArgb(clearValue.color(), color));
+      }
+    }
+
+    if (depthAttachment != null) {
+      attachments.put(((VulkanGpuTextureView)depthAttachment.textureView()).vkImageView());
+      VkClearValue clearValue = clearValues.get();
+      depthAttachment.clearValue().ifPresent(depth -> clearValue.depthStencil().depth((float)depth));
+    }
+
+    attachments.flip();
+    clearValues.flip();
+    long renderPass = this.device.renderPassCache().getRenderPass(descriptor, firstColor == null ? 0 : RenderPassCache.format(firstColor));
+    VkFramebufferCreateInfo framebufferInfo = VkFramebufferCreateInfo.calloc(stack).sType$Default()
+      .renderPass(renderPass)
+      .pAttachments(attachments)
+      .width(width)
+      .height(height)
+      .layers(1);
+    LongBuffer pointer = stack.callocLong(1);
+    VulkanUtils.crashIfFailure(this.device, VK12.vkCreateFramebuffer(this.device.vkDevice(), framebufferInfo, null, pointer), "Failed to create VkFramebuffer");
+    long framebuffer = pointer.get(0);
+    this.queueForDestroy(() -> VK12.vkDestroyFramebuffer(this.device.vkDevice(), framebuffer, null));
+    VkRenderPassBeginInfo beginInfo = VkRenderPassBeginInfo.calloc(stack).sType$Default()
+      .renderPass(renderPass)
+      .framebuffer(framebuffer)
+      .renderArea(renderArea)
+      .pClearValues(clearValues);
+    VK12.vkCmdBeginRenderPass2(this.commandBuffer(), beginInfo, VkSubpassBeginInfo.calloc(stack).sType$Default().contents(0));
+  }
+
+  private long unusedAttachment(final GpuTexture like, final int width, final int height) {
+    GpuTexture texture = this.unusedTexture;
+    if (texture == null || texture.getFormat() != like.getFormat() || texture.getWidth(0) != width || texture.getHeight(0) != height) {
+      this.releaseUnusedAttachment();
+      texture = this.device.createTexture("Unused color attachment", GpuTexture.USAGE_RENDER_ATTACHMENT, like.getFormat(), width, height, 1, 1);
+      this.unusedTexture = texture;
+      this.unusedView = this.device.createTextureView(texture);
+    }
+
+    return ((VulkanGpuTextureView)Objects.requireNonNull(this.unusedView)).vkImageView();
+  }
+
+  private void releaseUnusedAttachment() {
+    if (this.unusedView != null) {
+      this.unusedView.close();
+      this.unusedView = null;
+    }
+
+    if (this.unusedTexture != null) {
+      this.unusedTexture.close();
+      this.unusedTexture = null;
+    }
+  }
+
+  public static void endRendering(final VulkanDevice device, final VkCommandBuffer commandBuffer) {
+    if (device.dynamicRendering()) {
+      KHRDynamicRendering.vkCmdEndRenderingKHR(commandBuffer);
+    } else {
+      try (MemoryStack stack = MemoryStack.stackPush()) {
+        VK12.vkCmdEndRenderPass2(commandBuffer, VkSubpassEndInfo.calloc(stack).sType$Default());
       }
     }
   }

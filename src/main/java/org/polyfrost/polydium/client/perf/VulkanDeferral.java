@@ -29,7 +29,6 @@ import org.polyfrost.polydium.vulkan.compat.RenderPassDescriptor;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.joml.Vector4fc;
 import org.lwjgl.system.MemoryStack;
-import org.lwjgl.vulkan.KHRDynamicRendering;
 import org.lwjgl.vulkan.VK10;
 import org.lwjgl.vulkan.VkClearAttachment;
 import org.lwjgl.vulkan.VkClearRect;
@@ -335,7 +334,11 @@ public final class VulkanDeferral {
         VkCommandBuffer commandBuffer = this.host.polydium$currentCommandBuffer();
         this.suspendedPass = null;
         this.suspendedDescriptor = null;
-        KHRDynamicRendering.vkCmdEndRenderingKHR(commandBuffer);
+        //? if >= 26.2 {
+        VulkanLegacyRendering.endRendering(this.host.polydium$device(), commandBuffer);
+        //?} else {
+        /*VulkanCommandEncoder.endRendering(this.host.polydium$device(), commandBuffer);
+        *///?}
         this.host.polydium$device().instance().debug().endDebugGroup(commandBuffer);
         this.host.polydium$checkpointStorage().recordCheckpoint(commandBuffer, CheckpointExtension.CheckpointType.END_RENDER_PASS, pass.getLabel());
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -397,7 +400,7 @@ public final class VulkanDeferral {
         *///?}
     }
 
-    private static int outputWidth(RenderPassDescriptor descriptor) {
+    static int outputWidth(RenderPassDescriptor descriptor) {
         int width = 0;
         for (RenderPassDescriptor.Attachment<Optional<Vector4fc>> color : descriptor.colorAttachments()) {
             if (color != null) {
@@ -410,7 +413,7 @@ public final class VulkanDeferral {
         return width;
     }
 
-    private static int outputHeight(RenderPassDescriptor descriptor) {
+    static int outputHeight(RenderPassDescriptor descriptor) {
         int height = 0;
         for (RenderPassDescriptor.Attachment<Optional<Vector4fc>> color : descriptor.colorAttachments()) {
             if (color != null) {

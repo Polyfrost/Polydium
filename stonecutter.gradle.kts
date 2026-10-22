@@ -55,6 +55,7 @@ val renderpearlRenames = mapOf(
     "renderpearl.backend.vulkan.VulkanPhysicalDevice" to "blaze3d.vulkan.VulkanPhysicalDevice",
     "renderpearl.backend.util.TransientBlockAllocator" to "blaze3d.util.TransientBlockAllocator",
     "renderpearl.backend.vulkan.VulkanCommandEncoder" to "blaze3d.vulkan.VulkanCommandEncoder",
+    "renderpearl.backend.vulkan.VulkanConst" to "blaze3d.vulkan.VulkanConst",
     "renderpearl.backend.vulkan.VulkanDebug" to "blaze3d.vulkan.VulkanDebug",
     "renderpearl.backend.vulkan.VulkanDevice" to "blaze3d.vulkan.VulkanDevice",
     "renderpearl.backend.vulkan.VulkanGpuBuffer" to "blaze3d.vulkan.VulkanGpuBuffer",

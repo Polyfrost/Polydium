@@ -427,6 +427,8 @@ public class VulkanRenderPass implements RenderPassBackend {
       assert this.pipeline != null;
 
       VulkanBindGroupLayout layout = this.pipeline.layout();
+      // Without VK_KHR_push_descriptor, write a fresh set from the encoder's per-submit pool and bind it
+      long descriptorSet = this.device.pushDescriptors() ? 0L : this.encoder.allocateDescriptorSet(layout.handle());
       MemoryStack stack = MemoryStack.stackPush();
 
       try {
@@ -436,6 +438,7 @@ public class VulkanRenderPass implements RenderPassBackend {
           VulkanBindGroupLayout.Entry entry = layout.entries().get(i);
           VkWriteDescriptorSet set = ((VkWriteDescriptorSet)writes.get()).sType$Default();
           set.dstBinding(i);
+          set.dstSet(descriptorSet);
           set.dstArrayElement(0);
           set.descriptorCount(1);
           if (entry.type() == VulkanBindGroupLayout.VulkanBindGroupEntryType.UNIFORM_BUFFER) {
@@ -516,9 +519,14 @@ public class VulkanRenderPass implements RenderPassBackend {
           }
         }
 
-        KHRPushDescriptor.vkCmdPushDescriptorSetKHR(
-          this.commandBuffer(), 0, this.pipeline.pipelineLayout(), 0, (org.lwjgl.vulkan.VkWriteDescriptorSet.Buffer)writes.flip()
-        );
+        if (descriptorSet == 0L) {
+          KHRPushDescriptor.vkCmdPushDescriptorSetKHR(
+            this.commandBuffer(), 0, this.pipeline.pipelineLayout(), 0, (org.lwjgl.vulkan.VkWriteDescriptorSet.Buffer)writes.flip()
+          );
+        } else {
+          VK12.vkUpdateDescriptorSets(this.device.vkDevice(), (org.lwjgl.vulkan.VkWriteDescriptorSet.Buffer)writes.flip(), null);
+          VK12.vkCmdBindDescriptorSets(this.commandBuffer(), 0, this.pipeline.pipelineLayout(), 0, stack.longs(descriptorSet), null);
+        }
       } catch (Throwable var16) {
         if (stack != null) {
           try {

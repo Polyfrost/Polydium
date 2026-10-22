@@ -488,6 +488,20 @@
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanDeferral",
     //? if >= 26.2
+    "client.perf.vulkan.MixinGraphicsApiTooltip",
+    //? if >= 26.2 && < 26.3
+    //"client.perf.vulkan.MixinVulkanLegacyBindGroupLayout",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacyDescriptors",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacyDevice",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacyEncoder",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacyFeatures",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacyPipeline",
+    //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLazyTransient",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLazyTransientSubmission",

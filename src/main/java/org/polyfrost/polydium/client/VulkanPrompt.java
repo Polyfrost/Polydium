@@ -51,6 +51,8 @@ public final class VulkanPrompt {
             return;
         String key = "polydium.vulkanPrompt.message.backport";
         *///?}
+        if (VulkanAvailability.unavailableReason() != null)
+            return;
         for (Path marker : markers) {
             try {
                 Files.createDirectories(marker.getParent());

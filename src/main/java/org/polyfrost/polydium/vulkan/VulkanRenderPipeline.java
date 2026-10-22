@@ -213,13 +213,15 @@ public record VulkanRenderPipeline(
       ColorTargetState[] colorTargetStates = VulkanActive.COLOR_TARGETS.getOrDefault(pipeline, new ColorTargetState[]{colorState(pipeline)});
       VkPipelineColorBlendAttachmentState.Buffer blendAttachments = VkPipelineColorBlendAttachmentState.calloc(colorTargetStates.length, stack);
       IntBuffer colorAttachmentFormats = stack.mallocInt(colorTargetStates.length);
+      int[] colorFormats = new int[colorTargetStates.length];
       for (int i = 0; i < colorTargetStates.length; i++) {
         blendAttachments.position(i);
         blendAttachments.colorWriteMask(VulkanConst.toVk(colorTargetStates[i]));
         if (colorTargetStates[i].blendFunction().isPresent()) {
           applyBlendInformation(blendAttachments, colorTargetStates[i].blendFunction().get());
         }
-        colorAttachmentFormats.put(i, VulkanConst.toVk(MoulberryVulkan.colorFormat(pipeline)));
+        colorFormats[i] = VulkanConst.toVk(MoulberryVulkan.colorFormat(pipeline));
+        colorAttachmentFormats.put(i, colorFormats[i]);
       }
       blendAttachments.position(0);
 
@@ -245,8 +247,12 @@ public record VulkanRenderPipeline(
         .pViewportState(viewportState)
         .pMultisampleState(multisampleState)
         .pDynamicState(dynamicStateInfo)
-        .layout(pipelineLayout)
-        .pNext(renderingInfo);
+        .layout(pipelineLayout);
+      if (device.dynamicRendering()) {
+        createInfo.pNext(renderingInfo);
+      } else {
+        createInfo.renderPass(device.renderPassCache().getRenderPass(126, colorFormats)).subpass(0);
+      }
       LongBuffer pointer = stack.callocLong(1);
       VulkanUtils.crashIfFailure(
         device, VK12.vkCreateGraphicsPipelines(device.vkDevice(), 0L, createInfo, null, pointer), "Can't compile pipeline " + pipeline.getLocation()
@@ -255,6 +261,9 @@ public record VulkanRenderPipeline(
       device.instance().debug().setObjectName(device.vkDevice(), 19, withDepthPipeline, () -> "Pipeline " + pipeline.getLocation());
       // Built even for depth-tested pipelines: mods written against GL may use them in passes without a depth attachment
       renderingInfo.depthAttachmentFormat(0);
+      if (!device.dynamicRendering()) {
+        createInfo.renderPass(device.renderPassCache().getRenderPass(0, colorFormats));
+      }
       VulkanUtils.crashIfFailure(
         device, VK12.vkCreateGraphicsPipelines(device.vkDevice(), 0L, createInfo, null, pointer), "Can't compile pipeline " + pipeline.getLocation()
       );
