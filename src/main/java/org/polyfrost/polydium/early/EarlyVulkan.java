@@ -3,6 +3,7 @@ package org.polyfrost.polydium.early;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.LanguageAdapter;
 import net.fabricmc.loader.api.ModContainer;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -43,12 +44,33 @@ public final class EarlyVulkan implements LanguageAdapter {
         return FabricLoader.getInstance().getGameDir().resolve("polydium").resolve("auto-vulkan");
     }
 
-    public static boolean switched() {
+    private static String markerState() {
         try {
-            return Files.readString(marker()).isEmpty();
+            return Files.readString(marker());
         } catch (IOException e) {
-            return false;
+            return null;
         }
+    }
+
+    // "" = auto-switched, first launch not checked yet; "done" = checked; "no" = not switched
+    public static boolean switched() {
+        String state = markerState();
+        return state != null && !state.equals("no");
+    }
+
+    public static boolean switchPending() {
+        return "".equals(markerState());
+    }
+
+    public static void finishSwitch() {
+        try {
+            Files.writeString(marker(), "done");
+        } catch (IOException ignored) {
+        }
+    }
+
+    public static void logReset(String reason) {
+        LoggerFactory.getLogger("polydium/vulkan").warn("Resetting graphics API to Default: {}", reason);
     }
 
     private static Path graphicsApiFile() {
@@ -102,8 +124,10 @@ public final class EarlyVulkan implements LanguageAdapter {
                 clean = !Files.readAllLines(FabricLoader.getInstance().getGameDir().resolve("options.txt")).contains("startedCleanly:false");
             } catch (IOException ignored) {
             }
-            if (vulkan && !clean)
+            if (vulkan && !clean) {
+                logReset("last game startup did not finish");
                 setGraphicsApi("default");
+            }
             vulkanAtStartup = vulkan && clean;
         }
         return vulkanAtStartup;

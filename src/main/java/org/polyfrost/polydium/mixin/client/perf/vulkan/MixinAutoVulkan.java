@@ -30,11 +30,15 @@ public abstract class MixinAutoVulkan {
 
     @ModifyArg(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;initRenderer"))
     private GpuDevice polydium$undoFailedVulkan(GpuDevice device, @Local(argsOnly = true) GameConfig config) {
-        if (config.game.forcedGraphicsApi == null && this.options.preferredGraphicsBackend().get() == PreferredGraphicsApi.VULKAN
-                && !"Vulkan".equalsIgnoreCase(device.getDeviceInfo().backendName()) && EarlyVulkan.switched()) {
+        if (config.game.forcedGraphicsApi != null || !EarlyVulkan.switchPending())
+            return device;
+        if (this.options.preferredGraphicsBackend().get() == PreferredGraphicsApi.VULKAN
+                && !"Vulkan".equalsIgnoreCase(device.getDeviceInfo().backendName())) {
+            EarlyVulkan.logReset("automatic Vulkan switch failed, started on " + device.getDeviceInfo().backendName());
             this.options.preferredGraphicsBackend().set(PreferredGraphicsApi.DEFAULT);
             this.options.save();
         }
+        EarlyVulkan.finishSwitch();
         return device;
     }
 
@@ -84,8 +88,13 @@ public abstract class MixinAutoVulkan {
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void polydium$undoFailedVulkan(CallbackInfo ci) {
-        if (EarlyVulkan.vulkanAtStartup() && !VulkanActive.active && EarlyVulkan.switched())
+        if (!EarlyVulkan.switchPending())
+            return;
+        if (EarlyVulkan.vulkanAtStartup() && !VulkanActive.active) {
+            EarlyVulkan.logReset("automatic Vulkan switch failed");
             EarlyVulkan.setGraphicsApi("default");
+        }
+        EarlyVulkan.finishSwitch();
     }
 
     @Inject(method = "saveReport(Ljava/io/File;Lnet/minecraft/CrashReport;)I", at = @At("HEAD"))
