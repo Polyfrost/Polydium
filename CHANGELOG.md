@@ -1,4 +1,4 @@
-## Unreleased changes
+## 1.1.6
 - Lowered Vulkan requirements, allowing it to run on more hardware (mirrors 26.4-snapshot.1)
 - Fixed automatic Vulkan switches not working
 - Polydium now only falls back from Vulkan after crashes that are actually Vulkan-related
