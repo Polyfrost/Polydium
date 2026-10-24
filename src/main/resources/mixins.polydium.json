@@ -118,6 +118,8 @@
     "client.perf.iris.MixinVanillaRenderingPipeline",
     //? if < 26.3
     //"client.perf.iris.MixinRenderRegion",
+    "client.perf.overflow.MixinAbstractRenderer",
+    "client.perf.overflow.MixinLegacySkyRenderer",
     "client.perf.skyboxify.MixinEventManager",
     "client.perf.skyboxify.MixinSkyboxManager",
     "client.perf.skyboxify.MixinSkyFeatureRenderer",
