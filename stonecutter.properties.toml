@@ -19,6 +19,7 @@ loomx.loom_version = "1.17-SNAPSHOT"
 publish.curseforge = "1740837"
 
 ["1.21.1"]
+deps.xaerominimap = "ZD6hK4GV"
 mod.mc_compat = "1.21.1"
 mod.mc_releases = ["1.21.1"]
 deps.fabric_api = "0.116.15+1.21.1"
@@ -26,6 +27,7 @@ deps.sodium = "mc1.21.1-0.8.13-fabric"
 deps.iris = "1.8.14-beta.1+1.21.1-fabric"
 
 ["1.21.4"]
+deps.xaerominimap = "XsKw9RY8"
 mod.mc_compat = "1.21.4"
 mod.mc_releases = ["1.21.4"]
 deps.fabric_api = "0.119.4+1.21.4"
@@ -34,6 +36,7 @@ deps.iris = "1.8.8+1.21.4-fabric"
 deps.skyboxify = "dNqmsXMW"
 
 ["1.21.5"]
+deps.xaerominimap = "UiyvcqIl"
 mod.mc_compat = "1.21.5"
 mod.mc_releases = ["1.21.5"]
 deps.fabric_api = "0.128.2+1.21.5"
@@ -41,6 +44,7 @@ deps.sodium = "mc1.21.5-0.6.13-fabric"
 deps.iris = "1.8.11+1.21.5-fabric"
 
 ["1.21.8"]
+deps.xaerominimap = "bSWbd7fk"
 mod.mc_compat = "1.21.8"
 mod.mc_releases = ["1.21.8"]
 deps.fabric_api = "0.136.1+1.21.8"
@@ -49,6 +53,7 @@ deps.iris = "1.9.6+1.21.8-fabric"
 deps.skyboxify = "amGtgssn"
 
 ["1.21.10"]
+deps.xaerominimap = "F8LrvYl9"
 mod.mc_compat = "1.21.10"
 mod.mc_releases = ["1.21.10"]
 deps.fabric_api = "0.138.4+1.21.10"
@@ -57,6 +62,7 @@ deps.iris = "1.9.7+1.21.10-fabric"
 deps.skyboxify = "uCGJogDJ"
 
 ["1.21.11"]
+deps.xaerominimap = "VNYP3B0c"
 mod.mc_compat = "1.21.11"
 mod.mc_releases = ["1.21.11"]
 deps.fabric_api = "0.141.6+1.21.11"
@@ -67,6 +73,7 @@ deps.iris = "1.10.8+1.21.11-fabric"
 deps.skyboxify = "kANba6Nw"
 
 ["26.1"]
+deps.xaerominimap = "kWf58HtH"
 mod.mc_compat = "~26.1"
 mod.mc_releases = ["26.1", "26.1.1", "26.1.2"]
 deps.fabric_api = "0.155.2+26.1.2"
@@ -76,6 +83,7 @@ deps.iris = "1.11.4+26.1-fabric"
 deps.skyboxify = "3bBTLzlD"
 
 ["26.2"]
+deps.xaerominimap = "VlMbRW2O"
 mod.mc_compat = "~26.2"
 mod.mc_releases = ["26.2"]
 deps.fabric_api = "0.157.0+26.2"
@@ -84,6 +92,7 @@ deps.iris = "1.11.4+26.2-fabric"
 deps.skyboxify = "XPGqw2i5"
 
 ["26.3"]
+deps.xaerominimap = "YPkAliDt"
 mod.mc_compat = "~26.3"
 mod.mc_releases = ["26.3"]
 deps.fabric_api = "0.160.3+26.3"

@@ -123,6 +123,10 @@
     "client.perf.skyboxify.MixinEventManager",
     "client.perf.skyboxify.MixinSkyboxManager",
     "client.perf.skyboxify.MixinSkyFeatureRenderer",
+    //? if xaerominimap && < 1.21.6
+    //"client.perf.xaero.MixinMinimapFBORenderer",
+    //? if xaerominimap && >= 1.21.6
+    "client.perf.xaero.MixinMinimapPipRenderer",
     "client.perf.sodium.MixinAnimatedSpriteMarksAnimationState",
     "client.perf.sodium.MixinAnimatedSpriteMarksManager",
     "client.perf.sodium.MixinAnimatedSpriteMarksRegion",

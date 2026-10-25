@@ -28,6 +28,7 @@ fun optionalProperty(name: String): String? = findProperty(name)?.toString()?.ta
 
 stonecutter constants {
     put("skyboxify", optionalProperty("deps.skyboxify") != null)
+    put("xaerominimap", optionalProperty("deps.xaerominimap") != null)
 }
 
 val minecraftPredicate = property("mod.mc_compat") as String
@@ -167,6 +168,9 @@ dependencies {
     }
     optionalProperty("deps.skyboxify")?.let {
         modCompileOnly("maven.modrinth:skyboxify:$it") { isTransitive = false }
+    }
+    optionalProperty("deps.xaerominimap")?.let {
+        modCompileOnly("maven.modrinth:xaeros-minimap:$it") { isTransitive = false }
     }
 
     if (vulkanBackport) {

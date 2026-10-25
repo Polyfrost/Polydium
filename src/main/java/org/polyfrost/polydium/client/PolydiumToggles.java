@@ -34,4 +34,6 @@ public class PolydiumToggles {
     //? if < 1.21.4
     //@Switch(title = "Single-Pass Text Shadows", description = "Draws text shadows in the same pass as the text, as MC 1.21.4+ does.")
     public static boolean singlePassTextShadow = true;
+    @Switch(title = "Xaero's Minimap HUD Caching", description = "Caches Xaero's Minimap and redraws it at most 60 times per second.")
+    public static boolean xaeroMinimapHudCache = true;
 }

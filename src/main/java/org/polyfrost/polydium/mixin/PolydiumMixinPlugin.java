@@ -21,6 +21,7 @@ import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.service.MixinService;
 
 import org.polyfrost.polydium.compat.Mods;
 import org.slf4j.LoggerFactory;
@@ -161,6 +162,60 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         return false;
     }
 
+    private static boolean xaeroCompatible(String targetClassName, String mixinClassName) {
+        if (!Mods.loaded("xaerominimap") && !Mods.loaded("xaerominimapfair")) return false;
+        boolean compatible;
+        try {
+            compatible = xaeroMatches(xaeroNode(targetClassName));
+        } catch (Exception e) {
+            compatible = false;
+        }
+        if (!compatible) LoggerFactory.getLogger("polydium/perf").warn("Installed Xaero's Minimap doesn't match {}, skipping it", mixinClassName);
+        return compatible;
+    }
+
+    private static boolean xaeroMatches(ClassNode target) throws Exception {
+        //? if < 1.21.6 {
+        /*MethodNode render = xaeroMethod(target, "renderChunksToFBO");
+        return render != null && target.fields.stream().anyMatch(f -> f.name.equals("rotationFramebuffer"))
+            && xaeroArgs(render, Type.INT_TYPE) >= 3 && xaeroArgs(render, Type.BOOLEAN_TYPE) >= 3
+            && xaeroMethod(xaeroNode("xaero.hud.compat.mods.ImmediatelyFastHelper"), "triggerBatchingBuffersFlush") != null;
+        *///?} else {
+        ClassNode state = xaeroNode("xaero.hud.minimap.render.MinimapPipRenderState");
+        for (String getter : List.of("getWidth", "getHeight", "getScale", "getMinimapScale", "getSize", "getBoxSize")) {
+            if (xaeroMethod(state, getter) == null) return false;
+        }
+        if (xaeroMethod(xaeroNode("xaero.common.minimap.MinimapProcessor"), "updateZoom") == null) return false;
+        if (xaeroMethod(target, "textureIsReadyToBlit") != null) return false;
+        //? if >= 26.3 {
+        MethodNode prepare = xaeroMethod(target, "prepare");
+        if (prepare == null || !xaeroInvokes(prepare, "xaero_mm_prepareTexturesAndProjection") || !xaeroInvokes(prepare, "renderToTexture")) return false;
+        //?}
+        return true;
+        //?}
+    }
+
+    private static ClassNode xaeroNode(String name) throws Exception {
+        return MixinService.getService().getBytecodeProvider().getClassNode(name);
+    }
+
+    private static MethodNode xaeroMethod(ClassNode node, String name) {
+        return node.methods.stream().filter(m -> m.name.equals(name)).findFirst().orElse(null);
+    }
+
+    private static int xaeroArgs(MethodNode method, Type type) {
+        int n = 0;
+        for (Type arg : Type.getArgumentTypes(method.desc)) if (arg.equals(type)) n++;
+        return n;
+    }
+
+    private static boolean xaeroInvokes(MethodNode method, String name) {
+        for (AbstractInsnNode insn : method.instructions) {
+            if (insn instanceof MethodInsnNode call && call.name.equals(name)) return true;
+        }
+        return false;
+    }
+
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (isDisabled(mixinClassName))
@@ -168,6 +223,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
         if (standsDown(mixinClassName))
             return false;
+
+        if (mixinClassName.contains(".perf.xaero."))
+            return xaeroCompatible(targetClassName, mixinClassName);
 
         if (contains(OPT_IN, mixinClassName) && !contains(ENABLED, mixinClassName))
             return false;
