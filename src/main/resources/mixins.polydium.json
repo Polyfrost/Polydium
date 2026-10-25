@@ -147,6 +147,8 @@
     "client.perf.sodium.MixinParticleSectionTick",
     //? if >= 26.2
     "client.perf.sodium.MixinIndirectTerrainDraws",
+    //? if >= 26.2
+    "client.perf.sodium.MixinIndirectRingRotate",
     "client.perf.sodium.MixinMatrixHelperSharedTrig",
     "client.perf.sodium.MixinModelPartIdentity",
     //? if >= 1.21.10
