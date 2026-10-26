@@ -24,6 +24,9 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.service.MixinService;
 
 import org.polyfrost.polydium.compat.Mods;
+import org.polyfrost.polydium.early.EarlyVulkan;
+//? if >= 1.21.11 && < 26.2
+/*import org.polyfrost.polydium.vulkan.IrisVulkanGate;*/
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
@@ -94,7 +97,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final String[] OPT_IN = {"UnfocusedFullscreenThrottle"};
 
     private static boolean vulkanBackend() {
-        return !isDisabled("VulkanBackendList") && (contains(ENABLED, "VulkanBackendList") || org.polyfrost.polydium.early.EarlyVulkan.vulkanAtStartup());
+        return !isDisabled("VulkanBackendList") && (contains(ENABLED, "VulkanBackendList") || EarlyVulkan.vulkanAtStartup());
     }
 
     public static boolean isEnabled(String fragment) {
@@ -262,7 +265,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     public void onLoad(String mixinPackage) {
         //? if >= 1.21.11 && < 26.2 {
         /*if (vulkanBackend() && !standsDown("VulkanBackendList") && Mods.loaded("iris"))
-            org.polyfrost.polydium.vulkan.IrisVulkanGate.apply();
+            IrisVulkanGate.apply();
         *///?}
     }
 

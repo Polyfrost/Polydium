@@ -32,6 +32,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.vma.Vma;
 import org.lwjgl.util.vma.VmaAllocatorCreateInfo;
 import org.lwjgl.util.vma.VmaVulkanFunctions;
+import org.lwjgl.vulkan.VK;
 import org.lwjgl.vulkan.VK12;
 import org.lwjgl.vulkan.VkDevice;
 import org.lwjgl.vulkan.VkDeviceCreateInfo;
@@ -123,7 +124,7 @@ public class VulkanBackend implements GpuBackend {
 
   private static boolean isVulkanLoaderAvailable() {
     try {
-      org.lwjgl.vulkan.VK.getFunctionProvider();
+      VK.getFunctionProvider();
       return true;
     } catch (Throwable t) {
       return false;

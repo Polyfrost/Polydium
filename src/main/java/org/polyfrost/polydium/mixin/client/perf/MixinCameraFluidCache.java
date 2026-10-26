@@ -9,6 +9,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.Projection;
 //?}
 import net.minecraft.core.BlockPos;
+//? if < 1.21.11
+/*import net.minecraft.world.level.BlockGetter;*/
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.FogType;
 import net.minecraft.world.phys.Vec3;
@@ -24,7 +26,7 @@ public class MixinCameraFluidCache {
     @Shadow
     private boolean initialized;
     @Shadow
-    private /*? if >= 1.21.11 {*/Level/*?} else {*//*net.minecraft.world.level.BlockGetter*//*?}*/ level;
+    private /*? if >= 1.21.11 {*/Level/*?} else {*//*BlockGetter*//*?}*/ level;
     @Shadow
     private Vec3 position;
     @Shadow
@@ -55,7 +57,7 @@ public class MixinCameraFluidCache {
     @Unique
     private boolean polydium$fluidInitialized;
     @Unique
-    private /*? if >= 1.21.11 {*/Level/*?} else {*//*net.minecraft.world.level.BlockGetter*//*?}*/ polydium$fluidLevel;
+    private /*? if >= 1.21.11 {*/Level/*?} else {*//*BlockGetter*//*?}*/ polydium$fluidLevel;
     @Unique
     private Vec3 polydium$fluidPosition;
     @Unique

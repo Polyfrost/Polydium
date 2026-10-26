@@ -3,6 +3,7 @@ package org.polyfrost.polydium.vulkan;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import org.lwjgl.glfw.GLFW;
 
 public final class SodiumExtraMac {
   private static final MethodHandle IS_ENABLED;
@@ -30,7 +31,7 @@ public final class SodiumExtraMac {
   public static void reduceSwapchain(long window, int[] width, int[] height) {
     int[] windowWidth = new int[1];
     int[] windowHeight = new int[1];
-    org.lwjgl.glfw.GLFW.glfwGetWindowSize(window, windowWidth, windowHeight);
+    GLFW.glfwGetWindowSize(window, windowWidth, windowHeight);
     if (isHighDpi(width[0], height[0], windowWidth[0], windowHeight[0]) && enabled()) {
       width[0] = Math.max(1, width[0] / 2);
       height[0] = Math.max(1, height[0] / 2);
@@ -42,8 +43,8 @@ public final class SodiumExtraMac {
     int[] framebufferHeight = new int[1];
     int[] windowWidth = new int[1];
     int[] windowHeight = new int[1];
-    org.lwjgl.glfw.GLFW.glfwGetFramebufferSize(window, framebufferWidth, framebufferHeight);
-    org.lwjgl.glfw.GLFW.glfwGetWindowSize(window, windowWidth, windowHeight);
+    GLFW.glfwGetFramebufferSize(window, framebufferWidth, framebufferHeight);
+    GLFW.glfwGetWindowSize(window, windowWidth, windowHeight);
     return isHighDpi(framebufferWidth[0], framebufferHeight[0], windowWidth[0], windowHeight[0]);
   }
 

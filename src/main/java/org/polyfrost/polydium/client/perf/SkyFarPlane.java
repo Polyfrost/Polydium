@@ -42,6 +42,7 @@ import java.util.Map;
 //?}
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 public final class SkyFarPlane {
     private static final String DEFINE = "POLYDIUM_FAR_PLANE";
@@ -49,14 +50,14 @@ public final class SkyFarPlane {
     private static final Set<String> SHADERS = Set.of("minecraft:shaders/core/sky.vsh", "minecraft:shaders/core/stars.vsh", "minecraft:shaders/core/position_color.vsh", "minecraft:shaders/core/position_tex.vsh");
     private static final Set<String> PATCHED = ConcurrentHashMap.newKeySet();
     //? if >= 26.2 {
-    private static final boolean SKY_MOD = java.util.stream.Stream.of("optiboxes", "nuit").anyMatch(FabricLoader.getInstance()::isModLoaded);
+    private static final boolean SKY_MOD = Stream.of("optiboxes", "nuit").anyMatch(FabricLoader.getInstance()::isModLoaded);
     private static final boolean SKYBOXIFY = FabricLoader.getInstance().isModLoaded("skyboxify");
     private static final String SKYBOXIFY_SHADER = "skyboxify:shaders/core/custom_skybox.vsh";
     public static final String OVERFLOW_SKY_SHADER = "overflowanimations:shaders/core/legacy_sky.vsh";
     private static final String OVERFLOW_SKY_POSITION = "gl_Position = ProjMat * eye;";
     private static final Map<RenderPipeline, RenderPipeline> FAR = new IdentityHashMap<>();
     //?} else {
-    /*private static final boolean SKY_MOD = java.util.stream.Stream.of("skyboxify", "optiboxes", "nuit").anyMatch(FabricLoader.getInstance()::isModLoaded);
+    /*private static final boolean SKY_MOD = Stream.of("skyboxify", "optiboxes", "nuit").anyMatch(FabricLoader.getInstance()::isModLoaded);
     *///?}
 
     public static final class Pipelines {
