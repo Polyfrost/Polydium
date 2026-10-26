@@ -20,7 +20,7 @@ permissions:
 
 concurrency:
   # maximum of one running workflow per pull request source branch or pushed branch
-  group: ${{ github.head_ref || github.ref }}
+  group: ${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
