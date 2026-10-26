@@ -31,10 +31,6 @@
         "fabricloader": ">=0.16.0",
         "java": ">=21",
         "fabric-language-kotlin": ">=1.13.13",
-        "oneconfigv1": ">=${oneconfig_version}",
-        "sodium": "*"
-    },
-    "conflicts": {
-        "vulkanmod": "*"
+        "oneconfigv1": ">=${oneconfig_version}"
     }
 }
