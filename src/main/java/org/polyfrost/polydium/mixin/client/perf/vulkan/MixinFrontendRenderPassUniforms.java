@@ -18,6 +18,7 @@ import com.mojang.renderpearl.frontend.FrontendRenderPipeline;
 import com.mojang.renderpearl.util.TextureViewAndSampler;
 import org.polyfrost.polydium.client.perf.IrisShaders;
 import org.polyfrost.polydium.client.perf.PipelineUniforms;
+import org.polyfrost.polydium.client.perf.TextureList;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -56,7 +57,7 @@ import java.util.Set;
 
 //? if >= 26.3 {
 @Mixin(FrontendRenderPass.class)
-public abstract class MixinFrontendRenderPassUniforms {
+public abstract class MixinFrontendRenderPassUniforms implements TextureList.Binder {
     @Unique
     private static long polydium$passes;
 
@@ -73,6 +74,10 @@ public abstract class MixinFrontendRenderPassUniforms {
 
     @Shadow
     private boolean constantsPushed;
+
+    @Shadow
+    private void setUniform(String name, Object value) {
+    }
 
     @Unique
     private long polydium$pass;
@@ -92,6 +97,17 @@ public abstract class MixinFrontendRenderPassUniforms {
             kind = this.polydium$backendKind = (byte) (tracked ? 1 : 2);
         }
         return kind == 1;
+    }
+
+    @Override
+    public boolean polydium$bindTexture(String name, TextureViewAndSampler binding) {
+        if (!this.polydium$tracksBackend()) {
+            return false;
+        }
+        if (this.uniforms.get(name) != binding) {
+            this.setUniform(name, (Object) binding);
+        }
+        return true;
     }
 
     @Unique

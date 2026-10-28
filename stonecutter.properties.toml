@@ -87,6 +87,7 @@ deps.skyboxify = "XPGqw2i5"
 mod.mc_compat = "~26.3"
 mod.mc_releases = ["26.3"]
 deps.fabric_api = "0.160.3+26.3"
+deps.fabric_loader = "0.20.1"
 deps.sodium = "mc26.3-0.9.3-alpha.1-fabric"
 deps.iris = "1.11.7+26.3-fabric"
 deps.skyboxify = "LSewIGOo"

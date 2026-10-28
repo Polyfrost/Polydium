@@ -9,7 +9,6 @@ import net.minecraft.client.particle.Particle;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-//? if >= 26.2
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.polyfrost.polydium.client.perf.ParticleAirCollision;
@@ -32,7 +31,13 @@ public abstract class MixinParticleAirCollision {
             )
     )
     private Vec3 polydium$skipAirCollision(/*? if >= 26.2 {*/CollisionContext/*?} else {*//*Entity*//*?}*/ context, Vec3 movement, AABB box, Level level, List<VoxelShape> colliders, Operation<Vec3> original) {
-        if (colliders.isEmpty() && ParticleAirCollision.isOnlyAir(level, box, movement)) {
+        if (colliders.isEmpty()
+            //? if >= 26.2 {
+            && ParticleAirCollision.cannotCollide(level, context, box.expandTowards(movement))
+            //?} else {
+            /*&& context == null && ParticleAirCollision.cannotCollide(level, CollisionContext.empty(), box.expandTowards(movement))
+            *///?}
+        ) {
             return movement;
         }
         return original.call(context, movement, box, level, colliders);

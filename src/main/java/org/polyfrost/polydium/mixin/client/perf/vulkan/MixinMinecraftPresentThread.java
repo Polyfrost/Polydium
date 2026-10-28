@@ -13,6 +13,7 @@ import net.minecraft.client.Options;
 //? if < 26.3
 /*import org.lwjgl.glfw.GLFW;*/
 import org.objectweb.asm.Opcodes;
+import org.polyfrost.polydium.client.PolydiumToggles;
 import org.polyfrost.polydium.client.perf.FramePath;
 import org.polyfrost.polydium.client.perf.PresentThread;
 import org.slf4j.Logger;
@@ -21,6 +22,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Minecraft.class)
 public abstract class MixinMinecraftPresentThread {
@@ -53,6 +56,23 @@ public abstract class MixinMinecraftPresentThread {
     @Unique
     private boolean polydium$acquireDeferred;
 
+    @Unique
+    private boolean polydium$imageAcquiredEarly;
+
+    @Unique
+    private SurfaceException polydium$earlyAcquireFailure;
+
+    @Unique
+    private boolean polydium$frameAcquiredEarly;
+
+    @WrapOperation(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/device/GpuSurface;isAcquired()Z", ordinal = 0))
+    private boolean polydium$startWithEarlyImage(GpuSurface surface, Operation<Boolean> original) {
+        if (this.polydium$imageAcquiredEarly)
+            return false;
+
+        return original.call(surface);
+    }
+
     @ModifyExpressionValue(method = "renderFrame", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;windowSurfaceNeedsReconfiguring:Z", opcode = Opcodes.GETFIELD))
     private boolean polydium$deferAcquire(boolean needsReconfiguring) {
         if (!this.polydium$presentThread) {
@@ -64,17 +84,42 @@ public abstract class MixinMinecraftPresentThread {
 
         boolean worker = FramePath.beginFrame(PresentThread.canDeferAcquire(this.windowSurface));
 
-        this.polydium$acquireDeferred = !needsReconfiguring && worker;
+        this.polydium$frameAcquiredEarly = this.polydium$imageAcquiredEarly || this.polydium$earlyAcquireFailure != null;
+        this.polydium$acquireDeferred    = !needsReconfiguring && worker && !this.polydium$frameAcquiredEarly;
 
         return needsReconfiguring;
     }
 
     @WrapOperation(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/device/GpuSurface;isSuboptimal()Z"))
     private boolean polydium$skipDeferredSuboptimal(GpuSurface surface, Operation<Boolean> original) {
-        if (this.polydium$acquireDeferred)
+        if (this.polydium$acquireDeferred || this.polydium$frameAcquiredEarly)
             return false;
 
         return original.call(surface);
+    }
+
+    @WrapOperation(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/device/GpuSurface;configure(Lcom/mojang/renderpearl/api/device/GpuSurface$Configuration;)V"))
+    private void polydium$dropEarlyBeforeConfigure(GpuSurface surface, GpuSurface.Configuration config, Operation<Void> original) {
+        this.polydium$dropEarlyAcquire(surface);
+        original.call(surface, config);
+    }
+
+    @WrapOperation(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/device/GpuSurface;acquireNextTexture()V"))
+    private void polydium$useEarlyAcquire(GpuSurface surface, Operation<Void> original) throws SurfaceException {
+        if (!this.polydium$frameAcquiredEarly) {
+            original.call(surface);
+
+            return;
+        }
+
+        SurfaceException failure = this.polydium$earlyAcquireFailure;
+
+        this.polydium$frameAcquiredEarly  = false;
+        this.polydium$imageAcquiredEarly  = false;
+        this.polydium$earlyAcquireFailure = null;
+
+        if (failure != null)
+            throw failure;
     }
 
     @ModifyExpressionValue(method = "renderFrame", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;surfaceIsInvalid:Z", opcode = Opcodes.GETFIELD))
@@ -121,6 +166,41 @@ public abstract class MixinMinecraftPresentThread {
     private void polydium$skipHandedOffPresent(GpuSurface surface, Operation<Void> original) {
         if (!PresentThread.takeHandedOff())
             original.call(surface);
+    }
+
+    @Inject(method = "renderFrame", at = @At("TAIL"))
+    private void polydium$acquireNextEarly(boolean advanceGameTime, CallbackInfo ci) {
+        if (this.polydium$frameAcquiredEarly)
+            throw new IllegalStateException("The screen image acquired early was not used by its frame");
+
+        if (!PolydiumToggles.earlyAcquire || !this.polydium$presentThread || !FramePath.nextFrameAcquiresEarly(PresentThread.canDeferAcquire(this.windowSurface)))
+            return;
+
+        if (this.windowSurface.isAcquired() || this.surfaceIsInvalid || this.windowSurfaceNeedsReconfiguring || this.windowSurface.isSuboptimal())
+            return;
+
+        try {
+            this.windowSurface.acquireNextTexture();
+            this.polydium$imageAcquiredEarly = true;
+        } catch (SurfaceException exception) {
+            this.polydium$earlyAcquireFailure = exception;
+        }
+    }
+
+    @WrapOperation(method = "close", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/device/GpuSurface;close()V"))
+    private void polydium$dropEarlyBeforeClose(GpuSurface surface, Operation<Void> original) {
+        this.polydium$dropEarlyAcquire(surface);
+        original.call(surface);
+    }
+
+    @Unique
+    private void polydium$dropEarlyAcquire(GpuSurface surface) {
+        if (this.polydium$imageAcquiredEarly)
+            ((PresentThread.Discard) surface).polydium$discardAcquired();
+
+        this.polydium$imageAcquiredEarly  = false;
+        this.polydium$earlyAcquireFailure = null;
+        this.polydium$frameAcquiredEarly  = false;
     }
 
     @Unique

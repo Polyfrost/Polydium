@@ -17,24 +17,36 @@ public interface TexelViewCache {
         private int count;
 
         public boolean reuse(VkBufferViewCreateInfo info, LongBuffer view) {
-            for (int i = 0; i < this.count; i++) {
-                int base = i * 4;
-                if (this.views[base] == info.offset() && this.views[base + 1] == info.range() && this.views[base + 2] == info.format()) {
-                    view.put(0, this.views[base + 3]);
-                    return true;
-                }
+            long cached = this.find(info.offset(), info.range(), info.format());
+            if (cached == 0L) {
+                return false;
             }
-            return false;
+            view.put(0, cached);
+            return true;
         }
 
         public boolean store(VkBufferViewCreateInfo info, long view) {
+            return this.store(info.offset(), info.range(), info.format(), view);
+        }
+
+        public long find(long offset, long range, int format) {
+            for (int i = 0; i < this.count; i++) {
+                int base = i * 4;
+                if (this.views[base] == offset && this.views[base + 1] == range && this.views[base + 2] == format) {
+                    return this.views[base + 3];
+                }
+            }
+            return 0L;
+        }
+
+        public boolean store(long offset, long range, int format, long view) {
             if (this.count == MAX_VIEWS) {
                 return false;
             }
             int base = this.count++ * 4;
-            this.views[base] = info.offset();
-            this.views[base + 1] = info.range();
-            this.views[base + 2] = info.format();
+            this.views[base] = offset;
+            this.views[base + 1] = range;
+            this.views[base + 2] = format;
             this.views[base + 3] = view;
             return true;
         }

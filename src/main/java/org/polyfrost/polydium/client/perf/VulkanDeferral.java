@@ -26,7 +26,6 @@ import org.polyfrost.polydium.vulkan.checkpoints.CheckpointExtension;
 import org.polyfrost.polydium.vulkan.compat.RenderArea;
 import org.polyfrost.polydium.vulkan.compat.RenderPassDescriptor;
 *///?}
-import it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.joml.Vector4fc;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.KHRDynamicRendering;
@@ -44,7 +43,7 @@ import java.util.function.Supplier;
 
 public final class VulkanDeferral {
     private final Host host;
-    private final LongArrayList pendingRanges = new LongArrayList();
+    private final PendingRanges pendingRanges = new PendingRanges();
     private int deferDepth;
     private GpuTexture clearColorTexture;
     private Vector4fc clearColor;
@@ -264,14 +263,7 @@ public final class VulkanDeferral {
     }
 
     public void deferUploadBarrier() {
-        this.pendingRanges.add(this.uploadBuffer);
-        this.pendingRanges.add(this.uploadStart);
-        this.pendingRanges.add(this.uploadEnd);
-        if (this.readBuffer != 0L) {
-            this.pendingRanges.add(this.readBuffer);
-            this.pendingRanges.add(this.readStart);
-            this.pendingRanges.add(this.readEnd);
-        }
+        this.pendingRanges.add(this.uploadBuffer, this.uploadStart, this.uploadEnd, this.readBuffer, this.readStart, this.readEnd);
         this.barrierPending = true;
     }
 
@@ -380,13 +372,7 @@ public final class VulkanDeferral {
     }
 
     private boolean overlapsPending(long buffer, long start, long end) {
-        LongArrayList ranges = this.pendingRanges;
-        for (int index = 0; index < ranges.size(); index += 3) {
-            if (ranges.getLong(index) == buffer && ranges.getLong(index + 1) < end && start < ranges.getLong(index + 2)) {
-                return true;
-            }
-        }
-        return false;
+        return this.pendingRanges.overlaps(buffer, start, end);
     }
 
     private static RenderArea area(RenderPassDescriptor descriptor) {

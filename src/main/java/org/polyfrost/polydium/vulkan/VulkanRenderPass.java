@@ -564,6 +564,6 @@ public class VulkanRenderPass implements RenderPassBackend {
     return this.label;
   }
 
-  protected record TextureViewAndSampler(VulkanGpuTextureView view, VulkanGpuSampler sampler) {
+  public record TextureViewAndSampler(VulkanGpuTextureView view, VulkanGpuSampler sampler) {
   }
 }

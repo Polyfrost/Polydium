@@ -31,6 +31,7 @@
     "client.perf.MixinFullCubeShape",
     //? if >= 1.21.1
     "client.perf.MixinPaneCapCull",
+    "client.perf.CameraNearPlaneAccessor",
     //? if >= 1.21.8
     "client.perf.ItemBoundsLayerAccessor",
     //? if >= 1.21.10
@@ -43,6 +44,14 @@
     "client.perf.MixinBufferBuilderElementsFormat",
     //? if >= 1.21.1
     "client.perf.MixinCameraFluidCache",
+    "client.perf.MixinBlocksParallelCache",
+    "client.perf.MixinBootstrapParallelCache",
+    "client.perf.MixinFerriteCoreCacheLock",
+    "client.perf.MixinMainStartupBackground",
+    "client.perf.MixinInventoryClassPreload",
+    "client.perf.MixinInitialScreensProfile",
+    //? if >= 26.2
+    "client.perf.MinecraftProfileFutureAccessor",
     //? if >= 1.21.10
     "client.perf.MixinDebugEntrySet",
     //? if >= 1.21.11
@@ -69,10 +78,21 @@
     "client.perf.MixinLtrTextFastPath",
     //? if >= 1.21.1
     "client.perf.MixinMapColorTable",
+    "client.perf.MixinGradientRandomRoll",
+    "client.perf.MixinClimateSearchScratch",
+    //? if >= 26.3
+    "client.perf.c2me.MixinC2meSamplePoolKeep",
+    //? if >= 26.3
+    "client.perf.MixinDensityPoolContexts",
+    //? if >= 26.3
+    "client.perf.MixinSamplerContextCacheRelease",
+    "client.perf.XoroshiroPositionalFactoryAccessor",
     //? if >= 1.21.4
     "client.perf.MixinModelPoseReset",
     //? if >= 1.21.1
     "client.perf.MixinParticleAirCollision",
+    //? if >= 1.21.1
+    "client.perf.MixinParticleCollisionReach",
     //? if >= 1.21.1
     "client.perf.MixinParticleLightCache",
     //? if >= 1.21.1
@@ -87,12 +107,64 @@
     "client.perf.MixinQuadParticleLayerCache",
     //? if >= 1.21.8
     "client.perf.MixinRainFogTickCache",
+    "client.perf.BaseSpawnerSpinAccessor",
+    "client.perf.ChestLidControllerAccessor",
+    "client.perf.ChestLidHolderAccessor",
+    "client.perf.EnderChestLidHolderAccessor",
+    "client.perf.MixinIdleBlockEntityTick",
+    "client.perf.MixinParticleTickCycle",
+    //? if >= 26.2
+    "client.perf.MixinOutlineScissorDraw",
+    //? if >= 26.2
+    "client.perf.MixinOutlineScissorFrame",
+    //? if >= 1.21.8
+    "client.perf.MixinOutlineScissorGameRenderer",
+    //? if >= 26.2
+    "client.perf.MixinOutlineScissorGroup",
+    "client.perf.MixinOutlineScissorLevelRenderer",
+    "client.perf.MixinOutlineScissorPostChain",
+    "client.perf.MixinOutlineScissorPostPass",
+    //? if >= 26.2
+    "client.perf.MixinOutlineScissorPreparedType",
+    //? if >= 1.21.5
+    "client.perf.MixinOutlineScissorRenderTarget",
+    "client.perf.MixinOutlineScissorRenderType",
+    //? if >= 26.2
+    "client.perf.OutlineScissorDispatcherAccessor",
+    //? if >= 26.2
+    "client.perf.OutlineScissorGroupAccessor",
+    //? if >= 26.2
+    "client.perf.OutlineScissorRendererAccessor",
     //? if >= 26.2
     "client.perf.MixinRenderTypeEquality",
     //? if >= 1.21.1
     "client.perf.MixinSoundListenerThrottle",
     //? if >= 1.21.11
     "client.perf.MixinSubmitCollectionReuse",
+    //? if >= 1.21.10
+    "client.perf.MixinSubmitPosePool",
+    //? if >= 1.21.10
+    "client.perf.MixinSubmitPosePoolFrame",
+    //? if >= 1.21.10
+    "client.perf.MixinEtfSubmitDataPool",
+    //? if >= 1.21.2
+    "client.perf.MixinTransitionRefHolder",
+    //? if >= 1.21.2
+    "client.perf.MixinTransitionRefShare",
+    //? if >= 1.21.10
+    "client.perf.MixinEntityStateHolder",
+    //? if >= 1.21.10
+    "client.perf.MixinEntityStateReuse",
+    //? if >= 1.21.10
+    "client.perf.MixinEntityStateReusePass",
+    //? if >= 1.21.8
+    "client.perf.MixinTransformDirectWrite",
+    //? if >= 1.21.8
+    "client.perf.MixinGlobalSettingsUniformRing",
+    //? if >= 1.21.8
+    "client.perf.MixinLevelProjectionRing",
+    //? if >= 1.21.8
+    "client.perf.MixinLevelProjectionRingOwner",
     //? if >= 1.21.8
     "client.perf.MixinTransformEquality",
     //? if >= 1.21.1
@@ -151,6 +223,8 @@
     "client.perf.sodium.MixinQuadParticleBatchWrite",
     "client.perf.sodium.MixinRegionList",
     "client.perf.sodium.MixinRegionPassArrays",
+    //? if >= 26.1
+    "client.perf.sodium.MixinSodiumBoxPredicate",
     //? if >= 1.21.8 || < 1.21.4
     "client.perf.sodium.MixinSodiumPerFrameChecksEstimator",
     //? if >= 26.2
@@ -202,6 +276,7 @@
     "client.perf.vulkan.backport.MixinVulkanCubesWithoutBorders",
     "client.perf.vulkan.backport.MixinVulkanDeferralBackport",
     "client.perf.vulkan.backport.MixinVulkanDescriptorPushSkipBackport",
+    "client.perf.vulkan.backport.MixinVulkanDescriptorWriteBackport",
     "client.perf.vulkan.backport.MixinVulkanDhLightmap",
     "client.perf.vulkan.backport.MixinVulkanDynamicStateBackport",
     "client.perf.vulkan.backport.MixinVulkanDynamicStateResetBackport",
@@ -230,7 +305,6 @@
     /*"client.perf.sodium.vulkan.MixinVulkanChunkRenderer",
     "client.perf.sodium.vulkan.MixinVulkanGlTexelBuffer",
     "client.perf.sodium.vulkan.MixinVulkanGpuBufferHandle",
-    "client.perf.vulkan.backport.MixinVulkanGpuWaitMeterBackport",
     "client.perf.vulkan.backport.MixinVulkanJourneyMap",
     "client.perf.vulkan.backport.MixinVulkanOdin",
     "client.perf.vulkan.backport.MixinVulkanOwoBlur",
@@ -272,16 +346,39 @@
     //? if >= 1.21.1
     "client.perf.MixinEnchantmentEmptyIteration",
     //? if >= 1.21.1
-    "client.perf.MixinEntityCullBoxCache",
-    //? if >= 1.21.1
     "client.perf.MixinEntityCullBoxReuse",
+    "client.perf.MixinEntityCullBoxMemo",
+    //? if >= 1.21.1
+    "client.perf.AABBAccessor",
+    //? if >= 26.2
+    "client.perf.MixinLeashHolderLookup",
+    //? if >= 26.2
+    "client.perf.LeashDataAccessor",
+    "client.perf.MixinSyncedDataStore",
+    "client.perf.MixinEntitySyncedDataCopy",
+    "client.perf.MixinDisplayViewRange",
+    //? if >= 1.21.5
+    "client.perf.MixinEquipmentCullingHead",
+    //? if >= 1.21.5
+    "client.perf.MixinLivingEntityCullingHead",
+    //? if >= 1.21.5
+    "client.perf.MixinLivingRendererCullingHead",
+    //? if >= 1.21.4
+    "client.perf.MixinItemLayersOnDemand",
     //? if >= 1.21.1
     "client.perf.MixinItemFrameRenderOffset",
+    //? if >= 26.1
+    "client.perf.MixinItemFramePreparedModel",
+    //? if >= 26.1
+    "client.perf.ItemFrameRenderStateAccessor",
+    //? if >= 26.1
+    "client.perf.BlockStateModelWrapperAccessor",
     //? if >= 26.1
     "client.perf.MixinItemVertexBuilderReuse",
     //? if >= 1.21.10
     "client.perf.MixinParticleDrawMapPool",
     "client.perf.sodium.MixinModelCubeWrites",
+    "client.perf.MixinModelPartCallbackPool",
     //? if >= 1.21.1
     "client.perf.MixinRenderThreadStack",
     //? if >= 1.21.1
@@ -300,12 +397,12 @@
     "client.perf.DrawableGizmoPrimitivesAccessor",
     //? if >= 1.21.11
     "client.perf.MixinGizmoCollectionReuse",
-    //? if >= 26.2
-    "client.perf.MixinPreparedRenderTypeHash",
     //? if >= 1.21.11
     "client.perf.MixinDefaultTextureMatrix",
     //? if >= 1.21.11
     "client.perf.MixinRenderTypeTextures",
+    //? if >= 26.3
+    "client.perf.MixinPreparedTextureBinding",
     //? if >= 1.21.11
     "client.perf.MixinRenderTypeTexturesVersion",
     //? if >= 1.21.11
@@ -349,6 +446,10 @@
     "client.perf.vulkan.MixinFrontendRenderPipelineUniforms",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanDescriptorPushSkip",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanDescriptorWrite",
+    //? if >= 26.2 && < 26.3
+    //"client.perf.vulkan.VulkanTextureBindingAccessor",
     //? if >= 26.2 && < 26.3
     //"client.perf.vulkan.MixinVulkanBindGroupLayoutSlots",
     //? if >= 26.3
@@ -369,6 +470,10 @@
     "client.perf.vulkan.MixinStagedPoolMappable",
     //? if >= 26.2
     "client.perf.vulkan.MixinStagedVertexDirectCopy",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinLevelRendererVertexCopy",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanVertexCopyFinish",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanBackgroundDestroy",
     //? if >= 26.2
@@ -413,6 +518,8 @@
     "client.perf.MixinHideLevelLoadingScreen",
     //? if >= 1.21.1
     "client.perf.MixinHideTitleFade",
+    //? if >= 1.21.11
+    "client.perf.vulkan.MixinGpuSurfaceDiscard",
     //? if >= 26.2
     "client.perf.vulkan.MixinMinecraftPresentThread",
     //? if >= 1.21.11
@@ -437,8 +544,6 @@
     //"client.perf.MixinHitboxCullPartialTick",
     //? if < 26.3
     //"client.perf.MixinEntityCullLerp",
-    //? if < 26.3
-    //"client.perf.AABBAccessor",
     //? if >= 1.21.4 && < 26.3
     //"client.perf.MixinDisplayCullLerp",
     //? if >= 26.2 && < 26.3
@@ -513,8 +618,6 @@
     "client.perf.sodium.MixinOcclusionReset",
     //? if >= 1.21.8
     "client.perf.sodium.MixinOcclusionSectionFilter",
-    //? if >= 26.2
-    "client.perf.vulkan.MixinVulkanGpuWaitMeter",
     "client.perf.MixinBlockEntityLightCache",
     "client.perf.MixinBlockEntityLightCacheChunks",
     "client.perf.MixinBlockEntityLightCacheCombiner",
@@ -540,6 +643,28 @@
     "client.perf.MixinSpriteMipRelease",
     "client.perf.SpriteContentsMipAccessor",
     "client.perf.MixinTextEffectMerge",
+    //? if >= 26.3
+    "client.perf.MixinDynamicAtlasTreeFreeSpace",
+    //? if < 26.3
+    //"client.perf.MixinFontTextureNodeFreeSpace",
+    "client.perf.MixinTextDisplaySplitter",
+    "client.perf.MixinEntityNameTagMemo",
+    "client.perf.MixinEntityRendererNameTagMemo",
+    //? if >= 1.21.10 && < 26.1
+    //"client.perf.MixinAvatarScoreTextMemo",
+    //? if < 1.21.10
+    //"client.perf.MixinPlayerScoreTextMemo",
+    "client.perf.MixinNameTagWidthCache",
+    "client.perf.MixinEnclosedFluid",
+    "client.perf.sodium.MixinSodiumEnclosedFluid",
+    //? if >= 26.2
+    "client.perf.sodium.MixinSodiumNearestPlaneOrder",
+    //? if >= 1.21.11
+    "client.perf.MixinAnimatedSpriteOrder",
+    //? if >= 1.21.11
+    "client.perf.MixinAnimatedSpriteOrderState",
+    //? if >= 1.21.11
+    "client.perf.MixinAnimatedSpriteOrderTexture",
     //? if < 1.21.4
     //"client.perf.BakedGlyphEffectAccessor",
     //? if < 1.21.4
@@ -549,6 +674,48 @@
     "client.perf.wwaypoints.MixinClientDimensionUtils",
     "client.perf.wwaypoints.MixinHideWaypointCycle",
     "client.perf.punchy.MixinPunchyBlacklistCache",
+    "client.perf.gammautils.MixinGammaOptionGate",
+    "client.perf.lambdynlights.MixinDynamicLightOptimisticRead",
+    "client.perf.lambdynlights.MixinLightSourceSetRemove",
+    "client.perf.lambdynlights.MixinLightEntryPosition",
+    "client.perf.cullfewerleaves.MixinLeafCullScratchPos",
+    "client.perf.scalablelux.MixinClientLightBudget",
+    "client.perf.scalablelux.MixinClientLightBudgetTick",
+    "client.perf.scalablelux.MixinChunkLoadDirtyOnce",
+    "client.perf.scalablelux.MixinLightNibbleView",
+    "client.perf.sodium.MixinClonedLightView",
+    "client.perf.particle_core.MixinParticleCoreFinalizeCycle",
+    //? if >= 1.21.10
+    "client.perf.particle_core.MixinParticleCoreFinalizeDead",
+    "client.perf.particle_core.MixinParticleCoreLightCacheRead",
+    //? if >= 1.21.10
+    "client.perf.particle_core.MixinParticleTickOverlap",
+    //? if >= 1.21.10
+    "client.perf.particle_core.MixinParticleTickOverlapFrame",
+    //? if >= 1.21.10
+    "client.perf.particle_core.MixinParticleExtractDefer",
+    //? if >= 1.21.10
+    "client.perf.particle_core.MixinParticleExtractDeferSubmit",
+    //? if >= 26.1
+    "client.perf.lambdynlights.ParticleLightSourceInvoker",
+    //? if >= 26.1
+    "client.perf.lambdynlights.MixinParticleLightBatch",
+    //? if >= 26.1
+    "client.perf.lambdynlights.MixinParticleLightDrain",
+    "client.perf.sodium.MixinBlockRendererLambdaCache",
+    //? if >= 1.21.8 || < 1.21.4
+    "client.perf.sodium.RegularTQuadAccessor",
+    //? if >= 1.21.8 || < 1.21.4
+    "client.perf.sodium.MixinFullTQuadPackedVertices",
+    //? if >= 26.1
+    "client.perf.sodium.BitArrayAccessor",
+    //? if >= 26.1
+    "client.perf.sodium.MixinVisGraphScratch",
+    //? if >= 26.1
+    "client.perf.sodium.MixinFluidDefaultDirect",
+    "client.perf.oneconfig.MixinModGateEnumCache",
+    //? if >= 26.1
+    "client.perf.MixinBlockModelHookPrecheck",
     "client.perf.MixinPerfClockFrame"
   ]
 }

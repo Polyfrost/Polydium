@@ -5,6 +5,9 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+//? if >= 1.21.5 {
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+//?}
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import org.polyfrost.polydium.client.perf.EntityRendererCacheHolder;
@@ -30,5 +33,19 @@ public class MixinEntityRendererCache {
         }
         return EntityRendererCacheHolder.lookup(entity, map, type, original);
     }
+
+    //? if >= 1.21.5 {
+    @WrapOperation(
+        method = "getRenderer(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;)Lnet/minecraft/client/renderer/entity/EntityRenderer;",
+        at = @At(value = "INVOKE", target = "Ljava/util/Map;get(Ljava/lang/Object;)Ljava/lang/Object;"),
+        require = 0
+    )
+    private Object polydium$cachedStateRenderer(Map<?, ?> map, Object type, Operation<Object> original, @Local(argsOnly = true) EntityRenderState state) {
+        if (type == null || map != this.renderers || type != state.entityType) {
+            return original.call(map, type);
+        }
+        return EntityRendererCacheHolder.lookup(type, map, type, original);
+    }
+    //?}
 }
 //?}

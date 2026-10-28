@@ -14,6 +14,8 @@ import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Pseudo
 @Mixin(targets = "net.caffeinemc.mods.sodium.client.world.LevelSlice", remap = false)
@@ -24,13 +26,23 @@ public abstract class MixinSharedStateUnpack {
     @Unique
     private BlockState[][] polydium$ownArrays;
 
+    @Unique
+    private SectionStates.Shared[] polydium$held;
+
     @WrapOperation(method = "copySectionData", at = @At(value = "INVOKE", target = "Lnet/caffeinemc/mods/sodium/client/world/LevelSlice;unpackBlockData"), require = 0)
     private void polydium$shareUnpacked(LevelSlice slice, BlockState[] blockArray, ChunkRenderContext context, ClonedChunkSection section, Operation<Void> original, @Local(argsOnly = true) int sectionIndex) {
         if (this.polydium$ownArrays == null) {
             this.polydium$ownArrays = this.blockArrays.clone();
+            this.polydium$held = new SectionStates.Shared[this.blockArrays.length];
         }
 
-        BlockState[] shared = SectionStates.shared(section, context);
+        SectionStates.Shared held = this.polydium$held[sectionIndex];
+        if (held != null) {
+            this.polydium$held[sectionIndex] = null;
+            held.release();
+        }
+
+        BlockState[] shared = SectionStates.shared(section, context, this.polydium$held, sectionIndex);
         if (shared != null) {
             this.blockArrays[sectionIndex] = shared;
             return;
@@ -39,5 +51,12 @@ public abstract class MixinSharedStateUnpack {
         BlockState[] own = this.polydium$ownArrays[sectionIndex];
         this.blockArrays[sectionIndex] = own;
         original.call(slice, own, context, section);
+    }
+
+    @Inject(method = "reset", at = @At("HEAD"), require = 0)
+    private void polydium$releaseShared(CallbackInfo ci) {
+        if (this.polydium$held != null) {
+            SectionStates.release(this.polydium$held);
+        }
     }
 }

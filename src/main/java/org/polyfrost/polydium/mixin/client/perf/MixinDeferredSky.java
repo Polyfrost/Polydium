@@ -11,6 +11,10 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 /*import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.framegraph.FramePass;
 *///?}
+//? if >= 26.3 {
+import com.llamalad7.mixinextras.sugar.Local;
+import com.llamalad7.mixinextras.sugar.ref.LocalRef;
+//?}
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
@@ -67,12 +71,17 @@ public abstract class MixinDeferredSky {
             original.call(frame, pass);
             return;
         }
+        if (PolydiumToggles.skyMainPass) {
+            SkyFarPlane.drawDeferred(pass);
+            original.call(frame, pass);
+            return;
+        }
         if (this.polydium$afterSkyPass != null) {
             this.polydium$afterSkyPass.close();
         }
         RenderTarget mainTarget = this.gameRenderer.mainRenderTarget();
         pass.close();
-        SkyFarPlane.drawDeferred();
+        SkyFarPlane.drawDeferred(null);
         RenderPass afterSky = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "Main", mainTarget.getColorTextureView(), Optional.empty(), mainTarget.getDepthTextureView(), OptionalDouble.empty());
         RenderSystem.bindDefaultUniforms(afterSky);
         this.polydium$afterSkyPass = afterSky;
@@ -81,17 +90,14 @@ public abstract class MixinDeferredSky {
 
     @WrapOperation(
             method = "lambda$addMainPass$0",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;executeClassicTransparency(Lnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher$PreparedFrame;Lcom/mojang/renderpearl/api/commands/RenderPass;)V")
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;executeSolid(Lnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher$PreparedFrame;Lcom/mojang/renderpearl/api/commands/RenderPass;)V")
     )
-    private void polydium$continueAfterSky(LevelRenderer renderer, ChunkSectionsToRender sections, FeatureRenderDispatcher.PreparedFrame frame, RenderPass pass, Operation<Void> original) {
+    private void polydium$continueAfterSky(LevelRenderer renderer, ChunkSectionsToRender sections, FeatureRenderDispatcher.PreparedFrame frame, RenderPass pass, Operation<Void> original, @Local LocalRef<RenderPass> mainPass) {
+        original.call(renderer, sections, frame, pass);
         RenderPass afterSky = this.polydium$afterSkyPass;
-        if (afterSky == null) {
-            original.call(renderer, sections, frame, pass);
-            return;
-        }
-        this.polydium$afterSkyPass = null;
-        try (afterSky) {
-            original.call(renderer, sections, frame, afterSky);
+        if (afterSky != null) {
+            this.polydium$afterSkyPass = null;
+            mainPass.set(afterSky);
         }
     }
     //?} else if >= 26.2 {

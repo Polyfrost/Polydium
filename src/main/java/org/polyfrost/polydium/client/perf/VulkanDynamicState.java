@@ -8,6 +8,8 @@ package org.polyfrost.polydium.client.perf;
 *///?}
 import it.unimi.dsi.fastutil.objects.ReferenceList;
 import org.lwjgl.vulkan.VkCommandBuffer;
+import org.lwjgl.vulkan.VkExtent2D;
+import org.lwjgl.vulkan.VkOffset2D;
 import org.lwjgl.vulkan.VkRect2D;
 import org.lwjgl.vulkan.VkViewport;
 
@@ -108,8 +110,9 @@ public final class VulkanDynamicState {
             reset();
             return true;
         }
-        VkViewport viewport = viewports.get(viewports.position());
-        return changesViewport(buffer.address(), viewport.x(), viewport.y(), viewport.width(), viewport.height(), viewport.minDepth(), viewport.maxDepth());
+        long viewport = viewports.address();
+        return changesViewport(buffer.address(), VkViewport.nx(viewport), VkViewport.ny(viewport), VkViewport.nwidth(viewport),
+            VkViewport.nheight(viewport), VkViewport.nminDepth(viewport), VkViewport.nmaxDepth(viewport));
     }
 
     public static boolean changesScissor(VkCommandBuffer buffer, int firstScissor, VkRect2D.Buffer scissors) {
@@ -117,8 +120,9 @@ public final class VulkanDynamicState {
             reset();
             return true;
         }
-        VkRect2D scissor = scissors.get(scissors.position());
-        return changesScissor(buffer.address(), scissor.offset().x(), scissor.offset().y(), scissor.extent().width(), scissor.extent().height());
+        long scissor = scissors.address();
+        return changesScissor(buffer.address(), VkOffset2D.nx(scissor + VkRect2D.OFFSET), VkOffset2D.ny(scissor + VkRect2D.OFFSET),
+            VkExtent2D.nwidth(scissor + VkRect2D.EXTENT), VkExtent2D.nheight(scissor + VkRect2D.EXTENT));
     }
 
     public static int slot(String name) {
