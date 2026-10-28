@@ -50,6 +50,17 @@ public abstract class MixinDeferredSky {
     @Unique
     private RenderPass polydium$afterSkyPass;
 
+    @Unique
+    private Boolean polydium$vulkan;
+
+    @Unique
+    private boolean polydium$vulkan() {
+        if (this.polydium$vulkan == null) {
+            this.polydium$vulkan = "Vulkan".equals(RenderSystem.getDevice().getDeviceInfo().backendName());
+        }
+        return this.polydium$vulkan;
+    }
+
     @WrapOperation(
             method = "lambda$addSkyPass$0",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/SkyRenderer;render(Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;Lnet/minecraft/client/renderer/state/level/SkyRenderState;)V")
@@ -71,7 +82,7 @@ public abstract class MixinDeferredSky {
             original.call(frame, pass);
             return;
         }
-        if (PolydiumToggles.skyMainPass) {
+        if (PolydiumToggles.skyMainPass && this.polydium$vulkan()) {
             SkyFarPlane.drawDeferred(pass);
             original.call(frame, pass);
             return;

@@ -35,7 +35,7 @@ public class PolydiumToggles {
     //@Switch(title = "Single-Pass Text Shadows", description = "Draws text shadows in the same pass as the text, as MC 1.21.4+ does.")
     public static boolean singlePassTextShadow = true;
     //? if >= 26.3
-    @Switch(title = "Sky In Main Pass", description = "Draws the deferred sky inside the main render pass instead of closing and reopening it.")
+    @Switch(title = "Sky In Main Pass", description = "On Vulkan, draws the deferred sky inside the main render pass instead of closing and reopening it.")
     public static boolean skyMainPass = true;
     @Switch(title = "Entity Outline Scissor", description = "Runs the glowing outline post passes only over the screen area the outlines can reach.")
     public static boolean outlineScissor = true;
