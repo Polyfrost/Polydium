@@ -63,7 +63,8 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     public static final boolean SODIUM_PERF = Arrays.stream(SODIUM_PERF_VERSIONS).anyMatch(SODIUM_VERSION::startsWith);
 
-    public static volatile boolean SKYBOXIFY_FAR_SKY;
+    private static volatile ClassNode skyboxifyRenderer;
+    private static boolean skyboxifyFarSky;
 
     private static final String SODIUM_08_PACKAGE = SODIUM_PERF_PACKAGE + "v08.";
     private static final Set<String> SODIUM_09_ONLY = Set.of(
@@ -102,6 +103,23 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     public static boolean isEnabled(String fragment) {
         return contains(ENABLED, fragment) && !isDisabled(fragment);
+    }
+
+    public static boolean skyboxifyFarSky() {
+        ClassNode target = skyboxifyRenderer;
+        if (target != null) {
+            skyboxifyRenderer = null;
+            Set<String> handlers = new HashSet<>(), called = new HashSet<>();
+            for (MethodNode method : target.methods) {
+                if (method.name.contains("polydium$"))
+                    handlers.add(method.name);
+                for (AbstractInsnNode insn : method.instructions)
+                    if (insn instanceof MethodInsnNode call && call.owner.equals(target.name))
+                        called.add(call.name);
+            }
+            skyboxifyFarSky = !handlers.isEmpty() && called.containsAll(handlers);
+        }
+        return skyboxifyFarSky;
     }
 
     private static boolean contains(String[] fragments, String name) {
@@ -292,15 +310,8 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
         if (mixinClassName.endsWith(".skyboxify.MixinSkyFeatureRenderer")) {
-            Set<String> handlers = new HashSet<>(), called = new HashSet<>();
-            for (MethodNode method : targetClass.methods) {
-                if (method.name.contains("polydium$"))
-                    handlers.add(method.name);
-                for (AbstractInsnNode insn : method.instructions)
-                    if (insn instanceof MethodInsnNode call && call.owner.equals(targetClass.name))
-                        called.add(call.name);
-            }
-            SKYBOXIFY_FAR_SKY = !handlers.isEmpty() && called.containsAll(handlers);
+            // MixinExtras only wires up @WrapOperation call sites after every postApply, so inspect the class once it's fully transformed
+            skyboxifyRenderer = targetClass;
             return;
         }
 

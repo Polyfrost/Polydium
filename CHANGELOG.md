@@ -1,3 +1,2 @@
-## 1.1.9
-- Marked dependency on Sodium
-- Add VulkanMod notice
+## Unreleased changes
+- Fixed sky deferral being disabled by Skyboxify on 1.21.11 and above
