@@ -432,6 +432,13 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             return;
         }
 
+        // every method, since names are obfuscated on 1.21.x; this::splitLines is the only lambda capturing just this
+        if (mixinClassName.endsWith(".MixinTextDisplaySplitter")) {
+            for (MethodNode method : targetClass.methods)
+                cacheThisLambdas(targetClass, method);
+            return;
+        }
+
         if (mixinClassName.endsWith(".MixinBlockRendererLambdaCache")) {
             for (MethodNode method : targetClass.methods)
                 if (method.name.equals("renderModel"))

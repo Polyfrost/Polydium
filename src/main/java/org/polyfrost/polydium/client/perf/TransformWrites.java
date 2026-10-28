@@ -4,7 +4,6 @@ package org.polyfrost.polydium.client.perf;
 import org.joml.Matrix4fc;
 import org.joml.Vector3fc;
 import org.joml.Vector4fc;
-import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -26,19 +25,18 @@ public final class TransformWrites {
         if (!buffer.isDirect() || buffer.isReadOnly() || buffer.order() != ByteOrder.nativeOrder() || buffer.limit() - position < SIZE) {
             return false;
         }
-        long address = MemoryUtil.memAddress(buffer);
-        modelView.getToAddress(address);
+        modelView.get(position, buffer);
         //? if >= 26.3 {
-        textureMatrix.getToAddress(address + 64L);
-        colorModulator.getToAddress(address + 128L);
-        modelOffset.getToAddress(address + 144L);
+        textureMatrix.get(position + 64, buffer);
+        colorModulator.get(position + 128, buffer);
+        modelOffset.get(position + 144, buffer);
         //?} else {
-        /*colorModulator.getToAddress(address + 64L);
-        modelOffset.getToAddress(address + 80L);
-        textureMatrix.getToAddress(address + 96L);
+        /*colorModulator.get(position + 64, buffer);
+        modelOffset.get(position + 80, buffer);
+        textureMatrix.get(position + 96, buffer);
         *///?}
         //? if < 1.21.11
-        /*MemoryUtil.memPutFloat(address + 160L, lineWidth);*/
+        /*buffer.putFloat(position + 160, lineWidth);*/
         buffer.position(position + SIZE);
         return true;
     }

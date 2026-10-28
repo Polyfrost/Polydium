@@ -59,7 +59,6 @@ public final class EtfSubmitDataPool {
             return null;
         Object data = DATA[next++];
         SET_BACKUP_STATE.invokeExact(data, (Object) MOUNTED_STATE.invokeExact());
-        ((Map<?, ?>) GET_DATA.invokeExact(data)).clear();
         return data;
     }
 
@@ -71,6 +70,14 @@ public final class EtfSubmitDataPool {
     }
 
     public static void recycle() {
+        try {
+            for (int i = 0; i < next; i++) {
+                SET_BACKUP_STATE.invokeExact(DATA[i], (Object) null);
+                ((Map<?, ?>) GET_DATA.invokeExact(DATA[i])).clear();
+            }
+        } catch (Throwable e) {
+            throw new IllegalStateException(e);
+        }
         next = 0;
     }
 }

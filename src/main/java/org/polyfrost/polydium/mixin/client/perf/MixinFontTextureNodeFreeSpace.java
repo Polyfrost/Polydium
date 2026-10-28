@@ -6,6 +6,9 @@ import com.mojang.blaze3d.font.GlyphBitmap;
 //?} else {
 /^import com.mojang.blaze3d.font.SheetGlyphInfo;
 ^///?}
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -29,14 +32,14 @@ public abstract class MixinFontTextureNodeFreeSpace {
     @Final
     private int height;
     @Shadow
-    private MixinFontTextureNodeFreeSpace left;
-    @Shadow
-    private MixinFontTextureNodeFreeSpace right;
-    @Shadow
     private boolean occupied;
 
     @Unique
     private byte polydium$freeBits;
+    @Unique
+    private MixinFontTextureNodeFreeSpace polydium$left;
+    @Unique
+    private MixinFontTextureNodeFreeSpace polydium$right;
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void polydium$startFree(int x, int y, int width, int height, CallbackInfo ci) {
@@ -66,11 +69,23 @@ public abstract class MixinFontTextureNodeFreeSpace {
         this.polydium$refresh();
     }
 
+    @WrapOperation(method = "insert", at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/font/FontTexture$Node;left:Lnet/minecraft/client/gui/font/FontTexture$Node;", opcode = Opcodes.PUTFIELD))
+    private void polydium$trackLeft(MixinFontTextureNodeFreeSpace node, MixinFontTextureNodeFreeSpace child, Operation<Void> original) {
+        original.call(node, child);
+        node.polydium$left = child;
+    }
+
+    @WrapOperation(method = "insert", at = @At(value = "FIELD", target = "Lnet/minecraft/client/gui/font/FontTexture$Node;right:Lnet/minecraft/client/gui/font/FontTexture$Node;", opcode = Opcodes.PUTFIELD))
+    private void polydium$trackRight(MixinFontTextureNodeFreeSpace node, MixinFontTextureNodeFreeSpace child, Operation<Void> original) {
+        original.call(node, child);
+        node.polydium$right = child;
+    }
+
     @Unique
     private void polydium$refresh() {
-        if (this.left != null && this.right != null) {
-            int left  = this.left.polydium$freeBits;
-            int right = this.right.polydium$freeBits;
+        if (this.polydium$left != null && this.polydium$right != null) {
+            int left  = this.polydium$left.polydium$freeBits;
+            int right = this.polydium$right.polydium$freeBits;
 
             this.polydium$freeBits = (byte) (Math.max(left & NIBBLE_MASK, right & NIBBLE_MASK) | Math.max(left >>> NIBBLE & NIBBLE_MASK, right >>> NIBBLE & NIBBLE_MASK) << NIBBLE);
 
