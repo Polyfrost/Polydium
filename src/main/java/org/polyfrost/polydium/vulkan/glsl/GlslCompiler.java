@@ -4,10 +4,14 @@ import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.preprocessor.GlslPreprocessor;
 import com.mojang.blaze3d.shaders.ShaderType;
 import org.polyfrost.polydium.vulkan.VulkanBindGroupLayout;
+import org.polyfrost.polydium.vulkan.VulkanConst;
 import org.polyfrost.polydium.vulkan.VulkanDevice;
+import org.polyfrost.polydium.vulkan.compat.GpuFormat;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import net.minecraft.client.renderer.ShaderDefines;
 import org.lwjgl.system.MemoryUtil;
@@ -78,7 +82,7 @@ public class GlslCompiler implements AutoCloseable {
     long vertexId = vertex.createVulkanShaderModule(device);
     long fragmentId = fragment.createVulkanShaderModule(device);
     VulkanBindGroupLayout layout = VulkanBindGroupLayout.create(device, entries, pipelineName);
-    java.util.Map<String, Integer> inputTypes = new java.util.HashMap<>();
+    Map<String, Integer> inputTypes = new HashMap<>();
     for (SpvVariable input : vertex.inputs()) inputTypes.put(input.name(), input.baseType());
     return new GlslCompiler.CompiledModules(vertexId, fragmentId, layout, inputTypes);
   }
@@ -124,12 +128,12 @@ public class GlslCompiler implements AutoCloseable {
     }
   }
 
-  private static org.polyfrost.polydium.vulkan.compat.GpuFormat texelFormat(final RenderPipeline pipeline, final RenderPipeline.UniformDescription uniform) {
+  private static GpuFormat texelFormat(final RenderPipeline pipeline, final RenderPipeline.UniformDescription uniform) {
     return pipeline.getLocation().getNamespace().equals("sodium")
-      ? org.polyfrost.polydium.vulkan.compat.GpuFormat.R32_SINT
-      : org.polyfrost.polydium.vulkan.VulkanConst.toGpuFormat(uniform.textureFormat());
+      ? GpuFormat.R32_SINT
+      : VulkanConst.toGpuFormat(uniform.textureFormat());
   }
 
-  public record CompiledModules(long vertex, long fragment, VulkanBindGroupLayout layout, java.util.Map<String, Integer> inputTypes) {
+  public record CompiledModules(long vertex, long fragment, VulkanBindGroupLayout layout, Map<String, Integer> inputTypes) {
   }
 }

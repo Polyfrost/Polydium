@@ -7,6 +7,7 @@ import org.spongepowered.asm.mixin.transformer.Config;
 import org.spongepowered.asm.mixin.transformer.IMixinTransformer;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,7 +48,7 @@ public final class IrisVulkanGate {
       Object delegate = null;
       for (Class<?> type = owner.getClass(); type != null; type = type.getSuperclass()) {
         for (Field field : type.getDeclaredFields()) {
-          if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
+          if (Modifier.isStatic(field.getModifiers())) continue;
           field.setAccessible(true);
           if (field.getName().equals(name)) return field.get(owner);
           if (field.get(owner) instanceof IMixinTransformer inner && inner != owner) delegate = inner;

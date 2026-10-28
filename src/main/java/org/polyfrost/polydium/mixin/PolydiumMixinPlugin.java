@@ -21,13 +21,22 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
+import com.llamalad7.mixinextras.utils.MixinInternals;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.service.MixinService;
 
 import org.polyfrost.polydium.compat.Mods;
+import org.polyfrost.polydium.early.EarlyVulkan;
+import org.polyfrost.polydium.early.LocalRefHoister;
+import org.polyfrost.polydium.early.OperationInliner;
+//? if >= 1.21.11 && < 26.2
+/*import org.polyfrost.polydium.vulkan.IrisVulkanGate;*/
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +70,8 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     public static final boolean SODIUM_PERF = Arrays.stream(SODIUM_PERF_VERSIONS).anyMatch(SODIUM_VERSION::startsWith);
 
-    public static volatile boolean SKYBOXIFY_FAR_SKY;
+    private static volatile ClassNode skyboxifyRenderer;
+    private static boolean skyboxifyFarSky;
 
     private static final String SODIUM_08_PACKAGE = SODIUM_PERF_PACKAGE + "v08.";
     private static final Set<String> SODIUM_09_ONLY = Set.of(
@@ -98,11 +108,28 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final String[] OPT_IN = {"UnfocusedFullscreenThrottle"};
 
     private static boolean vulkanBackend() {
-        return !isDisabled("VulkanBackendList") && (contains(ENABLED, "VulkanBackendList") || org.polyfrost.polydium.early.EarlyVulkan.vulkanAtStartup());
+        return !isDisabled("VulkanBackendList") && (contains(ENABLED, "VulkanBackendList") || EarlyVulkan.vulkanAtStartup());
     }
 
     public static boolean isEnabled(String fragment) {
         return contains(ENABLED, fragment) && !isDisabled(fragment);
+    }
+
+    public static boolean skyboxifyFarSky() {
+        ClassNode target = skyboxifyRenderer;
+        if (target != null) {
+            skyboxifyRenderer = null;
+            Set<String> handlers = new HashSet<>(), called = new HashSet<>();
+            for (MethodNode method : target.methods) {
+                if (method.name.contains("polydium$"))
+                    handlers.add(method.name);
+                for (AbstractInsnNode insn : method.instructions)
+                    if (insn instanceof MethodInsnNode call && call.owner.equals(target.name))
+                        called.add(call.name);
+            }
+            skyboxifyFarSky = !handlers.isEmpty() && called.containsAll(handlers);
+        }
+        return skyboxifyFarSky;
     }
 
     private static boolean contains(String[] fragments, String name) {
@@ -166,6 +193,60 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         return false;
     }
 
+    private static boolean xaeroCompatible(String targetClassName, String mixinClassName) {
+        if (!Mods.loaded("xaerominimap") && !Mods.loaded("xaerominimapfair")) return false;
+        boolean compatible;
+        try {
+            compatible = xaeroMatches(xaeroNode(targetClassName));
+        } catch (Exception e) {
+            compatible = false;
+        }
+        if (!compatible) LoggerFactory.getLogger("polydium/perf").warn("Installed Xaero's Minimap doesn't match {}, skipping it", mixinClassName);
+        return compatible;
+    }
+
+    private static boolean xaeroMatches(ClassNode target) throws Exception {
+        //? if < 1.21.6 {
+        /*MethodNode render = xaeroMethod(target, "renderChunksToFBO");
+        return render != null && target.fields.stream().anyMatch(f -> f.name.equals("rotationFramebuffer"))
+            && xaeroArgs(render, Type.INT_TYPE) >= 3 && xaeroArgs(render, Type.BOOLEAN_TYPE) >= 3
+            && xaeroMethod(xaeroNode("xaero.hud.compat.mods.ImmediatelyFastHelper"), "triggerBatchingBuffersFlush") != null;
+        *///?} else {
+        ClassNode state = xaeroNode("xaero.hud.minimap.render.MinimapPipRenderState");
+        for (String getter : List.of("getWidth", "getHeight", "getScale", "getMinimapScale", "getSize", "getBoxSize")) {
+            if (xaeroMethod(state, getter) == null) return false;
+        }
+        if (xaeroMethod(xaeroNode("xaero.common.minimap.MinimapProcessor"), "updateZoom") == null) return false;
+        if (xaeroMethod(target, "textureIsReadyToBlit") != null) return false;
+        //? if >= 26.3 {
+        MethodNode prepare = xaeroMethod(target, "prepare");
+        if (prepare == null || !xaeroInvokes(prepare, "xaero_mm_prepareTexturesAndProjection") || !xaeroInvokes(prepare, "renderToTexture")) return false;
+        //?}
+        return true;
+        //?}
+    }
+
+    private static ClassNode xaeroNode(String name) throws Exception {
+        return MixinService.getService().getBytecodeProvider().getClassNode(name);
+    }
+
+    private static MethodNode xaeroMethod(ClassNode node, String name) {
+        return node.methods.stream().filter(m -> m.name.equals(name)).findFirst().orElse(null);
+    }
+
+    private static int xaeroArgs(MethodNode method, Type type) {
+        int n = 0;
+        for (Type arg : Type.getArgumentTypes(method.desc)) if (arg.equals(type)) n++;
+        return n;
+    }
+
+    private static boolean xaeroInvokes(MethodNode method, String name) {
+        for (AbstractInsnNode insn : method.instructions) {
+            if (insn instanceof MethodInsnNode call && call.name.equals(name)) return true;
+        }
+        return false;
+    }
+
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (isDisabled(mixinClassName))
@@ -176,6 +257,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
         if (standsDown(mixinClassName))
             return false;
+
+        if (mixinClassName.contains(".perf.xaero."))
+            return xaeroCompatible(targetClassName, mixinClassName);
 
         if (contains(OPT_IN, mixinClassName) && !contains(ENABLED, mixinClassName))
             return false;
@@ -258,12 +342,12 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     @Override
     public void onLoad(String mixinPackage) {
         if (!isDisabled("OperationInliner") && (Mods.loaded("particle_core") || Mods.loaded("mountopacity") || Mods.loaded("overflowparticles") || Mods.loaded("lambdynlights") || Mods.loaded("obe")))
-            com.llamalad7.mixinextras.utils.MixinInternals.registerExtension(new org.polyfrost.polydium.early.OperationInliner("particle_core", "mountopacity", "overflowparticles", "obe", "inline"));
+            MixinInternals.registerExtension(new OperationInliner("particle_core", "mountopacity", "overflowparticles", "obe", "inline"));
         if (!isDisabled("LocalRefHoister") && Mods.loaded("sodium"))
-            com.llamalad7.mixinextras.utils.MixinInternals.registerExtension(new org.polyfrost.polydium.early.LocalRefHoister());
+            MixinInternals.registerExtension(new LocalRefHoister());
         //? if >= 1.21.11 && < 26.2 {
         /*if (vulkanBackend() && !standsDown("VulkanBackendList") && Mods.loaded("iris"))
-            org.polyfrost.polydium.vulkan.IrisVulkanGate.apply();
+            IrisVulkanGate.apply();
         *///?}
     }
 
@@ -290,15 +374,8 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
         if (mixinClassName.endsWith(".skyboxify.MixinSkyFeatureRenderer")) {
-            Set<String> handlers = new HashSet<>(), called = new HashSet<>();
-            for (MethodNode method : targetClass.methods) {
-                if (method.name.contains("polydium$"))
-                    handlers.add(method.name);
-                for (AbstractInsnNode insn : method.instructions)
-                    if (insn instanceof MethodInsnNode call && call.owner.equals(targetClass.name))
-                        called.add(call.name);
-            }
-            SKYBOXIFY_FAR_SKY = !handlers.isEmpty() && called.containsAll(handlers);
+            // MixinExtras only wires up @WrapOperation call sites after every postApply, so inspect the class once it's fully transformed
+            skyboxifyRenderer = targetClass;
             return;
         }
 
@@ -1205,7 +1282,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         int ciSlot = 1;
         for (int i = 0; i < args.length - 1; i++)
             ciSlot += args[i].getSize();
-        List<AbstractInsnNode> prefix = new java.util.ArrayList<>();
+        List<AbstractInsnNode> prefix = new ArrayList<>();
         int end = -1;
         for (AbstractInsnNode insn : handler.instructions) {
             int op = insn.getOpcode();
@@ -1228,7 +1305,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (end < 0)
             return null;
         List<AbstractInsnNode> kept = prefix.subList(0, end);
-        Map<LabelNode, LabelNode> labels = new java.util.HashMap<>();
+        Map<LabelNode, LabelNode> labels = new HashMap<>();
         for (AbstractInsnNode insn : kept)
             if (insn instanceof LabelNode label)
                 labels.put(label, new LabelNode());

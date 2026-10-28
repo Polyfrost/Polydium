@@ -1,10 +1,12 @@
 @file:Suppress("UnstableApiUsage")
 
+import dev.detekt.gradle.Detekt
 import dev.kikugie.loomx.LoomCompatDependencyExtension
 import dev.kikugie.loomx.LoomCompatProjectExtension
 import dev.kikugie.stonecutter.build.StonecutterBuildExtension
 import net.fabricmc.loom.api.LoomGradleExtensionAPI
 import net.fabricmc.loom.task.prod.ClientProductionRunTask
+import net.ltgt.gradle.errorprone.errorprone
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmExtension
 
@@ -13,6 +15,8 @@ plugins {
     kotlin("jvm")
     id("dev.kikugie.loom-back-compat")
     id("me.modmuss50.mod-publish-plugin") version "2.2.0"
+    id("dev.detekt") version "2.0.0-alpha.6"
+    id("net.ltgt.errorprone") version "5.1.1"
     `maven-publish`
 }
 
@@ -28,6 +32,7 @@ fun optionalProperty(name: String): String? = findProperty(name)?.toString()?.ta
 
 stonecutter constants {
     put("skyboxify", optionalProperty("deps.skyboxify") != null)
+    put("xaerominimap", optionalProperty("deps.xaerominimap") != null)
 }
 
 val minecraftPredicate = property("mod.mc_compat") as String
@@ -168,6 +173,9 @@ dependencies {
     optionalProperty("deps.skyboxify")?.let {
         modCompileOnly("maven.modrinth:skyboxify:$it") { isTransitive = false }
     }
+    optionalProperty("deps.xaerominimap")?.let {
+        modCompileOnly("maven.modrinth:xaeros-minimap:$it") { isTransitive = false }
+    }
 
     if (vulkanBackport) {
         val lwjgl = property("deps.lwjgl") as String
@@ -181,6 +189,21 @@ dependencies {
 
     testImplementation("org.junit.jupiter:junit-jupiter:${property("deps.junit")}")
     testImplementation("net.fabricmc:fabric-loader-junit:$fabricLoaderVersion")
+
+    errorprone("com.google.errorprone:error_prone_core:${property("deps.errorprone")}")
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.errorprone {
+        disableAllChecks = true
+        error("UnnecessarilyFullyQualified")
+    }
+}
+
+// the enabled Detekt rules need type resolution, which only the per-compilation tasks have
+tasks.named<Detekt>("detekt") {
+    enabled = false
+    dependsOn(tasks.withType<Detekt>().matching { it.name != "detekt" && !it.name.endsWith("SourceSet") })
 }
 
 loomExt.mixin {

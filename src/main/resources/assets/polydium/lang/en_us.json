@@ -11,5 +11,7 @@
   "polydium.vulkanPrompt.message": "Minecraft can render with Vulkan, and Polydium makes it even faster.\n\n§lIt is very likely your FPS will be better with Vulkan.§r\n\nTry it out and see if your FPS is better! You can switch anytime in Video Settings → General → Graphics API.",
   "polydium.vulkanPrompt.yes": "Use Vulkan",
   "polydium.vulkanPrompt.no": "Not Now",
+  "polydium.vulkanModNotice.title": "VulkanMod detected",
+  "polydium.vulkanModNotice": "Polydium has its own Vulkan backend built for Sodium, which usually runs faster than VulkanMod and works with more mods. Users have seen up to 36% higher FPS with Polydium + Sodium than with VulkanMod. To try it, swap VulkanMod for Sodium.",
   "polydium.vulkanPrompt.restart": "Takes effect after restarting the game."
 }

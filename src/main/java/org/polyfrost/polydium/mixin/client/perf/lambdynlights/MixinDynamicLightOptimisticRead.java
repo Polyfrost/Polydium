@@ -3,6 +3,10 @@ package org.polyfrost.polydium.mixin.client.perf.lambdynlights;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.core.BlockPos;
+//? if >= 26.1 {
+import net.minecraft.world.level.BlockAndLightGetter;
+//?} else
+/*import net.minecraft.world.level.BlockAndTintGetter;*/
 import org.polyfrost.polydium.client.PolydiumToggles;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -54,9 +58,9 @@ public abstract class MixinDynamicLightOptimisticRead {
             remap = false, require = 0)
     private int polydium$inline$optimisticLightmap(
             //? if >= 26.1 {
-            net.minecraft.world.level.BlockAndLightGetter level,
+            BlockAndLightGetter level,
             //?} else {
-            /*net.minecraft.world.level.BlockAndTintGetter level,
+            /*BlockAndTintGetter level,
             *///?}
             BlockPos pos, int lightmap, Operation<Integer> original
     ) {

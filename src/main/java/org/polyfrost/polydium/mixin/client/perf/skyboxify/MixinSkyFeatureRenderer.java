@@ -3,7 +3,7 @@ package org.polyfrost.polydium.mixin.client.perf.skyboxify;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 
-//? if skyboxify && >= 26.2 {
+//? if skyboxify && >= 1.21.11 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.renderpearl.api.commands.RenderPass;
@@ -47,7 +47,7 @@ public class MixinSkyFeatureRenderer {
         RenderPipeline source = SkyFarPlane.isDrawing() ? this.polydium$sources.get(pipeline) : null;
         original.call(pass, source == null ? pipeline : RenderSystem.getCompiledPipeline(SkyFarPlane.far(source)));
     }
-    //?} else if skyboxify && >= 26.2 {
+    //?} else if skyboxify && >= 1.21.11 {
     /*@WrapOperation(
             method = "endFrame",
             at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderPass;setPipeline(Lcom/mojang/blaze3d/pipeline/RenderPipeline;)V"),

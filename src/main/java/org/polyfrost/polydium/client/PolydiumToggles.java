@@ -70,4 +70,6 @@ public class PolydiumToggles {
     //? if >= 26.2
     @Switch(title = "Background Vertex Copy", description = "On Vulkan, copies the world's entity, text, item and particle vertices into GPU memory on a separate thread while terrain is prepared.")
     public static boolean backgroundVertexCopy = true;
+    @Switch(title = "Xaero's Minimap HUD Caching", description = "Caches Xaero's Minimap and redraws it at most 60 times per second.")
+    public static boolean xaeroMinimapHudCache = true;
 }

@@ -4,10 +4,12 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuFence;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.textures.GpuTexture;
+import org.joml.Matrix4f;
 import org.joml.Vector4f;
 import org.lwjgl.BufferUtils;
 import org.spongepowered.asm.mixin.Mixins;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -25,7 +27,7 @@ public final class EssentialVulkan {
     try {
       Object processor = IrisVulkanGate.processor();
       Mixins.addConfiguration("mixins.polydium.late.json");
-      java.lang.reflect.Field count = processor.getClass().getDeclaredField("transformedCount");
+      Field count = processor.getClass().getDeclaredField("transformedCount");
       count.setAccessible(true);
       count.setInt(processor, 0);
     } catch (ReflectiveOperationException e) {
@@ -33,8 +35,8 @@ public final class EssentialVulkan {
     }
   }
 
-  public static java.nio.ByteBuffer guiProjection(org.joml.Matrix4f matrix, java.nio.ByteBuffer buffer) {
-    return (VulkanActive.active && VulkanActive.zZeroToOne() ? new org.joml.Matrix4f().translate(0.0F, 0.0F, 0.5F).scale(1.0F, 1.0F, 0.5F).mul(matrix) : matrix).get(buffer);
+  public static ByteBuffer guiProjection(Matrix4f matrix, ByteBuffer buffer) {
+    return (VulkanActive.active && VulkanActive.zZeroToOne() ? new Matrix4f().translate(0.0F, 0.0F, 0.5F).scale(1.0F, 1.0F, 0.5F).mul(matrix) : matrix).get(buffer);
   }
 
   public static boolean isZZeroToOne(boolean essential) {

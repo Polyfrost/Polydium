@@ -1,13 +1,15 @@
 package org.polyfrost.polydium.client;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.AlertScreen;
+import net.minecraft.network.chat.Component;
+import org.polyfrost.polydium.compat.Mods;
 //? if >= 1.21.11 {
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.components.ImageWidget;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.screens.ConfirmScreen;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.polyfrost.polydium.early.EarlyVulkan;
 
@@ -30,11 +32,27 @@ public final class VulkanPrompt {
     private static final Identifier IMAGE = Identifier.fromNamespaceAndPath("polydium", "textures/gui/vulkan_prompt.png");
 
     private static boolean checked;
+    private static boolean vulkanModNoticed;
 
     private VulkanPrompt() {
     }
 
+    public static final class Notice extends AlertScreen {
+        public static final int MAX_WIDTH = 320;
+
+        private Notice(Runnable callback) {
+            super(callback, Component.translatable("polydium.vulkanModNotice.title"), Component.translatable("polydium.vulkanModNotice"));
+        }
+    }
+
     public static void tick(Minecraft mc) {
+        if (Mods.VULKANMOD) {
+            if (!vulkanModNoticed && mc.player != null && mc/*? if >= 26.2 {*/.gui.screen()/*?} else {*//*.screen*//*?}*/ == null) {
+                vulkanModNoticed = true;
+                mc/*? if >= 26.2 {*/.gui/*?}*/.setScreen(new Notice(() -> mc/*? if >= 26.2 {*/.gui/*?}*/.setScreen(null)));
+            }
+            return;
+        }
         //? if >= 1.21.11 {
         if (checked || mc.player == null || mc/*? if >= 26.2 {*/.gui.screen()/*?} else {*//*.screen*//*?}*/ != null)
             return;

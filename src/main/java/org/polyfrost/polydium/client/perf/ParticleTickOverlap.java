@@ -10,6 +10,9 @@ import net.minecraft.client.renderer.state.level.ParticlesRenderState;
 /*import net.minecraft.client.renderer.state.ParticlesRenderState;*/
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
+import org.lwjgl.system.JNI;
+import org.lwjgl.system.Platform;
+import org.lwjgl.system.macosx.DynamicLinkLoader;
 import org.polyfrost.polydium.client.PolydiumToggles;
 import org.slf4j.LoggerFactory;
 
@@ -69,12 +72,12 @@ public final class ParticleTickOverlap {
     private static final int QOS_CLASS_USER_INTERACTIVE = 0x21;
 
     private static void userInteractiveQos() {
-        if (org.lwjgl.system.Platform.get() != org.lwjgl.system.Platform.MACOSX)
+        if (Platform.get() != Platform.MACOSX)
             return;
         try {
-            long fn = org.lwjgl.system.macosx.DynamicLinkLoader.dlsym(org.lwjgl.system.macosx.DynamicLinkLoader.RTLD_DEFAULT, "pthread_set_qos_class_self_np");
+            long fn = DynamicLinkLoader.dlsym(DynamicLinkLoader.RTLD_DEFAULT, "pthread_set_qos_class_self_np");
             if (fn != 0)
-                org.lwjgl.system.JNI.invokeI(QOS_CLASS_USER_INTERACTIVE, 0, fn);
+                JNI.invokeI(QOS_CLASS_USER_INTERACTIVE, 0, fn);
         } catch (Throwable ignored) {
         }
     }

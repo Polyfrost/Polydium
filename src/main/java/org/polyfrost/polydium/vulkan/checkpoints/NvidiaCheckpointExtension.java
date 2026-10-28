@@ -8,6 +8,8 @@ import java.util.List;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.NVDeviceDiagnosticCheckpoints;
 import org.lwjgl.vulkan.VkCheckpointData2NV;
+//? if < 26.1
+/*import org.lwjgl.vulkan.VkCheckpointDataNV;*/
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.lwjgl.vulkan.VkCheckpointData2NV.Buffer;
 
@@ -78,16 +80,16 @@ public class NvidiaCheckpointExtension implements CheckpointExtension {
         }
         //?} else {
         /*NVDeviceDiagnosticCheckpoints.vkGetQueueCheckpointDataNV(this.queue, count, null);
-        org.lwjgl.vulkan.VkCheckpointDataNV.Buffer data = org.lwjgl.vulkan.VkCheckpointDataNV.calloc(count.get(0), stack);
+        VkCheckpointDataNV.Buffer data = VkCheckpointDataNV.calloc(count.get(0), stack);
 
         for (int i = 0; i < count.get(0); i++) {
-          ((org.lwjgl.vulkan.VkCheckpointDataNV)data.get(i)).sType$Default();
+          ((VkCheckpointDataNV)data.get(i)).sType$Default();
         }
 
         NVDeviceDiagnosticCheckpoints.vkGetQueueCheckpointDataNV(this.queue, count, data);
 
         while (data.remaining() > 0) {
-          org.lwjgl.vulkan.VkCheckpointDataNV checkpointData = (org.lwjgl.vulkan.VkCheckpointDataNV)data.get();
+          VkCheckpointDataNV checkpointData = (VkCheckpointDataNV)data.get();
           AbstractCheckpointStorage.Checkpoint checkpoint = this.findCheckpoint((int)checkpointData.pCheckpointMarker());
           if (checkpoint != null) {
             stageCheckpoints.add(new CheckpointExtension.StageCheckpoint(checkpointData.stage(), checkpoint.type(), checkpoint.label()));

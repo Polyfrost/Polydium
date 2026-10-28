@@ -1,10 +1,14 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
+//? if < 1.21.4
+/*import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;*/
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.caffeinemc.mods.sodium.api.math.MatrixHelper;
+//? if < 1.21.4
+/*import net.caffeinemc.mods.sodium.api.util.ColorABGR;*/
 import net.caffeinemc.mods.sodium.api.util.ColorARGB;
 import net.caffeinemc.mods.sodium.api.vertex.attributes.common.ColorAttribute;
 import net.caffeinemc.mods.sodium.api.vertex.attributes.common.PositionAttribute;
@@ -16,6 +20,8 @@ import net.minecraft.client.gui.font.glyphs.BakedSheetGlyph;
 //?} else {
 /*import net.minecraft.client.gui.font.glyphs.BakedGlyph;
 *///?}
+//? if < 26.1
+/*import org.joml.Matrix4f;*/
 import org.joml.Matrix4fc;
 import org.lwjgl.system.MemoryStack;
 import org.polyfrost.polydium.client.perf.DirectVertexBuffers;
@@ -52,11 +58,11 @@ public abstract class MixinDirectVertexGlyph {
             //?} else if >= 1.21.10 {
             /*at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/font/glyphs/BakedSheetGlyph;render(ZFFFLorg/joml/Matrix4f;Lcom/mojang/blaze3d/vertex/VertexConsumer;IZI)V")
     )
-    private void polydium$writeGlyphIntoTarget(BakedSheetGlyph glyph, boolean italic, float x, float y, float z, org.joml.Matrix4f pose,
+    private void polydium$writeGlyphIntoTarget(BakedSheetGlyph glyph, boolean italic, float x, float y, float z, Matrix4f pose,
             *///?} else {
             /*at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/font/glyphs/BakedGlyph;render(ZFFFLorg/joml/Matrix4f;Lcom/mojang/blaze3d/vertex/VertexConsumer;IZI)V")
     )
-    private void polydium$writeGlyphIntoTarget(BakedGlyph glyph, boolean italic, float x, float y, float z, org.joml.Matrix4f pose,
+    private void polydium$writeGlyphIntoTarget(BakedGlyph glyph, boolean italic, float x, float y, float z, Matrix4f pose,
             *///?}
                                                VertexConsumer builder, int color, boolean bold, int light, Operation<Void> original) {
         long pointer = DirectVertexBuffers.reserve(builder, GlyphVertex.FORMAT, GlyphVertex.STRIDE, 4);
@@ -82,21 +88,21 @@ public abstract class MixinDirectVertexGlyph {
         }
     }
     //?} else {
-    /*@com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod(method = "render")
-    private void polydium$writeGlyphIntoTarget(boolean italic, float x, float y, org.joml.Matrix4f pose, VertexConsumer builder,
+    /*@WrapMethod(method = "render")
+    private void polydium$writeGlyphIntoTarget(boolean italic, float x, float y, Matrix4f pose, VertexConsumer builder,
                                                float red, float green, float blue, float alpha, int light, Operation<Void> original) {
         long pointer = DirectVertexBuffers.reserve(builder, GlyphVertex.FORMAT, GlyphVertex.STRIDE, 4);
         if (pointer == 0L) {
             original.call(italic, x, y, pose, builder, red, green, blue, alpha, light);
             return;
         }
-        int color = ColorARGB.fromABGR(net.caffeinemc.mods.sodium.api.util.ColorABGR.pack(red, green, blue, alpha));
+        int color = ColorARGB.fromABGR(ColorABGR.pack(red, green, blue, alpha));
         this.polydium$writeQuad(pointer, true, italic, x, y, 0.0F, pose, color, false, light);
     }
     *///?}
 
     @Unique
-    private void polydium$writeQuad(long pointer, boolean lit, boolean italic, float x, float y, float z, /*? if >= 1.21.5 {*/Matrix4fc/*?} else {*//*org.joml.Matrix4f*//*?}*/ pose, int color, boolean bold, int light) {
+    private void polydium$writeQuad(long pointer, boolean lit, boolean italic, float x, float y, float z, /*? if >= 1.21.5 {*/Matrix4fc/*?} else {*//*Matrix4f*//*?}*/ pose, int color, boolean bold, int light) {
         float x1 = x + this.left;
         float x2 = x + this.right;
         float h1 = y + this.up;
@@ -113,7 +119,7 @@ public abstract class MixinDirectVertexGlyph {
     }
 
     @Unique
-    private static void polydium$put(long pointer, boolean lit, /*? if >= 1.21.5 {*/Matrix4fc/*?} else {*//*org.joml.Matrix4f*//*?}*/ pose, float x, float y, float z, int color, float u, float v, int light) {
+    private static void polydium$put(long pointer, boolean lit, /*? if >= 1.21.5 {*/Matrix4fc/*?} else {*//*Matrix4f*//*?}*/ pose, float x, float y, float z, int color, float u, float v, int light) {
         float xt = MatrixHelper.transformPositionX(pose, x, y, z);
         float yt = MatrixHelper.transformPositionY(pose, x, y, z);
         float zt = MatrixHelper.transformPositionZ(pose, x, y, z);

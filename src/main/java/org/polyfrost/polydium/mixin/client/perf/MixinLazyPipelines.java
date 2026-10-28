@@ -27,6 +27,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 *///?}
 
 import java.util.List;
+//? if < 1.21.11
+/*import java.util.function.BiFunction;*/
 
 @Mixin(ShaderManager.class)
 public abstract class MixinLazyPipelines {
@@ -64,7 +66,7 @@ public abstract class MixinLazyPipelines {
         method = "apply(Lnet/minecraft/client/renderer/ShaderManager$Configs;Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/util/profiling/ProfilerFiller;)V",
         at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/device/GpuDevice;precompilePipeline(Lcom/mojang/renderpearl/api/pipeline/RenderPipeline;Ljava/util/function/BiFunction;)Lcom/mojang/renderpearl/api/pipeline/CompiledRenderPipeline;")
     )
-    private CompiledRenderPipeline polydium$compileLazyPipelines(GpuDevice device, RenderPipeline pipeline, java.util.function.BiFunction<Identifier, ShaderType, String> source, Operation<CompiledRenderPipeline> original) {
+    private CompiledRenderPipeline polydium$compileLazyPipelines(GpuDevice device, RenderPipeline pipeline, BiFunction<Identifier, ShaderType, String> source, Operation<CompiledRenderPipeline> original) {
         for (RenderPipeline lazy : LazyPipelines.withRemembered(List.of())) {
             device.precompilePipeline(lazy, source);
         }

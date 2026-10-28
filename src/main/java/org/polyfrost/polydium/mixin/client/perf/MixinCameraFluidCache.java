@@ -9,6 +9,8 @@ import net.minecraft.client.renderer.Projection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
+//? if < 1.21.11
+/*import net.minecraft.world.level.BlockGetter;*/
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -31,7 +33,7 @@ public abstract class MixinCameraFluidCache {
     @Shadow
     private boolean initialized;
     @Shadow
-    private /*? if >= 1.21.11 {*/Level/*?} else {*//*net.minecraft.world.level.BlockGetter*//*?}*/ level;
+    private /*? if >= 1.21.11 {*/Level/*?} else {*//*BlockGetter*//*?}*/ level;
     @Shadow
     private Vec3 position;
     @Shadow
@@ -70,7 +72,7 @@ public abstract class MixinCameraFluidCache {
     @Unique
     private boolean polydium$fluidInitialized;
     @Unique
-    private /*? if >= 1.21.11 {*/Level/*?} else {*//*net.minecraft.world.level.BlockGetter*//*?}*/ polydium$fluidLevel;
+    private /*? if >= 1.21.11 {*/Level/*?} else {*//*BlockGetter*//*?}*/ polydium$fluidLevel;
     @Unique
     private Vec3 polydium$fluidPosition;
     @Unique

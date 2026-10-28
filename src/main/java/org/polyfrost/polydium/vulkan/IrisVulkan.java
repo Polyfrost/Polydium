@@ -1,11 +1,13 @@
 package org.polyfrost.polydium.vulkan;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import net.caffeinemc.mods.sodium.client.gui.VideoSettingsScreen;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 //? if >= 26.1 {
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 //?} else
 /*import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;*/
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ConfirmScreen;
@@ -71,7 +73,7 @@ public final class IrisVulkan {
 
     public static void selectGraphicsApi(GraphicsApi value) {
         Minecraft mc = Minecraft.getInstance();
-        if (IrisVulkanGate.applied || VulkanActive.active || value != GraphicsApi.VULKAN || !net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("iris")) {
+        if (IrisVulkanGate.applied || VulkanActive.active || value != GraphicsApi.VULKAN || !FabricLoader.getInstance().isModLoaded("iris")) {
             GraphicsApi.OPTION.set(value);
             return;
         }
@@ -82,7 +84,7 @@ public final class IrisVulkan {
                 mc.setScreen(s);
             } else {
                 s.onClose();
-                mc.setScreen(net.caffeinemc.mods.sodium.client.gui.VideoSettingsScreen.createScreen(mc.screen));
+                mc.setScreen(VideoSettingsScreen.createScreen(mc.screen));
             }
         }, Component.literal("Iris"), Component.literal("Setting the backend to Vulkan will remove your ability to use shaders.\nWould you like to proceed?")));
     }

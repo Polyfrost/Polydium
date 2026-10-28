@@ -9,6 +9,8 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import net.caffeinemc.mods.sodium.api.util.ColorARGB;
 import net.caffeinemc.mods.sodium.api.vertex.buffer.VertexBufferWriter;
+//? if < 1.21.4
+/*import net.caffeinemc.mods.sodium.api.vertex.format.common.EntityVertex;*/
 import net.caffeinemc.mods.sodium.client.render.immediate.model.EntityRenderer;
 import net.caffeinemc.mods.sodium.client.render.immediate.model.ModelCuboid;
 import net.minecraft.client.model.geom.ModelPart;
@@ -37,7 +39,7 @@ public abstract class MixinModelCubeWrites {
     private void polydium$writeCuboid(ModelPart.Cube cube, PoseStack.Pose pose, VertexConsumer builder, int lightCoords, int overlayCoords, int color,
                                       Operation<Void> original) {
         if (SodiumModelParts.CUBOIDS && cube.getClass() == ModelPart.Cube.class) {
-            VertexBufferWriter writer = VertexBufferWriter.tryOf(builder/*? if < 1.21.4 {*//*, net.caffeinemc.mods.sodium.api.vertex.format.common.EntityVertex.FORMAT*//*?}*/);
+            VertexBufferWriter writer = VertexBufferWriter.tryOf(builder/*? if < 1.21.4 {*//*, EntityVertex.FORMAT*//*?}*/);
             ModelCuboid cuboid = SodiumModelParts.cuboid(cube);
             if (writer != null && cuboid != null) {
                 EntityRenderer.renderCuboid(pose, writer, cuboid, lightCoords, overlayCoords, ColorARGB.toABGR(color));

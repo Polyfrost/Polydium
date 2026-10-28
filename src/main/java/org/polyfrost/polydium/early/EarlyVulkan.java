@@ -4,6 +4,10 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.LanguageAdapter;
 import net.fabricmc.loader.api.ModContainer;
 import org.slf4j.LoggerFactory;
+//? if >= 1.21.11 {
+import oshi.SystemInfo;
+import oshi.hardware.GraphicsCard;
+//?}
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -193,7 +197,7 @@ public final class EarlyVulkan implements LanguageAdapter {
 
     private static boolean hasDiscreteGpu() {
         try {
-            for (oshi.hardware.GraphicsCard card : new oshi.SystemInfo().getHardware().getGraphicsCards())
+            for (GraphicsCard card : new SystemInfo().getHardware().getGraphicsCards())
                 if (isDiscreteName(card.getVendor() + " " + card.getName()))
                     return true;
         } catch (Throwable ignored) {

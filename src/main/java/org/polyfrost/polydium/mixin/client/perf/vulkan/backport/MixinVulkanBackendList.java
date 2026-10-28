@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.BackendCreationException;
 import com.mojang.blaze3d.systems.GpuBackend;
 import net.minecraft.client.Minecraft;
 import org.polyfrost.polydium.client.VulkanAvailability;
+import org.polyfrost.polydium.vulkan.EssentialVulkan;
 import org.polyfrost.polydium.vulkan.VulkanBackend;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -19,7 +20,7 @@ public class MixinVulkanBackendList {
         if (unavailable != null)
             return backends;
 
-        org.polyfrost.polydium.vulkan.EssentialVulkan.registerMixins();
+        EssentialVulkan.registerMixins();
         GpuBackend[] withVulkan = new GpuBackend[backends.length + 1];
         withVulkan[0] = new VulkanBackend();
         System.arraycopy(backends, 0, withVulkan, 1, backends.length);

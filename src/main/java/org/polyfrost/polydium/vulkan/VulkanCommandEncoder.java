@@ -2,11 +2,14 @@ package org.polyfrost.polydium.vulkan;
 
 import java.util.function.Supplier;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import org.polyfrost.polydium.vulkan.compat.RenderArea;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.GpuFence;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.CommandEncoderBackend;
+import com.mojang.blaze3d.systems.GpuQuery;
 import org.polyfrost.polydium.vulkan.compat.GpuQueryPool;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderPassBackend;
@@ -22,9 +25,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import org.joml.Vector4f;
 import org.joml.Vector4fc;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.vulkan.KHRDynamicRendering;
 import org.lwjgl.vulkan.KHRSynchronization2;
 import org.lwjgl.vulkan.VK12;
@@ -1086,7 +1091,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
   }
 
   private static Vector4fc argb(final int color) {
-    return new org.joml.Vector4f((color >> 16 & 0xFF) / 255.0F, (color >> 8 & 0xFF) / 255.0F, (color & 0xFF) / 255.0F, (color >>> 24) / 255.0F);
+    return new Vector4f((color >> 16 & 0xFF) / 255.0F, (color >> 8 & 0xFF) / 255.0F, (color & 0xFF) / 255.0F, (color >>> 24) / 255.0F);
   }
 
   @Override
@@ -1104,7 +1109,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
   ) {
     RenderPassDescriptor descriptor = RenderPassDescriptor.create(label)
       .withColorAttachment(colorTexture, clearColor.isPresent() ? Optional.of(argb(clearColor.getAsInt())) : Optional.empty())
-      .withRenderArea(new org.polyfrost.polydium.vulkan.compat.RenderArea(0, 0, colorTexture.getWidth(0), colorTexture.getHeight(0)));
+      .withRenderArea(new RenderArea(0, 0, colorTexture.getWidth(0), colorTexture.getHeight(0)));
     if (depthTexture != null) {
       descriptor.withDepthAttachment(depthTexture, clearDepth);
     }
@@ -1149,7 +1154,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
   @Override
   public void writeToTexture(
     final GpuTexture destination,
-    final com.mojang.blaze3d.platform.NativeImage source,
+    final NativeImage source,
     final int mipLevel,
     final int depthOrLayer,
     final int destX,
@@ -1162,7 +1167,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
     int texelSize = source.format().components();
     long start = (sourceX + (long)sourceY * source.getWidth()) * texelSize;
     long length = ((long)(height - 1) * source.getWidth() + width) * texelSize;
-    ByteBuffer data = org.lwjgl.system.MemoryUtil.memByteBuffer(source.getPointer() + start, (int)length);
+    ByteBuffer data = MemoryUtil.memByteBuffer(source.getPointer() + start, (int)length);
     GpuBufferSlice staging = this.transientMemory.uploadStaging(data, texelSize, 16);
     this.copyBufferToTexture(staging, 0, 0, source.getWidth(), height, destination, destX, destY, width, height, mipLevel, depthOrLayer);
   }
@@ -1171,7 +1176,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
   public void writeToTexture(
     final GpuTexture destination,
     final ByteBuffer source,
-    final com.mojang.blaze3d.platform.NativeImage.Format format,
+    final NativeImage.Format format,
     final int mipLevel,
     final int depthOrLayer,
     final int destX,
@@ -1188,22 +1193,22 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
   }
 
   @Override
-  public com.mojang.blaze3d.systems.GpuQuery timerQueryBegin() {
+  public GpuQuery timerQueryBegin() {
     return new CpuTimerQuery();
   }
 
   @Override
-  public void timerQueryEnd(final com.mojang.blaze3d.systems.GpuQuery query) {
+  public void timerQueryEnd(final GpuQuery query) {
     ((CpuTimerQuery)query).elapsed = System.nanoTime() - ((CpuTimerQuery)query).start;
   }
 
-  private static final class CpuTimerQuery implements com.mojang.blaze3d.systems.GpuQuery {
+  private static final class CpuTimerQuery implements GpuQuery {
     private final long start = System.nanoTime();
     private long elapsed = -1L;
 
     @Override
-    public java.util.OptionalLong getValue() {
-      return this.elapsed < 0L ? java.util.OptionalLong.empty() : java.util.OptionalLong.of(this.elapsed);
+    public OptionalLong getValue() {
+      return this.elapsed < 0L ? OptionalLong.empty() : OptionalLong.of(this.elapsed);
     }
 
     @Override
