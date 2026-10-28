@@ -2,6 +2,7 @@ package org.polyfrost.polydium.test
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import java.lang.reflect.Field
 import java.lang.reflect.Proxy
 import java.util.Random
 
@@ -34,8 +35,8 @@ class GlyphAtlasSkipTest {
     private class Atlas(size: Int) {
         private val tree: Any
         private val insert: (Int, Int) -> Any?
-        private val xField: java.lang.reflect.Field
-        private val yField: java.lang.reflect.Field
+        private val xField: Field
+        private val yField: Field
 
         init {
             val modern = runCatching { Class.forName("net.minecraft.client.renderer.texture.DynamicAtlasTree") }.getOrNull()
