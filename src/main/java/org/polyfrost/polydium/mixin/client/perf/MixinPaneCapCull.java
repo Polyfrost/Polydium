@@ -25,9 +25,11 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(/*? if >= 26.1 {*/UnbakedCuboidGeometry/*?} else if >= 1.21.5 {*//*SimpleUnbakedGeometry*//*?} else if >= 1.21.4 {*//*SimpleBakedModel*//*?} else {*//*BlockModel*//*?}*/.class)
 public abstract class MixinPaneCapCull {
     @ModifyExpressionValue(
-            //? if >= 1.21.11 {
+            //? if >= 26.1 {
             method = "bake*",
-            //?} else if >= 1.21.5 {
+            //?} else if >= 1.21.11 {
+            /*method = "bake(Ljava/util/List;Lnet/minecraft/client/renderer/block/model/TextureSlots;Lnet/minecraft/client/resources/model/ModelBaker;Lnet/minecraft/client/resources/model/ModelState;Lnet/minecraft/client/resources/model/ModelDebugName;)Lnet/minecraft/client/resources/model/QuadCollection;",
+            *///?} else if >= 1.21.5 {
             /*method = "method_67933",
             *///?} else if >= 1.21.4 {
             /*method = "bakeElements",

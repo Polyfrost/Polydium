@@ -33,7 +33,10 @@ public abstract class MixinParticleCollisionReach implements ParticleAirCollisio
         this.polydium$reachCode = code;
     }
 
-    @ModifyExpressionValue(method = {"set", "getAndSet", "onResize"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/chunk/Palette;idFor"))
+    //? if >= 1.21.10 {
+    @ModifyExpressionValue(method = {"set(ILjava/lang/Object;)V", "getAndSet(ILjava/lang/Object;)Ljava/lang/Object;"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/chunk/Palette;idFor(Ljava/lang/Object;Lnet/minecraft/world/level/chunk/PaletteResize;)I"))
+    //?} else
+    //@ModifyExpressionValue(method = {"set(ILjava/lang/Object;)V", "getAndSet(ILjava/lang/Object;)Ljava/lang/Object;"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/chunk/Palette;idFor(Ljava/lang/Object;)I"))
     private int polydium$bumpOnPaletteWrite(int id) {
         this.polydium$paletteVersion++;
         return id;
