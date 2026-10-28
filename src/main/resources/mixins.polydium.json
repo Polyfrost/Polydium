@@ -735,7 +735,6 @@
     "client.perf.sodium.MixinVisGraphScratch",
     //? if >= 26.1
     "client.perf.sodium.MixinFluidDefaultDirect",
-    "client.perf.oneconfig.MixinModGateEnumCache",
     //? if >= 26.1
     "client.perf.MixinBlockModelHookPrecheck",
     "client.perf.MixinPerfClockFrame",
