@@ -8,6 +8,7 @@ import net.caffeinemc.mods.sodium.api.config.structure.OptionPageBuilder;
 import net.caffeinemc.mods.sodium.client.gui.SodiumConfigBuilder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import org.polyfrost.polydium.client.VulkanAvailability;
 import org.polyfrost.polydium.vulkan.GraphicsApi;
 import org.polyfrost.polydium.vulkan.IrisVulkan;
 import org.spongepowered.asm.mixin.Final;
@@ -30,7 +31,7 @@ public class MixinGraphicsApiOptionSodium {
                 builder.createEnumOption(Identifier.fromNamespaceAndPath("sodium", "general.graphics_api"), GraphicsApi.class)
                         .setStorageHandler(this.vanillaStorage)
                         .setName(Component.translatable("options.graphicsApi"))
-                        .setTooltip(api -> Component.translatable(api == GraphicsApi.VULKAN ? "options.graphicsApi.tooltip.vulkan" : "options.graphicsApi.tooltip"))
+                        .setTooltip(api -> api == GraphicsApi.VULKAN ? VulkanAvailability.vulkanTooltip() : Component.translatable("options.graphicsApi.tooltip"))
                         .setElementNameProvider(EnumOptionBuilder.nameProviderFrom(
                                 Component.translatable("options.graphicsApi.default"),
                                 Component.translatable("options.graphicsApi.opengl"),

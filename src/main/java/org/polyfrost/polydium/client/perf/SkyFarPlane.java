@@ -58,6 +58,8 @@ public final class SkyFarPlane {
     private static final boolean SKY_MOD = java.util.stream.Stream.of("optiboxes", "nuit").anyMatch(FabricLoader.getInstance()::isModLoaded);
     private static final boolean SKYBOXIFY = FabricLoader.getInstance().isModLoaded("skyboxify");
     private static final String SKYBOXIFY_SHADER = "skyboxify:shaders/core/custom_skybox.vsh";
+    public static final String OVERFLOW_SKY_SHADER = "overflowanimations:shaders/core/legacy_sky.vsh";
+    private static final String OVERFLOW_SKY_POSITION = "gl_Position = ProjMat * eye;";
     private static final Map<RenderPipeline, RenderPipeline> FAR = new IdentityHashMap<>();
     //?} else {
     /*private static final boolean SKY_MOD = java.util.stream.Stream.of("skyboxify", "optiboxes", "nuit").anyMatch(FabricLoader.getInstance()::isModLoaded);
@@ -184,6 +186,7 @@ public final class SkyFarPlane {
     /*private static Runnable deferredSky;
     *///?}
     private static boolean drawing;
+    private static boolean blockDefer;
 
     private SkyFarPlane() {
     }
@@ -207,6 +210,7 @@ public final class SkyFarPlane {
                 .withPrimitiveTopology(source.getPrimitiveTopology())
                 .withDepthStencilState(Pipelines.BEHIND_TERRAIN);
             source.getBindGroupLayouts().forEach(builder::withBindGroupLayout);
+            source.getShaderDefines().flags().forEach(builder::withShaderDefine);
             return builder.build();
         });
     }
@@ -214,9 +218,13 @@ public final class SkyFarPlane {
 
     private static boolean isFarShader(String id) {
         //? if >= 26.2 {
-        return SHADERS.contains(id) || SKYBOXIFY_SHADER.equals(id);
+        return SHADERS.contains(id) || SKYBOXIFY_SHADER.equals(id) || OVERFLOW_SKY_SHADER.equals(id);
         //?} else
         /*return SHADERS.contains(id);*/
+    }
+
+    public static boolean isPatched(String id) {
+        return PATCHED.contains(id);
     }
 
     private static boolean allPatched() {
@@ -233,28 +241,40 @@ public final class SkyFarPlane {
         if (!isFarShader(id)) {
             return source;
         }
-        if (!source.contains(POSITION)) {
+        //? if >= 26.2 {
+        String position = OVERFLOW_SKY_SHADER.equals(id) ? OVERFLOW_SKY_POSITION : POSITION;
+        //?} else
+        /*String position = POSITION;*/
+        if (!source.contains(position)) {
             PATCHED.remove(id);
             return source;
         }
         PATCHED.add(id);
         //? if >= 26.3 {
-        return source.replace(POSITION, POSITION + "\n#ifdef " + DEFINE
+        return source.replace(position, position + "\n#ifdef " + DEFINE
             + "\n#ifdef RENDERPEARL_DEPTH_IS_ZERO_TO_ONE\n    gl_Position.z = 0.0;\n#else\n    gl_Position.z = -gl_Position.w;\n#endif\n#endif");
         //?} else if >= 26.2 {
         /*String far = RenderSystem.getDevice().getDeviceInfo().isZZeroToOne() ? "0.0" : "-gl_Position.w";
-        return source.replace(POSITION, POSITION + "\n#ifdef " + DEFINE + "\n    gl_Position.z = " + far + ";\n#endif");
+        return source.replace(position, position + "\n#ifdef " + DEFINE + "\n    gl_Position.z = " + far + ";\n#endif");
         *///?} else {
-        /*return source.replace(POSITION, POSITION + "\n#ifdef " + DEFINE + "\n    gl_Position.z = gl_Position.w;\n#endif");
+        /*return source.replace(position, position + "\n#ifdef " + DEFINE + "\n    gl_Position.z = gl_Position.w;\n#endif");
         *///?}
     }
 
+    public static void blockNextDefer() {
+        blockDefer = true;
+    }
+
     public static boolean canDefer(SkyRenderState state, boolean improvedTransparency) {
+        boolean blocked = blockDefer;
+        blockDefer = false;
         //? if >= 1.21.11 {
-        return state.skybox == DimensionType.Skybox.OVERWORLD
+        return !blocked
+                && state.skybox == DimensionType.Skybox.OVERWORLD
                 && !IrisShaders.packInUse()
         //?} else {
-        /*return state.skyType == DimensionSpecialEffects.SkyType.OVERWORLD
+        /*return !blocked
+                && state.skyType == DimensionSpecialEffects.SkyType.OVERWORLD
                 && !IrisShaders.packInUse()
         *///?}
                 && !improvedTransparency

@@ -1,2 +1,4 @@
-## Unreleased changes
-- Fixed a crash with Impact Frames when attacking on Polydium's Vulkan backend on 1.21.11/26.1
+## 1.1.7
+- Fixed OpenGL error spam from `glFlushMappedNamedBufferRange` on 26.2 (#10)
+- Fixed a dark square appearing below the player with OverflowAnimations' legacy sky (#13)
+- Fixed a crash when exporting Flashback replays on the Vulkan backend with Sodium

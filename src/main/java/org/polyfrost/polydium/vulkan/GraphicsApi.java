@@ -5,6 +5,7 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.StringRepresentable;
+import org.polyfrost.polydium.client.VulkanAvailability;
 import org.polyfrost.polydium.early.EarlyVulkan;
 
 import java.util.ArrayList;
@@ -28,7 +29,7 @@ public enum GraphicsApi implements StringRepresentable {
                 lines.add(Component.translatable("options.graphicsApi.tooltip"));
                 if (value == VULKAN) {
                     lines.add(CommonComponents.EMPTY);
-                    lines.add(Component.translatable("options.graphicsApi.tooltip.vulkan"));
+                    lines.add(VulkanAvailability.vulkanTooltip());
                 }
                 return Tooltip.create(CommonComponents.joinLines(lines));
             },

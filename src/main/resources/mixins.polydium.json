@@ -190,6 +190,8 @@
     "client.perf.iris.MixinVanillaRenderingPipeline",
     //? if < 26.3
     //"client.perf.iris.MixinRenderRegion",
+    "client.perf.overflow.MixinAbstractRenderer",
+    "client.perf.overflow.MixinLegacySkyRenderer",
     "client.perf.skyboxify.MixinEventManager",
     "client.perf.skyboxify.MixinSkyboxManager",
     "client.perf.skyboxify.MixinSkyFeatureRenderer",
@@ -217,6 +219,8 @@
     "client.perf.sodium.MixinParticleSectionTick",
     //? if >= 26.2
     "client.perf.sodium.MixinIndirectTerrainDraws",
+    //? if >= 26.2
+    "client.perf.sodium.MixinIndirectRingRotate",
     "client.perf.sodium.MixinMatrixHelperSharedTrig",
     "client.perf.sodium.MixinModelPartIdentity",
     //? if >= 1.21.10
@@ -592,6 +596,20 @@
     "client.perf.MixinSkipFirstMainClear",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanDeferral",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinGraphicsApiTooltip",
+    //? if >= 26.2 && < 26.3
+    //"client.perf.vulkan.MixinVulkanLegacyBindGroupLayout",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacyDescriptors",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacyDevice",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacyEncoder",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacyFeatures",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacyPipeline",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLazyTransient",
     //? if >= 26.2

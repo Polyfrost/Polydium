@@ -76,6 +76,9 @@ public class VulkanDevice implements GpuDeviceBackend {
   private final VulkanQueue transferQueue;
   private final boolean isIntegratedIntelMoltenVK;
   private final boolean fillModeNonSolid;
+  private final boolean dynamicRendering;
+  private final boolean pushDescriptors;
+  private final RenderPassCache renderPassCache = new RenderPassCache(this);
   private final VulkanCommandEncoder commandEncoder;
   private final CheckpointExtension checkpointExtension;
 
@@ -94,6 +97,8 @@ public class VulkanDevice implements GpuDeviceBackend {
     this.vma = vma;
     this.checkpointExtension = checkpointExtension;
     this.fillModeNonSolid = physicalDevice.supportsFillModeNonSolid();
+    this.dynamicRendering = enabledDeviceExtensions.contains("VK_KHR_dynamic_rendering");
+    this.pushDescriptors = enabledDeviceExtensions.contains("VK_KHR_push_descriptor");
     Set<String> extensionNames = new HashSet<>();
 
     for (String name : instance.getEnabledExtensions()) {
@@ -166,6 +171,7 @@ public class VulkanDevice implements GpuDeviceBackend {
     this.checkpointExtension.close();
     this.commandEncoder.destroy();
     this.clearPipelineCache();
+    this.renderPassCache.destroy();
     Vma.vmaDestroyAllocator(this.vma);
     VK12.vkDestroyDevice(this.vkDevice, null);
     this.instance.close();
@@ -182,6 +188,18 @@ public class VulkanDevice implements GpuDeviceBackend {
 
   public boolean fillModeNonSolid() {
     return this.fillModeNonSolid;
+  }
+
+  public boolean dynamicRendering() {
+    return this.dynamicRendering;
+  }
+
+  public boolean pushDescriptors() {
+    return this.pushDescriptors;
+  }
+
+  public RenderPassCache renderPassCache() {
+    return this.renderPassCache;
   }
 
   public VkDevice vkDevice() {

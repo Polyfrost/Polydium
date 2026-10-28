@@ -53,9 +53,12 @@ import org.slf4j.Logger;
 
 public class VulkanBackend implements GpuBackend {
   private static final Logger LOGGER = LogUtils.getLogger();
+  // 26.4-snapshot-1 dropped VK_KHR_dynamic_rendering and VK_KHR_push_descriptor; both are still used when present
   public static final Set<String> REQUIRED_DEVICE_EXTENSIONS = Set.of(
-    "VK_KHR_dynamic_rendering", "VK_KHR_push_descriptor", "VK_KHR_synchronization2", "VK_EXT_vertex_attribute_divisor", "VK_KHR_swapchain"
+    "VK_KHR_synchronization2", "VK_EXT_vertex_attribute_divisor", "VK_KHR_swapchain"
   );
+  // Forces the render pass / descriptor set fallback on capable hardware, for testing
+  private static final boolean FORCE_LEGACY = Boolean.getBoolean("polydium.vulkan.legacyRenderPasses");
   public static final VulkanPNextStruct VK10_FEATURES_STRUCT = new VulkanPNextStruct(1000059000, VkPhysicalDeviceProperties2.SIZEOF);
   public static final VulkanPNextStruct VK11_FEATURES_STRUCT = new VulkanPNextStruct(49, VkPhysicalDeviceVulkan11Features.SIZEOF);
   public static final VulkanPNextStruct VK12_FEATURES_STRUCT = new VulkanPNextStruct(51, VkPhysicalDeviceVulkan12Features.SIZEOF);
@@ -73,12 +76,14 @@ public class VulkanBackend implements GpuBackend {
     new VulkanFeature(VK12_FEATURES_STRUCT, "timelineSemaphore", VkPhysicalDeviceVulkan12Features.TIMELINESEMAPHORE),
     new VulkanFeature(VK12_FEATURES_STRUCT, "hostQueryReset", VkPhysicalDeviceVulkan12Features.HOSTQUERYRESET),
     new VulkanFeature(SYNC2_FEATURES_STRUCT, "synchronization2", VkPhysicalDeviceSynchronization2Features.SYNCHRONIZATION2),
-    new VulkanFeature(DYNAMIC_RENDERING_FEATURES_STRUCT, "dynamicRendering", VkPhysicalDeviceDynamicRenderingFeatures.DYNAMICRENDERING),
     new VulkanFeature(
       VERTEX_ATTRIB_DIVISOR_FEATURES_STRUCT,
       "vertexAttributeInstanceRateDivisor",
       VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT.VERTEXATTRIBUTEINSTANCERATEDIVISOR
     )
+  );
+  private static final VulkanFeature DYNAMIC_RENDERING_FEATURE = new VulkanFeature(
+    DYNAMIC_RENDERING_FEATURES_STRUCT, "dynamicRendering", VkPhysicalDeviceDynamicRenderingFeatures.DYNAMICRENDERING
   );
   private static final VulkanFeature MULTI_DRAW_FEATURE = new VulkanFeature(
     MULTI_DRAW_FEATURES_STRUCT, "multiDraw", VkPhysicalDeviceMultiDrawFeaturesEXT.MULTIDRAW
@@ -204,6 +209,16 @@ public class VulkanBackend implements GpuBackend {
           enabledFeatures.add(MULTI_DRAW_FEATURE);
         }
 
+        if (!FORCE_LEGACY && physicalDevice.hasDeviceExtension("VK_KHR_dynamic_rendering")
+          && isFeatureSupported(physicalDevice.vkPhysicalDevice(), DYNAMIC_RENDERING_FEATURE)) {
+          deviceExtensions.add("VK_KHR_dynamic_rendering");
+          enabledFeatures.add(DYNAMIC_RENDERING_FEATURE);
+        }
+
+        if (!FORCE_LEGACY && physicalDevice.hasDeviceExtension("VK_KHR_push_descriptor")) {
+          deviceExtensions.add("VK_KHR_push_descriptor");
+        }
+
         if (isFeatureSupported(physicalDevice.vkPhysicalDevice(), WIREFRAME_FEATURE)) {
           enabledFeatures.add(WIREFRAME_FEATURE);
         }
@@ -231,6 +246,11 @@ public class VulkanBackend implements GpuBackend {
       }
 
       VulkanDevice vulkanDevice = new VulkanDevice(defaultShaderSource, instance, physicalDevice, deviceExtensions, device, vma, checkpointExtension);
+      LOGGER.info(
+        "Vulkan using {} and {}",
+        vulkanDevice.dynamicRendering() ? "dynamic rendering" : "render passes",
+        vulkanDevice.pushDescriptors() ? "push descriptors" : "descriptor sets"
+      );
       vulkanDevice.initSurface(window);
       //? if >= 26.1 {
       return new GpuDevice(vulkanDevice);
