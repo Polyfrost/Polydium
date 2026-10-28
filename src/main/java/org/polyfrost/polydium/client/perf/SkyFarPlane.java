@@ -19,7 +19,7 @@ import com.mojang.renderpearl.api.pipeline.ColorTargetState;
 import com.mojang.renderpearl.api.pipeline.CompareOp;
 import com.mojang.renderpearl.api.pipeline.DepthStencilState;
 //?}
-//? if = 1.21.11
+//? if < 26.1
 /*import com.mojang.blaze3d.platform.DepthTestFunction;*/
 //? if >= 26.2
 import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
@@ -41,14 +41,11 @@ import net.minecraft.client.renderer.state.level.SkyRenderState;
 *///?}
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.dimension.DimensionType;
-//? if >= 1.21.11
 import org.polyfrost.polydium.mixin.PolydiumMixinPlugin;
 
-//? if >= 1.21.11 {
 import java.util.IdentityHashMap;
 import java.util.Map;
-//?}
-//? if >= 1.21.11 && < 26.2
+//? if < 26.2
 /*import java.util.Optional;*/
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -59,14 +56,10 @@ public final class SkyFarPlane {
     private static final String POSITION = "gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);";
     private static final Set<String> SHADERS = Set.of("minecraft:shaders/core/sky.vsh", "minecraft:shaders/core/stars.vsh", "minecraft:shaders/core/position_color.vsh", "minecraft:shaders/core/position_tex.vsh");
     private static final Set<String> PATCHED = ConcurrentHashMap.newKeySet();
-    //? if >= 1.21.11 {
     private static final boolean SKY_MOD = Stream.of("optiboxes", "nuit").anyMatch(FabricLoader.getInstance()::isModLoaded);
     private static final boolean SKYBOXIFY = FabricLoader.getInstance().isModLoaded("skyboxify");
     private static final String SKYBOXIFY_SHADER = "skyboxify:shaders/core/custom_skybox.vsh";
     private static final Map<RenderPipeline, RenderPipeline> FAR = new IdentityHashMap<>();
-    //?} else {
-    /*private static final boolean SKY_MOD = Stream.of("skyboxify", "optiboxes", "nuit").anyMatch(FabricLoader.getInstance()::isModLoaded);
-    *///?}
     //? if >= 26.2 {
     public static final String OVERFLOW_SKY_SHADER = "overflowanimations:shaders/core/legacy_sky.vsh";
     private static final String OVERFLOW_SKY_POSITION = "gl_Position = ProjMat * eye;";
@@ -221,7 +214,7 @@ public final class SkyFarPlane {
             return builder.build();
         });
     }
-    //?} else if >= 1.21.11 {
+    //?} else {
     /*public static RenderPipeline far(RenderPipeline pipeline) {
         return FAR.computeIfAbsent(pipeline, source -> RenderPipeline.builder(new RenderPipeline.Snippet(
                 Optional.of(source.getVertexShader()),
@@ -255,10 +248,8 @@ public final class SkyFarPlane {
     private static boolean isFarShader(String id) {
         //? if >= 26.2 {
         return SHADERS.contains(id) || SKYBOXIFY_SHADER.equals(id) || OVERFLOW_SKY_SHADER.equals(id);
-        //?} else if >= 1.21.11 {
-        /*return SHADERS.contains(id) || SKYBOXIFY_SHADER.equals(id);
-        *///?} else
-        /*return SHADERS.contains(id);*/
+        //?} else
+        /*return SHADERS.contains(id) || SKYBOXIFY_SHADER.equals(id);*/
     }
 
     public static boolean isPatched(String id) {
@@ -266,11 +257,9 @@ public final class SkyFarPlane {
     }
 
     private static boolean allPatched() {
-        //? if >= 1.21.11 {
         if (SKYBOXIFY && (!PolydiumMixinPlugin.skyboxifyFarSky() || !PATCHED.contains(SKYBOXIFY_SHADER))) {
             return false;
         }
-        //?}
         return PATCHED.containsAll(SHADERS);
     }
 
