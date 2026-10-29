@@ -25,6 +25,10 @@
     "client.perf.MixinTaskWakeCoalesce",
     //? if >= 1.21.10
     "client.perf.MixinDebugEntryCache",
+    //? if >= 1.21.8
+    "client.perf.MixinDebugChartMerge",
+    //? if >= 1.21.8
+    "client.perf.MixinDebugChartMergeState",
     //? if >= 1.21.10 && < 26.2
     //"client.perf.MixinBatchPipelineSortModels",
     //? if >= 1.21.1
