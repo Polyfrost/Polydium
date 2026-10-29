@@ -523,6 +523,10 @@
     "client.perf.MixinOcclusionDepthCapture",
     //? if < 26.2
     //"client.perf.MixinGlSwapWaitMeter",
+    //? if >= 1.21.8 && < 26.2
+    //"client.perf.MixinFenceBatchFlush",
+    //? if >= 1.21.8 && < 26.2
+    //"client.perf.MixinFenceBatchRingBuffer",
     //? if >= 26.2
     "client.perf.MixinGlPresentWaitMeter",
     //? if >= 26.3

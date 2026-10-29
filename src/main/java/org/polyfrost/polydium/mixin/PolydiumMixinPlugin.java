@@ -90,6 +90,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("PreparedText", new String[]{"caxton"}),
             Map.entry("PreparedLanguage", new String[]{"languagereload"}),
             Map.entry("ParticleRotationReuse", new String[]{"vulkanmod"}),
+            Map.entry("FenceBatch", new String[]{"vulkanmod"}),
             Map.entry("SinglePassTextShadow", new String[]{"caxton"}),
             Map.entry("VulkanBackendList", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"}),
             Map.entry("GraphicsApiOption", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"})
@@ -252,6 +253,11 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             return false;
 
         if (mixinClassName.contains("VulkanBackendList") && !vulkanBackend())
+            return false;
+
+        // Vulkan fences are a submit index and cost nothing to create. One taken after present would also wait on
+        // the next frame's submit.
+        if (mixinClassName.contains("FenceBatch") && vulkanBackend())
             return false;
 
         if (mixinClassName.endsWith("MixinVulkanOwoBlur") && !Mods.loaded("owo"))
