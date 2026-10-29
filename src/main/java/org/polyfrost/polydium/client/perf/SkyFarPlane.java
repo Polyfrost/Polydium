@@ -7,6 +7,12 @@ package org.polyfrost.polydium.client.perf;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
+//? if >= 26.3 {
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.renderpearl.api.commands.RenderPass;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
+import net.minecraft.client.Minecraft;
+//?}
 import com.mojang.renderpearl.api.pipeline.BlendFunction;
 //? if >= 26.1 {
 import com.mojang.renderpearl.api.pipeline.ColorTargetState;
@@ -175,6 +181,7 @@ public final class SkyFarPlane {
     private static SkyRenderer deferredRenderer;
     private static GpuBufferSlice deferredFog;
     private static SkyRenderState deferredState;
+    private static RenderPass hostPass;
     //?} else {
     /*private static Runnable deferredSky;
     *///?}
@@ -322,7 +329,10 @@ public final class SkyFarPlane {
     }
     *///?}
 
-    public static void drawDeferred() {
+    //? if >= 26.3 {
+    public static void drawDeferred(RenderPass host) {
+    //?} else
+    //public static void drawDeferred() {
         //? if >= 26.3 {
         SkyRenderer renderer = deferredRenderer;
         GpuBufferSlice fog = deferredFog;
@@ -336,6 +346,8 @@ public final class SkyFarPlane {
         *///?}
         GpuBufferSlice mainFog = RenderSystem.getShaderFog();
         drawing = true;
+        //? if >= 26.3
+        hostPass = host;
         try {
             //? if >= 26.3 {
             renderer.render(fog, state);
@@ -344,9 +356,29 @@ public final class SkyFarPlane {
             *///?}
         } finally {
             drawing = false;
+            //? if >= 26.3
+            hostPass = null;
             RenderSystem.setShaderFog(mainFog);
         }
     }
+
+    //? if >= 26.3 {
+    public static RenderPass hostPass(GpuTextureView color, GpuTextureView depth) {
+        RenderPass host = hostPass;
+        if (host == null) {
+            return null;
+        }
+        RenderTarget main = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        if (color != main.getColorTextureView() || depth != main.getDepthTextureView()) {
+            throw new IllegalStateException("The deferred sky draws into another target than the main pass");
+        }
+        return host;
+    }
+
+    public static boolean isHosting() {
+        return hostPass != null;
+    }
+    //?}
 
     public static boolean isDrawing() {
         return drawing;

@@ -1,27 +1,31 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
 //? if >= 1.21.1 {
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
-import org.polyfrost.polydium.client.perf.BlockEntityDistance;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Shadow;
 
-@Mixin(BlockEntityRenderDispatcher.class)
-public abstract class MixinBlockEntityRenderDistance {
-    @WrapOperation(
-            method = /*? if >= 1.21.10 {*/"tryExtractRenderState"/*?} else {*//*"render"*//*?}*/,
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/blockentity/BlockEntityRenderer;shouldRender(Lnet/minecraft/world/level/block/entity/BlockEntity;Lnet/minecraft/world/phys/Vec3;)Z")
-    )
-    private boolean polydium$distanceWithoutVector(BlockEntityRenderer<?/*? if >= 1.21.10 {*/, ?/*?}*/> renderer, BlockEntity blockEntity, Vec3 cameraPosition, Operation<Boolean> original) {
-        if (BlockEntityDistance.inheritsDefault(renderer)) {
-            return BlockEntityDistance.shouldRender(renderer, blockEntity, cameraPosition);
-        }
-        return original.call(renderer, blockEntity, cameraPosition);
+@Mixin(BlockEntityRenderer.class)
+public interface MixinBlockEntityRenderDistance {
+    @Shadow
+    int getViewDistance();
+
+    /**
+     * @author Polydium
+     * @reason Vanilla allocates a Vec3 per block entity per frame for the distance check.
+     */
+    @Overwrite
+    default boolean shouldRender(BlockEntity blockEntity, Vec3 cameraPosition) {
+        BlockPos pos = blockEntity.getBlockPos();
+        double xd = cameraPosition.x() - (pos.getX() + 0.5);
+        double yd = cameraPosition.y() - (pos.getY() + 0.5);
+        double zd = cameraPosition.z() - (pos.getZ() + 0.5);
+        double distance = this.getViewDistance();
+        return xd * xd + yd * yd + zd * zd < distance * distance;
     }
 }
 //?}

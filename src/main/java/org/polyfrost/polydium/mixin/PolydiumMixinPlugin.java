@@ -9,9 +9,11 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.IntInsnNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.JumpInsnNode;
 import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.LdcInsnNode;
@@ -19,17 +21,22 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
+import com.llamalad7.mixinextras.utils.MixinInternals;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.service.MixinService;
 
 import org.polyfrost.polydium.compat.Mods;
 import org.polyfrost.polydium.early.EarlyVulkan;
+import org.polyfrost.polydium.early.LocalRefHoister;
+import org.polyfrost.polydium.early.OperationInliner;
 //? if >= 1.21.11 && < 26.2
 /*import org.polyfrost.polydium.vulkan.IrisVulkanGate;*/
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +76,10 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final String SODIUM_08_PACKAGE = SODIUM_PERF_PACKAGE + "v08.";
     private static final Set<String> SODIUM_09_ONLY = Set.of(
             SODIUM_PERF_PACKAGE + "MixinAnimatedSpriteMarksRegion",
-            SODIUM_PERF_PACKAGE + "MixinSpriteSetRegion"
+            SODIUM_PERF_PACKAGE + "MixinSpriteSetRegion",
+            SODIUM_PERF_PACKAGE + "MixinSodiumBoxPredicate",
+            SODIUM_PERF_PACKAGE + "MixinVisGraphScratch",
+            SODIUM_PERF_PACKAGE + "MixinFluidDefaultDirect"
     );
     //? if >= 26.1 && < 26.2 {
     /*private static final boolean SODIUM_08 = SODIUM_VERSION.startsWith("0.8.");
@@ -243,6 +253,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (isDisabled(mixinClassName))
             return false;
 
+        if (mixinClassName.endsWith(".MixinParticleExtractDefer") && isDisabled(mixinClassName + "Submit"))
+            return false;
+
         if (standsDown(mixinClassName))
             return false;
 
@@ -255,22 +268,69 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.contains("VulkanBackendList") && !vulkanBackend())
             return false;
 
+        if (mixinClassName.endsWith(".MixinEtfSubmitDataPool") && !Mods.loaded("entity_texture_features"))
+            return false;
+
+        if (mixinClassName.endsWith(".MixinGammaOptionGate") && !Mods.loaded("gammautils"))
+            return false;
+
+        if (mixinClassName.endsWith(".MixinDynamicLightOptimisticRead") && !Mods.loaded("lambdynlights"))
+            return false;
+
+        if (mixinClassName.endsWith(".MixinLightSourceSetRemove") && !Mods.loaded("lambdynlights"))
+            return false;
+
+        if (mixinClassName.endsWith(".MixinLightEntryPosition") && !Mods.loaded("lambdynlights"))
+            return false;
+
+        if (mixinClassName.contains(".MixinBlockEntityLightCache") && Mods.DYNAMIC_LIGHTS)
+            return false;
+
+        if (mixinClassName.endsWith(".MixinLeafCullScratchPos") && !Mods.loaded("cull-fewer-leaves"))
+            return false;
+
+        if ((mixinClassName.endsWith(".MixinClientLightBudget") || mixinClassName.endsWith(".MixinClientLightBudgetTick") || mixinClassName.endsWith(".MixinChunkLoadDirtyOnce")) && !Mods.loaded("scalablelux"))
+            return false;
+
+        if ((mixinClassName.endsWith(".MixinLightNibbleView") || mixinClassName.endsWith(".MixinClonedLightView")) && !Mods.loaded("scalablelux"))
+            return false;
+
+        if ((mixinClassName.endsWith(".MixinParticleCoreFinalizeCycle") || mixinClassName.endsWith(".MixinParticleCoreFinalizeDead") || mixinClassName.endsWith(".MixinParticleCoreLightCacheRead") || mixinClassName.endsWith(".MixinParticleTickOverlap") || mixinClassName.endsWith(".MixinParticleTickOverlapFrame") || mixinClassName.contains(".MixinParticleExtractDefer")) && !Mods.loaded("particle_core"))
+            return false;
+
+        if ((mixinClassName.endsWith(".MixinParticleLightBatch") || mixinClassName.endsWith(".MixinParticleLightDrain") || mixinClassName.endsWith(".ParticleLightSourceInvoker"))
+            && !(Mods.loaded("lambdynlights") && Mods.loaded("particle_core")))
+            return false;
+
+        if (mixinClassName.endsWith(".MixinC2meSamplePoolKeep") && !Mods.loaded("c2me-opts-allocs"))
+            return false;
+
+        if (mixinClassName.endsWith(".MixinBlockModelHookPrecheck") && !Mods.loaded("obe") && !Mods.loaded("overflowanimations"))
+            return false;
+
+        if ((mixinClassName.endsWith(".MixinTransitionRefShare") || mixinClassName.endsWith(".MixinTransitionRefHolder")) && !Mods.loaded("transition"))
+            return false;
+
         // Vulkan fences are a submit index and cost nothing to create. One taken after present would also wait on
         // the next frame's submit.
         if (mixinClassName.contains("FenceBatch") && vulkanBackend())
             return false;
 
         if (mixinClassName.endsWith("MixinVulkanOwoBlur") && !Mods.loaded("owo"))
-            return false;
+        return false;
 
         if (mixinClassName.endsWith("MixinIrisUppercasePaths") && !Mods.loaded("iris"))
+            return false;
+
+        if (mixinClassName.endsWith("MixinBlocksParallelCache") && Mods.loaded("modernfix")
+                && PolydiumMixinPlugin.class.getClassLoader().getResource("org/embeddedt/modernfix/common/mixin/perf/reduce_blockstate_cache_rebuilds/BlocksMixin.class") != null)
             return false;
 
         if (mixinClassName.endsWith("MixinFontrastConfig") && !Mods.loaded("fontrast"))
             return false;
 
         if (mixinClassName.endsWith("MixinVulkanBackendListImGui") && !Mods.loaded("flashback") && !Mods.loaded("axiom"))
-            return false;
+        return false;
 
         if (mixinClassName.startsWith(SODIUM_VULKAN_PACKAGE))
             return SODIUM_V08 ? !Arrays.asList(SODIUM_VULKAN_09_ONLY).contains(mixinClassName.substring(SODIUM_VULKAN_PACKAGE.length()))
@@ -290,6 +350,10 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void onLoad(String mixinPackage) {
+        if (!isDisabled("OperationInliner") && (Mods.loaded("particle_core") || Mods.loaded("mountopacity") || Mods.loaded("overflowparticles") || Mods.loaded("lambdynlights") || Mods.loaded("obe")))
+            MixinInternals.registerExtension(new OperationInliner("particle_core", "mountopacity", "overflowparticles", "obe", "inline"));
+        if (!isDisabled("LocalRefHoister") && Mods.loaded("sodium"))
+            MixinInternals.registerExtension(new LocalRefHoister());
         //? if >= 1.21.11 && < 26.2 {
         /*if (vulkanBackend() && !standsDown("VulkanBackendList") && Mods.loaded("iris"))
             IrisVulkanGate.apply();
@@ -321,6 +385,80 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".skyboxify.MixinSkyFeatureRenderer")) {
             // MixinExtras only wires up @WrapOperation call sites after every postApply, so inspect the class once it's fully transformed
             skyboxifyRenderer = targetClass;
+            return;
+        }
+
+        if (mixinClassName.endsWith(".MixinModelPartCallbackPool")) {
+            for (MethodNode method : targetClass.methods)
+                poolCancellableCallbacks(method);
+            return;
+        }
+
+        if (mixinClassName.endsWith(".MixinEtfSubmitDataPool")) {
+            for (MethodNode method : targetClass.methods)
+                if (method.name.equals("<init>"))
+                    poolEtfSubmitData(method);
+            return;
+        }
+
+        if (mixinClassName.endsWith(".MixinGammaOptionGate")) {
+            for (MethodNode method : targetClass.methods)
+                precheckCallbacks(targetClass, method, "gammautils$getModValue");
+            return;
+        }
+
+        if (mixinClassName.endsWith(".MixinBlockModelHookPrecheck")) {
+            for (MethodNode method : targetClass.methods)
+                precheckCallbacks(targetClass, method, "obe$getBlockStateModel", "overflowanimations$fastGrass");
+            return;
+        }
+
+        if (mixinClassName.endsWith(".MixinLightSourceSetRemove")) {
+            for (MethodNode method : targetClass.methods)
+                if (method.name.equals("removeLightSource") && method.desc.equals("(Ldev/lambdaurora/lambdynlights/engine/source/EntityDynamicLightSourceBehavior;)V"))
+                    setRemoveLightSource(method);
+            return;
+        }
+
+        if (mixinClassName.endsWith(".MixinParticleTickOverlap")) {
+            for (MethodNode method : targetClass.methods)
+                if (method.name.endsWith("asyncParticleTicking") && method.desc.startsWith("(Ljava/util/Map;Ljava/util/function/BiConsumer;"))
+                    deferParticleCoreJoin(method);
+            return;
+        }
+
+        if (mixinClassName.endsWith(".MixinChunkLoadDirtyOnce")) {
+            for (MethodNode method : targetClass.methods)
+                if (method.name.endsWith("$postChunkLoadHook"))
+                    chunkLoadDirtyOnce(targetClass, method);
+            return;
+        }
+
+        if (mixinClassName.endsWith(".MixinClientLightBudget")) {
+            for (MethodNode method : targetClass.methods)
+                if (method.name.equals("propagateChanges") && method.desc.equals("()V"))
+                    budgetLightTasks(targetClass, method);
+            return;
+        }
+
+        // every method, since names are obfuscated on 1.21.x; this::splitLines is the only lambda capturing just this
+        if (mixinClassName.endsWith(".MixinTextDisplaySplitter")) {
+            for (MethodNode method : targetClass.methods)
+                cacheThisLambdas(targetClass, method);
+            return;
+        }
+
+        if (mixinClassName.endsWith(".MixinBlockRendererLambdaCache")) {
+            for (MethodNode method : targetClass.methods)
+                if (method.name.equals("renderModel"))
+                    cacheThisLambdas(targetClass, method);
+            return;
+        }
+
+        if (mixinClassName.endsWith(".MixinTransitionRefShare")) {
+            for (MethodNode method : targetClass.methods)
+                if (method.name.equals("setTransitionEntity") && method.desc.endsWith(";)V"))
+                    shareTransitionRef(method);
             return;
         }
 
@@ -898,5 +1036,313 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         list.add(new MethodInsnNode(Opcodes.INVOKEINTERFACE, "gg/essential/util/image/GpuTexture", "getUc", "()Lgg/essential/universal/render/UGpuTexture;"));
         list.add(new MethodInsnNode(Opcodes.INVOKEINTERFACE, "gg/essential/universal/render/UGpuPlatformAdapter", "texture", "(Lgg/essential/universal/render/UGpuTexture;)" + MC_TEXTURE));
         return list;
+    }
+
+    private static final String CALLBACK_INFO = "org/spongepowered/asm/mixin/injection/callback/CallbackInfo", CALLBACK_INFO_POOL = "org/polyfrost/polydium/client/perf/CallbackInfoPool";
+
+    private static void shareTransitionRef(MethodNode method) {
+        for (AbstractInsnNode insn : method.instructions.toArray()) {
+            if (!(insn instanceof TypeInsnNode alloc) || alloc.getOpcode() != Opcodes.NEW || !alloc.desc.equals("java/lang/ref/WeakReference"))
+                continue;
+            AbstractInsnNode dup = alloc.getNext(), load = dup == null ? null : dup.getNext(), init = load == null ? null : load.getNext();
+            if (dup == null || dup.getOpcode() != Opcodes.DUP || !(load instanceof VarInsnNode var) || var.getOpcode() != Opcodes.ALOAD || var.var != 1
+                || !(init instanceof MethodInsnNode call) || call.getOpcode() != Opcodes.INVOKESPECIAL
+                || !call.owner.equals("java/lang/ref/WeakReference") || !call.name.equals("<init>") || !call.desc.equals("(Ljava/lang/Object;)V"))
+                continue;
+            method.instructions.remove(alloc);
+            method.instructions.remove(dup);
+            method.instructions.set(call, new MethodInsnNode(Opcodes.INVOKESTATIC, "org/polyfrost/polydium/client/perf/TransitionRefShare",
+                "of", "(Ljava/lang/Object;)Ljava/lang/ref/WeakReference;"));
+        }
+    }
+
+    private static final String ETF_SUBMIT_DATA = "traben/entity_texture_features/features/state/ETFSubmitData";
+    private static final String ETF_SUBMIT_DATA_POOL = "org/polyfrost/polydium/client/perf/EtfSubmitDataPool";
+
+    private static void poolEtfSubmitData(MethodNode method) {
+        for (AbstractInsnNode insn : method.instructions.toArray()) {
+            if (!(insn instanceof TypeInsnNode alloc) || alloc.getOpcode() != Opcodes.NEW || !alloc.desc.equals(ETF_SUBMIT_DATA))
+                continue;
+
+            AbstractInsnNode dup = alloc.getNext(), init = dup == null ? null : dup.getNext();
+            if (dup == null || dup.getOpcode() != Opcodes.DUP || !(init instanceof MethodInsnNode call) || call.getOpcode() != Opcodes.INVOKESPECIAL
+                || !call.owner.equals(ETF_SUBMIT_DATA) || !call.name.equals("<init>") || !call.desc.equals("()V"))
+                continue;
+
+            LabelNode pooled = new LabelNode(), done = new LabelNode();
+            InsnList before = new InsnList();
+            before.add(new MethodInsnNode(Opcodes.INVOKESTATIC, ETF_SUBMIT_DATA_POOL, "acquire", "()Ljava/lang/Object;"));
+            before.add(new InsnNode(Opcodes.DUP));
+            before.add(new JumpInsnNode(Opcodes.IFNONNULL, pooled));
+            before.add(new InsnNode(Opcodes.POP));
+            method.instructions.insertBefore(alloc, before);
+
+            InsnList after = new InsnList();
+            after.add(new InsnNode(Opcodes.DUP));
+            after.add(new MethodInsnNode(Opcodes.INVOKESTATIC, ETF_SUBMIT_DATA_POOL, "created", "(Ljava/lang/Object;)V"));
+            after.add(new JumpInsnNode(Opcodes.GOTO, done));
+            after.add(pooled);
+            after.add(new TypeInsnNode(Opcodes.CHECKCAST, ETF_SUBMIT_DATA));
+            after.add(done);
+            method.instructions.insert(call, after);
+        }
+    }
+
+    private static void poolCancellableCallbacks(MethodNode method) {
+        for (AbstractInsnNode insn : method.instructions.toArray()) {
+            if (!(insn instanceof TypeInsnNode alloc) || alloc.getOpcode() != Opcodes.NEW || !alloc.desc.equals(CALLBACK_INFO))
+                continue;
+
+            AbstractInsnNode dup = alloc.getNext(), id = dup.getNext(), flag = id.getNext(), init = flag.getNext(), store = init.getNext();
+            if (dup.getOpcode() != Opcodes.DUP || !(id instanceof LdcInsnNode ldc) || !(ldc.cst instanceof String) || flag.getOpcode() != Opcodes.ICONST_1
+                    || !(init instanceof MethodInsnNode ctor) || !ctor.name.equals("<init>") || !ctor.desc.equals("(Ljava/lang/String;Z)V")
+                    || !(store instanceof VarInsnNode slot) || slot.getOpcode() != Opcodes.ASTORE)
+                continue;
+
+            MethodInsnNode check = null;
+            int checks = 0;
+            for (AbstractInsnNode other : method.instructions)
+                if (other instanceof MethodInsnNode call && call.getOpcode() == Opcodes.INVOKEVIRTUAL && call.name.equals("isCancelled")
+                        && call.getPrevious() instanceof VarInsnNode load && load.getOpcode() == Opcodes.ALOAD && load.var == slot.var) {
+                    check = call;
+                    checks++;
+                }
+            if (checks != 1)
+                continue;
+
+            method.instructions.remove(alloc);
+            method.instructions.remove(dup);
+            method.instructions.remove(flag);
+            method.instructions.set(init, new MethodInsnNode(Opcodes.INVOKESTATIC, CALLBACK_INFO_POOL, "acquire", "(Ljava/lang/String;)L" + CALLBACK_INFO + ";"));
+            method.instructions.set(check, new MethodInsnNode(Opcodes.INVOKESTATIC, CALLBACK_INFO_POOL, "release", "(L" + CALLBACK_INFO + ";)Z"));
+        }
+    }
+
+    private static void cacheThisLambdas(ClassNode owner, MethodNode method) {
+        Type self = Type.getObjectType(owner.name);
+        int index = 0;
+        for (AbstractInsnNode insn : method.instructions.toArray()) {
+            if (!(insn instanceof InvokeDynamicInsnNode indy) || !indy.bsm.getOwner().equals("java/lang/invoke/LambdaMetafactory")
+                || !indy.bsm.getName().equals("metafactory") || !Arrays.equals(Type.getArgumentTypes(indy.desc), new Type[]{self}))
+                continue;
+
+            String field = "polydium$lambda$" + method.name + "$" + index++;
+            String type = Type.getReturnType(indy.desc).getDescriptor();
+            owner.fields.add(new FieldNode(Opcodes.ACC_PRIVATE | Opcodes.ACC_SYNTHETIC, field, type, null, null));
+
+            LabelNode have = new LabelNode(), done = new LabelNode();
+            InsnList cached = new InsnList();
+            cached.add(new InsnNode(Opcodes.DUP));
+            cached.add(new FieldInsnNode(Opcodes.GETFIELD, owner.name, field, type));
+            cached.add(new InsnNode(Opcodes.DUP));
+            cached.add(new JumpInsnNode(Opcodes.IFNONNULL, have));
+            cached.add(new InsnNode(Opcodes.POP));
+            cached.add(new InsnNode(Opcodes.DUP));
+            cached.add(new InvokeDynamicInsnNode(indy.name, indy.desc, indy.bsm, indy.bsmArgs));
+            cached.add(new InsnNode(Opcodes.DUP_X1));
+            cached.add(new FieldInsnNode(Opcodes.PUTFIELD, owner.name, field, type));
+            cached.add(new JumpInsnNode(Opcodes.GOTO, done));
+            cached.add(have);
+            cached.add(new InsnNode(Opcodes.SWAP));
+            cached.add(new InsnNode(Opcodes.POP));
+            cached.add(done);
+            method.instructions.insertBefore(indy, cached);
+            method.instructions.remove(indy);
+        }
+    }
+
+    private static void deferParticleCoreJoin(MethodNode method) {
+        MethodInsnNode allOf = null, iterator = null;
+        int allOfs = 0, iterators = 0;
+        for (AbstractInsnNode insn : method.instructions) {
+            if (!(insn instanceof MethodInsnNode call))
+                continue;
+            if (call.getOpcode() == Opcodes.INVOKESTATIC && call.owner.equals("java/util/concurrent/CompletableFuture") && call.name.equals("allOf")) {
+                allOf = call;
+                allOfs++;
+            } else if (call.getOpcode() == Opcodes.INVOKEINTERFACE && call.owner.equals("java/util/List") && call.name.equals("iterator") && call.desc.equals("()Ljava/util/Iterator;")) {
+                iterator = call;
+                iterators++;
+            }
+        }
+        if (allOfs != 1 || iterators != 1)
+            return;
+
+        String overlap = "org/polyfrost/polydium/client/perf/ParticleTickOverlap";
+        method.instructions.insertBefore(allOf, new VarInsnNode(Opcodes.ALOAD, 0));
+        method.instructions.set(allOf, new MethodInsnNode(Opcodes.INVOKESTATIC, overlap, "allOf", "([Ljava/util/concurrent/CompletableFuture;Ljava/lang/Object;)Ljava/util/concurrent/CompletableFuture;", false));
+        method.instructions.insertBefore(iterator, new VarInsnNode(Opcodes.ALOAD, 0));
+        method.instructions.set(iterator, new MethodInsnNode(Opcodes.INVOKESTATIC, overlap, "iterator", "(Ljava/util/List;Ljava/lang/Object;)Ljava/util/Iterator;", false));
+        for (AbstractInsnNode insn : method.instructions)
+            if (insn instanceof MethodInsnNode call && call.getOpcode() == Opcodes.INVOKESTATIC && call.owner.equals("java/util/concurrent/CompletableFuture")
+                    && call.name.equals("supplyAsync") && call.desc.equals("(Ljava/util/function/Supplier;)Ljava/util/concurrent/CompletableFuture;"))
+                call.owner = overlap;
+    }
+
+    private static void chunkLoadDirtyOnce(ClassNode owner, MethodNode method) {
+        InsnNode flag = null;
+        for (AbstractInsnNode insn : method.instructions) {
+            if (!(insn instanceof MethodInsnNode call) || !call.owner.equals(owner.name))
+                continue;
+            if (flag == null && call.desc.startsWith("(II") && call.desc.endsWith(";Z)V") && call.getPrevious() instanceof InsnNode prev && prev.getOpcode() == Opcodes.ICONST_1)
+                flag = prev;
+            else if (flag != null && call.desc.startsWith("(L") && call.desc.endsWith(";II)V")) {
+                InsnList toggle = new InsnList();
+                toggle.add(new FieldInsnNode(Opcodes.GETSTATIC, "org/polyfrost/polydium/client/PolydiumToggles", "chunkLoadDirtyOnce", "Z"));
+                toggle.add(new InsnNode(Opcodes.ICONST_1));
+                toggle.add(new InsnNode(Opcodes.IXOR));
+                method.instructions.insert(flag, toggle);
+                method.instructions.remove(flag);
+                return;
+            }
+        }
+    }
+
+    private static void budgetLightTasks(ClassNode owner, MethodNode method) {
+        if (owner.fields.stream().noneMatch(field -> field.name.equals("isClientSide") && field.desc.equals("Z")))
+            return;
+
+        String budget = "org/polyfrost/polydium/client/perf/ClientLightBudget";
+        InsnList begin = new InsnList();
+        begin.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        begin.add(new FieldInsnNode(Opcodes.GETFIELD, owner.name, "isClientSide", "Z"));
+        begin.add(new MethodInsnNode(Opcodes.INVOKESTATIC, budget, "begin", "(Z)V"));
+        method.instructions.insert(begin);
+
+        for (AbstractInsnNode insn : method.instructions.toArray()) {
+            if (!(insn instanceof MethodInsnNode call) || !call.name.equals("removeFirstTask") || !(call.owner.endsWith("$SimpleLightQueue") || call.owner.endsWith("$LightQueue")))
+                continue;
+
+            LabelNode take = new LabelNode(), done = new LabelNode();
+            InsnList gate = new InsnList();
+            gate.add(new VarInsnNode(Opcodes.ALOAD, 0));
+            gate.add(new FieldInsnNode(Opcodes.GETFIELD, owner.name, "isClientSide", "Z"));
+            gate.add(new MethodInsnNode(Opcodes.INVOKESTATIC, budget, "takeNext", "(Z)Z"));
+            gate.add(new JumpInsnNode(Opcodes.IFNE, take));
+            gate.add(new InsnNode(Opcodes.POP));
+            gate.add(new InsnNode(Opcodes.ACONST_NULL));
+            gate.add(new JumpInsnNode(Opcodes.GOTO, done));
+            gate.add(take);
+            method.instructions.insertBefore(call, gate);
+            method.instructions.insert(call, done);
+        }
+    }
+
+    private static void setRemoveLightSource(MethodNode method) {
+        FieldInsnNode sources = null, toClear = null;
+        boolean scans = false;
+        for (AbstractInsnNode insn : method.instructions) {
+            if (insn instanceof FieldInsnNode field && field.getOpcode() == Opcodes.GETFIELD) {
+                if (field.desc.equals("Ljava/util/Set;") && sources == null)
+                    sources = field;
+                else if (field.desc.equals("Ljava/util/List;") && toClear == null)
+                    toClear = field;
+            } else if (insn instanceof MethodInsnNode call && call.name.equals("equals")) {
+                scans = true;
+            }
+        }
+        if (sources == null || toClear == null || !scans)
+            return;
+        LabelNode done = new LabelNode();
+        InsnList fast = new InsnList();
+        fast.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        fast.add(new FieldInsnNode(Opcodes.GETFIELD, sources.owner, sources.name, sources.desc));
+        fast.add(new VarInsnNode(Opcodes.ALOAD, 1));
+        fast.add(new MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/util/Set", "remove", "(Ljava/lang/Object;)Z", true));
+        fast.add(new JumpInsnNode(Opcodes.IFEQ, done));
+        fast.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        fast.add(new FieldInsnNode(Opcodes.GETFIELD, toClear.owner, toClear.name, toClear.desc));
+        fast.add(new VarInsnNode(Opcodes.ALOAD, 1));
+        fast.add(new MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/util/List", "add", "(Ljava/lang/Object;)Z", true));
+        fast.add(new InsnNode(Opcodes.POP));
+        fast.add(done);
+        fast.add(new InsnNode(Opcodes.RETURN));
+        method.instructions.clear();
+        method.tryCatchBlocks.clear();
+        method.localVariables = null;
+        method.instructions.add(fast);
+    }
+
+    private static void precheckCallbacks(ClassNode owner, MethodNode method, String... handlerSuffixes) {
+        for (AbstractInsnNode insn : method.instructions.toArray()) {
+            if (!(insn instanceof TypeInsnNode alloc) || alloc.getOpcode() != Opcodes.NEW || !alloc.desc.equals(CALLBACK_INFO + "Returnable"))
+                continue;
+            AbstractInsnNode store = alloc;
+            for (int i = 0; i < 5 && store != null; i++)
+                store = store.getNext();
+            if (!(store instanceof VarInsnNode ci) || ci.getOpcode() != Opcodes.ASTORE)
+                continue;
+            AbstractInsnNode call = store.getNext();
+            while (call instanceof VarInsnNode)
+                call = call.getNext();
+            if (!(call instanceof MethodInsnNode h) || !h.owner.equals(owner.name) || !(call.getPrevious() instanceof VarInsnNode last) || last.var != ci.var
+                || !(call.getNext() instanceof VarInsnNode reload) || reload.var != ci.var
+                || !(reload.getNext() instanceof MethodInsnNode check) || !check.name.equals("isCancelled")
+                || !(check.getNext() instanceof JumpInsnNode next) || next.getOpcode() != Opcodes.IFEQ)
+                continue;
+            String name = h.name;
+            if (Arrays.stream(handlerSuffixes).noneMatch(name::endsWith))
+                continue;
+            MethodNode handler = owner.methods.stream().filter(m -> m.name.equals(name) && m.desc.equals(h.desc)).findFirst().orElse(null);
+            InsnList precheck = handler == null ? null : copyEarlyReturns(handler, next.label);
+            if (precheck == null)
+                continue;
+            method.instructions.insertBefore(alloc, precheck);
+        }
+    }
+
+    private static InsnList copyEarlyReturns(MethodNode handler, LabelNode skip) {
+        if ((handler.access & Opcodes.ACC_STATIC) != 0)
+            return null;
+        Type[] args = Type.getArgumentTypes(handler.desc);
+        int ciSlot = 1;
+        for (int i = 0; i < args.length - 1; i++)
+            ciSlot += args[i].getSize();
+        List<AbstractInsnNode> prefix = new ArrayList<>();
+        int end = -1;
+        for (AbstractInsnNode insn : handler.instructions) {
+            int op = insn.getOpcode();
+            boolean read = insn instanceof VarInsnNode var && op >= Opcodes.ILOAD && op <= Opcodes.ALOAD && var.var < ciSlot
+                || op == Opcodes.GETSTATIC || op == Opcodes.GETFIELD || op == Opcodes.CHECKCAST || op == Opcodes.LDC
+                || op >= Opcodes.ACONST_NULL && op <= Opcodes.ICONST_5
+                || insn instanceof MethodInsnNode m && op != Opcodes.INVOKESPECIAL && !m.owner.startsWith("org/spongepowered/");
+            boolean exit = op == Opcodes.RETURN || insn instanceof JumpInsnNode && op != Opcodes.GOTO && op != Opcodes.JSR;
+            if (op < 0) {
+                if (insn instanceof LabelNode)
+                    prefix.add(insn);
+                continue;
+            }
+            if (!read && !exit)
+                break;
+            prefix.add(insn);
+            if (exit)
+                end = prefix.size();
+        }
+        if (end < 0)
+            return null;
+        List<AbstractInsnNode> kept = prefix.subList(0, end);
+        Map<LabelNode, LabelNode> labels = new HashMap<>();
+        for (AbstractInsnNode insn : kept)
+            if (insn instanceof LabelNode label)
+                labels.put(label, new LabelNode());
+        LabelNode run = new LabelNode();
+        InsnList out = new InsnList();
+        for (AbstractInsnNode insn : kept) {
+            if (insn.getOpcode() == Opcodes.RETURN)
+                out.add(new JumpInsnNode(Opcodes.GOTO, skip));
+            else if (insn instanceof JumpInsnNode jump)
+                out.add(new JumpInsnNode(jump.getOpcode(), labels.getOrDefault(jump.label, returnsAt(jump.label) ? skip : run)));
+            else
+                out.add(insn.clone(labels));
+        }
+        out.add(run);
+        return out;
+    }
+
+    private static boolean returnsAt(LabelNode label) {
+        AbstractInsnNode insn = label;
+        while (insn != null && insn.getOpcode() < 0)
+            insn = insn.getNext();
+        return insn != null && insn.getOpcode() == Opcodes.RETURN;
     }
 }

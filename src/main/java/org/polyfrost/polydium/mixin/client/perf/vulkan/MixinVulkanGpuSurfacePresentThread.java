@@ -10,6 +10,8 @@ import com.mojang.renderpearl.backend.vulkan.VulkanDevice;
 import com.mojang.renderpearl.backend.vulkan.VulkanGpuSurface;
 import com.mojang.renderpearl.backend.vulkan.VulkanUtils;
 import org.lwjgl.vulkan.KHRSwapchain;
+import org.lwjgl.vulkan.VK13;
+import com.mojang.renderpearl.backend.vulkan.VulkanQueue;
 import org.lwjgl.vulkan.VkQueue;
 import org.lwjgl.vulkan.VkSurfaceCapabilitiesKHR;
 import org.polyfrost.polydium.client.perf.PresentThread;
@@ -24,7 +26,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(VulkanGpuSurface.class)
-public abstract class MixinVulkanGpuSurfacePresentThread {
+public abstract class MixinVulkanGpuSurfacePresentThread implements PresentThread.Discard {
 
     @Shadow
     @Final
@@ -36,6 +38,13 @@ public abstract class MixinVulkanGpuSurfacePresentThread {
 
     @Shadow
     private long swapchain;
+
+    @Shadow
+    @Final
+    private long[] acquireSemaphores;
+
+    @Shadow
+    private int currentAcquireSemaphore;
 
     @Shadow
     private long[] presentSemaphores;
@@ -105,6 +114,18 @@ public abstract class MixinVulkanGpuSurfacePresentThread {
 
         this.currentImageIndex = -1;
         PresentThread.capture(() -> this.polydium$queuePresent(semaphore, frameChain, imageIndex));
+    }
+
+    @Override
+    public void polydium$discardAcquired() {
+        if (this.currentImageIndex == -1)
+            throw new IllegalStateException("No swapchain image is acquired");
+
+        try (VulkanQueue.Submission submission = this.device.graphicsQueue().beginSubmit()) {
+            submission.waitSemaphore(this.acquireSemaphores[this.currentAcquireSemaphore], 0L, VK13.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT);
+        }
+
+        this.currentImageIndex = -1;
     }
 
     @Unique

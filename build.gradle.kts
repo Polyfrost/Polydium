@@ -99,7 +99,7 @@ java {
 }
 
 if (stonecutter.current.parsed < "26.3") {
-    sourceSets.test { kotlin.exclude("**/TxTextFastPathTest.kt") }
+    sourceSets.test { kotlin.exclude("**/TxTextFastPathTest.kt", "**/TransformWritesTest.kt") }
 }
 
 val vulkanBackport = stonecutter.current.parsed >= "1.21.11" && stonecutter.current.parsed < "26.2"

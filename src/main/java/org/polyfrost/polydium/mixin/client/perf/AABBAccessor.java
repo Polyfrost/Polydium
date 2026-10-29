@@ -1,7 +1,7 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if < 26.3 {
-/*import net.minecraft.world.phys.AABB;
+//? if >= 1.21.1 {
+import net.minecraft.world.phys.AABB;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
@@ -32,4 +32,4 @@ public interface AABBAccessor {
     @Accessor("maxZ")
     void polydium$setMaxZ(double maxZ);
 }
-*///?}
+//?}
