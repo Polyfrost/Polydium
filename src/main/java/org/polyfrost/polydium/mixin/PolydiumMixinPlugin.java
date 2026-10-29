@@ -100,6 +100,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("PreparedText", new String[]{"caxton"}),
             Map.entry("PreparedLanguage", new String[]{"languagereload"}),
             Map.entry("ParticleRotationReuse", new String[]{"vulkanmod"}),
+            Map.entry("FenceBatch", new String[]{"vulkanmod"}),
             Map.entry("SinglePassTextShadow", new String[]{"caxton"}),
             Map.entry("VulkanBackendList", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"}),
             Map.entry("GraphicsApiOption", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"})
@@ -310,8 +311,13 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if ((mixinClassName.endsWith(".MixinTransitionRefShare") || mixinClassName.endsWith(".MixinTransitionRefHolder")) && !Mods.loaded("transition"))
             return false;
 
-        if (mixinClassName.endsWith("MixinVulkanOwoBlur") && !Mods.loaded("owo"))
+        // Vulkan fences are a submit index and cost nothing to create. One taken after present would also wait on
+        // the next frame's submit.
+        if (mixinClassName.contains("FenceBatch") && vulkanBackend())
             return false;
+
+        if (mixinClassName.endsWith("MixinVulkanOwoBlur") && !Mods.loaded("owo"))
+        return false;
 
         if (mixinClassName.endsWith("MixinIrisUppercasePaths") && !Mods.loaded("iris"))
             return false;
@@ -320,8 +326,11 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
                 && PolydiumMixinPlugin.class.getClassLoader().getResource("org/embeddedt/modernfix/common/mixin/perf/reduce_blockstate_cache_rebuilds/BlocksMixin.class") != null)
             return false;
 
-        if (mixinClassName.endsWith("MixinVulkanBackendListImGui") && !Mods.loaded("flashback") && !Mods.loaded("axiom"))
+        if (mixinClassName.endsWith("MixinFontrastConfig") && !Mods.loaded("fontrast"))
             return false;
+
+        if (mixinClassName.endsWith("MixinVulkanBackendListImGui") && !Mods.loaded("flashback") && !Mods.loaded("axiom"))
+        return false;
 
         if (mixinClassName.startsWith(SODIUM_VULKAN_PACKAGE))
             return SODIUM_V08 ? !Arrays.asList(SODIUM_VULKAN_09_ONLY).contains(mixinClassName.substring(SODIUM_VULKAN_PACKAGE.length()))

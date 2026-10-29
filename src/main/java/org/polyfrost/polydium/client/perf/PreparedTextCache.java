@@ -4,6 +4,7 @@ package org.polyfrost.polydium.client.perf;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
+import org.polyfrost.polydium.compat.FontrastCompat;
 
 import com.google.common.collect.ImmutableList;
 
@@ -19,7 +20,7 @@ public final class PreparedTextCache<V> {
     private static final int MAX_LENGTH = 256;
 
     public static boolean cacheable(Style style) {
-        return !style.isObfuscated() /*? if >= 1.21.10 {*/&& style.getFont() instanceof FontDescription.Resource/*?}*/;
+        return !style.isObfuscated() && !FontrastCompat.forcesObfuscation() /*? if >= 1.21.10 {*/&& style.getFont() instanceof FontDescription.Resource/*?}*/;
     }
 
     public interface Access {
