@@ -122,6 +122,14 @@ public abstract class MixinMinecraftPresentThread {
             throw failure;
     }
 
+    //? if < 26.3 {
+    /*@ModifyExpressionValue(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/Window;isMinimized()Z"))
+    private boolean polydium$consumeEarlyWhenMinimized(boolean minimized) {
+        // Minimizing after the early acquire would otherwise skip the acquire call that consumes its image
+        return minimized && !this.polydium$frameAcquiredEarly;
+    }
+    *///?}
+
     @ModifyExpressionValue(method = "renderFrame", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;surfaceIsInvalid:Z", opcode = Opcodes.GETFIELD))
     private boolean polydium$skipDeferredAcquire(boolean invalid) {
         return invalid || this.polydium$acquireDeferred;
@@ -178,6 +186,10 @@ public abstract class MixinMinecraftPresentThread {
 
         if (this.windowSurface.isAcquired() || this.surfaceIsInvalid || this.windowSurfaceNeedsReconfiguring || this.windowSurface.isSuboptimal())
             return;
+        //? if < 26.3 {
+        /*if (this.window.isMinimized())
+            return;
+        *///?}
 
         try {
             this.windowSurface.acquireNextTexture();
