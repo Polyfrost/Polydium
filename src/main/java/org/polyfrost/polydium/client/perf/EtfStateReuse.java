@@ -2,8 +2,8 @@ package org.polyfrost.polydium.client.perf;
 
 //? if >= 1.21.10 {
 import com.mojang.blaze3d.systems.RenderSystem;
+import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandleProxies;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
@@ -66,10 +66,11 @@ public final class EtfStateReuse {
             originalMake = lookup.findVirtual(init, "make", MethodType.methodType(state, etfEntity))
                 .asType(MethodType.methodType(Object.class, Object.class, Object.class));
             original = current;
-            MethodHandle make = lookup.findStatic(EtfStateReuse.class, "make", MethodType.methodType(Object.class, Object.class))
-                .asType(MethodType.methodType(state, etfEntity));
-            field.set(null, MethodHandleProxies.asInterfaceInstance(init, make));
-        } catch (ReflectiveOperationException | RuntimeException e) {
+            MethodType makeType = MethodType.methodType(state, etfEntity);
+            MethodHandle make = lookup.findStatic(EtfStateReuse.class, "make", MethodType.methodType(Object.class, Object.class));
+            // MethodHandleProxies allocates an argument array per call before Java 22
+            field.set(null, LambdaMetafactory.metafactory(lookup, "make", MethodType.methodType(init), makeType, make, makeType).getTarget().invoke());
+        } catch (Throwable e) {
             originalMake = null;
             LoggerFactory.getLogger("polydium/perf").info("ETF state reuse disabled: {}", e.toString());
         }
