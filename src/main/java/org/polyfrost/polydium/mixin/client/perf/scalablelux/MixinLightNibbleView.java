@@ -17,6 +17,8 @@ public abstract class MixinLightNibbleView {
     protected volatile int stateVisible;
     @Shadow
     protected volatile byte[] storageVisible;
+    @Shadow
+    protected byte[] storageUpdating;
 
     @Unique
     private boolean polydium$shared;
@@ -44,8 +46,13 @@ public abstract class MixinLightNibbleView {
             if (this.polydium$shared) {
                 this.polydium$shared = false;
                 byte[] visible = this.storageVisible;
-                if (visible != null)
-                    this.storageVisible = visible.clone();
+                if (visible != null) {
+                    byte[] copy = visible.clone();
+                    // A state-only change leaves both aliased, and updateVisible would pool the shared array
+                    if (this.storageUpdating == visible)
+                        this.storageUpdating = copy;
+                    this.storageVisible = copy;
+                }
             }
         }
     }
