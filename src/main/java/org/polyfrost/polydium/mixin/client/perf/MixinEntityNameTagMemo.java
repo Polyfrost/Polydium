@@ -20,7 +20,7 @@ public abstract class MixinEntityNameTagMemo implements NameTagReuse.Memo {
             return this.polydium$nameTag;
         }
         this.polydium$nameTag = NameTagReuse.remembered(nameTag);
-        return nameTag;
+        return this.polydium$nameTag != null ? this.polydium$nameTag : nameTag;
     }
 
     @Override
@@ -29,6 +29,6 @@ public abstract class MixinEntityNameTagMemo implements NameTagReuse.Memo {
             return this.polydium$scoreText;
         }
         this.polydium$scoreText = NameTagReuse.remembered(scoreText);
-        return scoreText;
+        return this.polydium$scoreText != null ? this.polydium$scoreText : scoreText;
     }
 }

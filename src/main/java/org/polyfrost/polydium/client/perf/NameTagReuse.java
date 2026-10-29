@@ -32,7 +32,25 @@ public final class NameTagReuse {
     }
 
     public static Component remembered(Component fresh) {
-        return fresh != null && isStatic(fresh) ? fresh : null;
+        return fresh != null && isStatic(fresh) ? snapshot(fresh) : null;
+    }
+
+    private static MutableComponent snapshot(Component component) {
+        ComponentContents contents = component.getContents();
+        if (contents instanceof TranslatableContents translatable) {
+            Object[] args = translatable.getArgs().clone();
+            for (int i = 0; i < args.length; i++) {
+                if (args[i] instanceof Component nested) {
+                    args[i] = snapshot(nested);
+                }
+            }
+            contents = new TranslatableContents(translatable.getKey(), translatable.getFallback(), args);
+        }
+        MutableComponent copy = MutableComponent.create(contents).setStyle(component.getStyle());
+        for (Component sibling : component.getSiblings()) {
+            copy.append(snapshot(sibling));
+        }
+        return copy;
     }
 
     public static boolean isStatic(Component component) {

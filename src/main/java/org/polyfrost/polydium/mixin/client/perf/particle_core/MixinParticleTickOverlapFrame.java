@@ -14,5 +14,10 @@ public abstract class MixinParticleTickOverlapFrame {
     private void polydium$finishPendingTick(CallbackInfo ci) {
         ParticleTickOverlap.frameStart();
     }
+
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void polydium$finishBeforeTick(CallbackInfo ci) {
+        ParticleTickOverlap.complete();
+    }
 }
 //?}
