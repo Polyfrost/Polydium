@@ -543,6 +543,7 @@
     "client.perf.MixinBlockEntityLightCacheHolder",
     "client.perf.MixinBlockEntityLightCacheLevel",
     "client.perf.MixinFontGeneration",
+    "client.perf.MixinFontrastConfig",
     "client.perf.MixinTextWidthCache",
     "client.perf.MixinTextWidthCacheManager",
     //? if >= 1.21.8
