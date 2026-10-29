@@ -15,6 +15,7 @@ import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -28,16 +29,18 @@ public final class ParticleAirCollision {
     private ParticleAirCollision() {
     }
 
-    public static boolean cannotCollide(Level level, CollisionContext context, AABB box) {
+    public static boolean cannotCollide(Level level, CollisionContext context, AABB box, Vec3 movement) {
         if (level.isDebug())
             return false;
-        int minX = Mth.floor(box.minX - EPSILON) - 1;
-        int maxX = Mth.floor(box.maxX + EPSILON) + 1;
-        int minY = Mth.floor(box.minY - EPSILON) - 1;
-        int maxY = Mth.floor(box.maxY + EPSILON) + 1;
-        int minZ = Mth.floor(box.minZ - EPSILON) - 1;
-        int maxZ = Mth.floor(box.maxZ + EPSILON) + 1;
+        double dx = movement.x, dy = movement.y, dz = movement.z;
+        int minX = Mth.floor(box.minX + Math.min(dx, 0.0) - EPSILON) - 1;
+        int maxX = Mth.floor(box.maxX + Math.max(dx, 0.0) + EPSILON) + 1;
+        int minY = Mth.floor(box.minY + Math.min(dy, 0.0) - EPSILON) - 1;
+        int maxY = Mth.floor(box.maxY + Math.max(dy, 0.0) + EPSILON) + 1;
+        int minZ = Mth.floor(box.minZ + Math.min(dz, 0.0) - EPSILON) - 1;
+        int maxZ = Mth.floor(box.maxZ + Math.max(dz, 0.0) + EPSILON) + 1;
         BlockPos.MutableBlockPos pos = null;
+        AABB swept = null;
         ClientChunkCache clientChunks = level instanceof ClientLevel clientLevel ? clientLevel.getChunkSource() : null;
 
         int maxChunkX = SectionPos.blockToSectionCoord(maxX);
@@ -82,15 +85,17 @@ public final class ParticleAirCollision {
                                 BlockState state = section.getBlockState(x & 15, y & 15, z & 15);
                                 if (state.isAir() || type == TYPE_FACE && !state.hasLargeCollisionShape() || type == TYPE_EDGE && !state.is(Blocks.MOVING_PISTON))
                                     continue;
-                                if (pos == null)
+                                if (pos == null) {
                                     pos = new BlockPos.MutableBlockPos();
+                                    swept = box.expandTowards(movement);
+                                }
                                 pos.set(x, y, z);
                                 //? if >= 26.2 {
                                 VoxelShape shape = context.getCollisionShape(state, level, pos);
                                 //?} else {
                                 /*VoxelShape shape = state.getCollisionShape(level, pos, context);
                                 *///?}
-                                if (mayCollide(shape, box, x, y, z))
+                                if (mayCollide(shape, swept, x, y, z))
                                     return false;
                             }
                         }

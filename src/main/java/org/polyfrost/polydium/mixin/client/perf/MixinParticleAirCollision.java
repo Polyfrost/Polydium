@@ -33,9 +33,9 @@ public abstract class MixinParticleAirCollision {
     private Vec3 polydium$skipAirCollision(/*? if >= 26.2 {*/CollisionContext/*?} else {*//*Entity*//*?}*/ context, Vec3 movement, AABB box, Level level, List<VoxelShape> colliders, Operation<Vec3> original) {
         if (colliders.isEmpty()
             //? if >= 26.2 {
-            && ParticleAirCollision.cannotCollide(level, context, box.expandTowards(movement))
+            && ParticleAirCollision.cannotCollide(level, context, box, movement)
             //?} else {
-            /*&& context == null && ParticleAirCollision.cannotCollide(level, CollisionContext.empty(), box.expandTowards(movement))
+            /*&& context == null && ParticleAirCollision.cannotCollide(level, CollisionContext.empty(), box, movement)
             *///?}
         ) {
             return movement;
