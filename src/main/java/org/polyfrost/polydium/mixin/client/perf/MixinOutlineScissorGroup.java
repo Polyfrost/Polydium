@@ -7,7 +7,6 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.minecraft.client.renderer.StagedVertexBuffer;
 import net.minecraft.client.renderer.rendertype.PreparedRenderType;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import org.polyfrost.polydium.client.PolydiumToggles;
 import org.polyfrost.polydium.client.perf.OutlineScissor;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -38,7 +37,7 @@ public abstract class MixinOutlineScissorGroup implements OutlineScissor.DrawGro
 
     @ModifyExpressionValue(method = "getOrAddDraw", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/StagedVertexBuffer;appendDraw(Lcom/mojang/renderpearl/api/vertex/VertexFormat;Lcom/mojang/renderpearl/api/pipeline/PrimitiveTopology;Lcom/mojang/blaze3d/vertex/VertexSorting;)Lnet/minecraft/client/renderer/StagedVertexBuffer$Draw;"))
     private StagedVertexBuffer.Draw polydium$trackOutlineDraw(StagedVertexBuffer.Draw draw, @Local(argsOnly = true) RenderType renderType) {
-        if (PolydiumToggles.outlineScissor && renderType.isOutline() && renderType.format() == DefaultVertexFormat.POSITION_TEX_COLOR)
+        if (OutlineScissor.active() && renderType.isOutline() && renderType.format() == DefaultVertexFormat.POSITION_TEX_COLOR)
             ((OutlineScissor.Draw) draw).polydium$trackOutline();
         return draw;
     }

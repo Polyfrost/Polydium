@@ -154,7 +154,7 @@ public final class OutlineScissor {
     }
     //?}
 
-    private static boolean active() {
+    public static boolean active() {
         return vanilla && PolydiumToggles.outlineScissor;
     }
 
