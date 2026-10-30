@@ -53,7 +53,6 @@ repositories {
         filter { groups.forEach(::includeGroup) }
     }
 
-    mavenLocal()
     mavenCentral()
     google()
     maven("https://repo.polyfrost.org/releases")
@@ -71,6 +70,7 @@ repositories {
     strictMaven("https://maven.terraformersmc.com/releases/", "TerraformersMC", "com.terraformersmc")
     strictMaven("https://api.modrinth.com/maven", "Modrinth", "maven.modrinth")
     strictMaven("https://maven.bawnorton.com/releases", "Bawnorton", "com.github.bawnorton.mixinsquared")
+    mavenLocal()
 }
 
 configurations.all {
