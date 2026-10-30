@@ -109,7 +109,6 @@ if (!vulkanBackport) sourceSets.main {
         "org/polyfrost/polydium/mixin/client/perf/vulkan/backport/**",
         "org/polyfrost/polydium/mixin/client/perf/sodium/vulkan/**",
         "org/polyfrost/polydium/mixin/late/**",
-        "org/polyfrost/oneconfig/internal/ui/services/**",
     )
     resources.exclude(
         "mixins.polydium.late.json",

@@ -254,8 +254,7 @@
     //? if >= 26.1 && < 26.2
     //"client.perf.vulkan.backport.MixinSodiumExtraMacWindow",
     //? if >= 1.21.11 && < 26.1 {
-    /*"client.perf.vulkan.backport.MixinVulkanBackendListOneConfig",
-    "client.perf.vulkan.backport.MixinVulkanBackendListRenderSystem",
+    /*"client.perf.vulkan.backport.MixinVulkanBackendListRenderSystem",
     "client.perf.vulkan.backport.MixinVulkanBackendListWindow",
     "client.perf.vulkan.backport.MixinVkInstanceDeviceExtensions",
     *///?}
@@ -606,8 +605,6 @@
     "client.perf.vulkan.MixinVulkanQueuePresentDrain",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanSubmissionPresentDrain",
-    //? if >= 1.21.11
-    "client.perf.vulkan.MixinSkiaPresentDrain",
     //? if >= 1.21.5
     "client.perf.MixinSkipFirstMainClear",
     //? if >= 26.2
