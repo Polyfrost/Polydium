@@ -54,7 +54,7 @@ public abstract class MixinHideReloadOverlay {
             original.call(graphics, mouseX, mouseY, partialTick);
             return;
         }
-        if (this.minecraft.level == null) {
+        if (this.polydium$screen() != null) {
             this.polydium$screen()./*? if >= 26.1 {*/extractRenderStateWithTooltipAndSubtitles/*?} else if >= 1.21.10 {*//*renderWithTooltipAndSubtitles*//*?} else {*//*renderWithTooltip*//*?}*/(graphics, mouseX, mouseY, partialTick);
         }
         if (this.fadeOutStart == -1L && this.reload.isDone()) {
