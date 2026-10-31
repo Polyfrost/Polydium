@@ -9,6 +9,7 @@ import net.fabricmc.loom.task.prod.ClientProductionRunTask
 import net.ltgt.gradle.errorprone.errorprone
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmExtension
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     java
@@ -197,6 +198,10 @@ tasks.withType<JavaCompile>().configureEach {
         disableAllChecks = true
         error("UnnecessarilyFullyQualified")
     }
+}
+
+tasks.withType<KotlinCompile>().configureEach {
+    finalizedBy("detekt")
 }
 
 // the enabled Detekt rules need type resolution, which only the per-compilation tasks have
