@@ -34,7 +34,6 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import com.mojang.renderpearl.backend.vulkan.VulkanRenderPass;
 import org.objectweb.asm.Opcodes;
-import org.polyfrost.polydium.client.perf.IrisShaders;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -46,7 +45,6 @@ import java.util.Set;
 *///?} else {
 /*import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import org.polyfrost.polydium.client.perf.IrisShaders;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -209,7 +207,7 @@ public abstract class MixinFrontendRenderPassUniforms {
     )
     private Object polydium$compareWithPrevious(HashMap<Object, Object> map, Object name, Object value, Operation<Object> original) {
         Object previous = original.call(map, name, value);
-        this.polydium$sameValue = value.equals(previous) && ((Object) this instanceof VulkanRenderPass || !IrisShaders.packInUse());
+        this.polydium$sameValue = value.equals(previous);
         return previous;
     }
 
@@ -274,7 +272,7 @@ public abstract class MixinFrontendRenderPassUniforms {
     )
     private Object polydium$compareWithPrevious(HashMap<Object, Object> map, Object name, Object value, Operation<Object> original) {
         Object previous = original.call(map, name, value);
-        this.polydium$sameValue = value.equals(previous) && !IrisShaders.packInUse();
+        this.polydium$sameValue = value.equals(previous);
         return previous;
     }
 

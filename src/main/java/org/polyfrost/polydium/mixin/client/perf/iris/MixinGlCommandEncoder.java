@@ -13,6 +13,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+//? if >= 26.3 {
+import com.mojang.renderpearl.backend.opengl.GlRenderPipeline;
+import net.irisshaders.iris.Iris;
+import net.irisshaders.iris.pbr.TextureTracker;
+import net.irisshaders.iris.pipeline.IrisRenderingPipeline;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import org.spongepowered.asm.mixin.Shadow;
+//?}
 //? if < 26.3 {
 /*import java.util.Collection;
 import net.irisshaders.iris.Iris;
@@ -69,6 +77,34 @@ public class MixinGlCommandEncoder {
     @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "FIELD", target = POLYDIUM$LAST_PASS, opcode = Opcodes.PUTSTATIC, remap = false), require = 0, expect = 0)
     private void polydium$dropLastPass(@Coerce Object pass, Operation<Void> original) {
     }
+
+    //? if >= 26.3 {
+    @Shadow
+    private GlRenderPipeline lastPipeline;
+
+    @Unique
+    private int polydium$albedo;
+
+    @Unique
+    private TextureAtlas polydium$albedoAtlas;
+
+    @Inject(method = "setupDraw", at = @At("HEAD"))
+    private void polydium$rebindOnAtlasChange(CallbackInfo ci) {
+        if (!(Iris.getPipelineManager().getPipelineNullable() instanceof IrisRenderingPipeline pipeline)) {
+            return;
+        }
+        int albedo = pipeline.getAlbedoTex();
+        if (albedo == polydium$albedo) {
+            return;
+        }
+        polydium$albedo = albedo;
+        TextureAtlas atlas = TextureTracker.INSTANCE.getTexture(albedo) instanceof TextureAtlas bound ? bound : null;
+        if (atlas != polydium$albedoAtlas) {
+            polydium$albedoAtlas = atlas;
+            lastPipeline = null;
+        }
+    }
+    //?}
 
     //? if = 26.2 {
     /*
