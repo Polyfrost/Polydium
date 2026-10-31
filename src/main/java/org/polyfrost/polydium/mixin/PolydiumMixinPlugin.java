@@ -268,9 +268,6 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.contains("VulkanBackendList") && !vulkanBackend())
             return false;
 
-        if (mixinClassName.endsWith(".MixinEtfSubmitDataPool") && !Mods.loaded("entity_texture_features"))
-            return false;
-
         if (mixinClassName.endsWith(".MixinGammaOptionGate") && !Mods.loaded("gammautils"))
             return false;
 
@@ -391,13 +388,6 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".MixinModelPartCallbackPool")) {
             for (MethodNode method : targetClass.methods)
                 poolCancellableCallbacks(method);
-            return;
-        }
-
-        if (mixinClassName.endsWith(".MixinEtfSubmitDataPool")) {
-            for (MethodNode method : targetClass.methods)
-                if (method.name.equals("<init>"))
-                    poolEtfSubmitData(method);
             return;
         }
 
@@ -1053,38 +1043,6 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             method.instructions.remove(dup);
             method.instructions.set(call, new MethodInsnNode(Opcodes.INVOKESTATIC, "org/polyfrost/polydium/client/perf/TransitionRefShare",
                 "of", "(Ljava/lang/Object;)Ljava/lang/ref/WeakReference;"));
-        }
-    }
-
-    private static final String ETF_SUBMIT_DATA = "traben/entity_texture_features/features/state/ETFSubmitData";
-    private static final String ETF_SUBMIT_DATA_POOL = "org/polyfrost/polydium/client/perf/EtfSubmitDataPool";
-
-    private static void poolEtfSubmitData(MethodNode method) {
-        for (AbstractInsnNode insn : method.instructions.toArray()) {
-            if (!(insn instanceof TypeInsnNode alloc) || alloc.getOpcode() != Opcodes.NEW || !alloc.desc.equals(ETF_SUBMIT_DATA))
-                continue;
-
-            AbstractInsnNode dup = alloc.getNext(), init = dup == null ? null : dup.getNext();
-            if (dup == null || dup.getOpcode() != Opcodes.DUP || !(init instanceof MethodInsnNode call) || call.getOpcode() != Opcodes.INVOKESPECIAL
-                || !call.owner.equals(ETF_SUBMIT_DATA) || !call.name.equals("<init>") || !call.desc.equals("()V"))
-                continue;
-
-            LabelNode pooled = new LabelNode(), done = new LabelNode();
-            InsnList before = new InsnList();
-            before.add(new MethodInsnNode(Opcodes.INVOKESTATIC, ETF_SUBMIT_DATA_POOL, "acquire", "()Ljava/lang/Object;"));
-            before.add(new InsnNode(Opcodes.DUP));
-            before.add(new JumpInsnNode(Opcodes.IFNONNULL, pooled));
-            before.add(new InsnNode(Opcodes.POP));
-            method.instructions.insertBefore(alloc, before);
-
-            InsnList after = new InsnList();
-            after.add(new InsnNode(Opcodes.DUP));
-            after.add(new MethodInsnNode(Opcodes.INVOKESTATIC, ETF_SUBMIT_DATA_POOL, "created", "(Ljava/lang/Object;)V"));
-            after.add(new JumpInsnNode(Opcodes.GOTO, done));
-            after.add(pooled);
-            after.add(new TypeInsnNode(Opcodes.CHECKCAST, ETF_SUBMIT_DATA));
-            after.add(done);
-            method.instructions.insert(call, after);
         }
     }
 
