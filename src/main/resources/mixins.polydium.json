@@ -345,14 +345,13 @@
     "client.perf.vulkan.MixinVulkanTexelViewCache",
     //? if >= 1.21.11
     "client.perf.MixinSodiumExtraFrameCounter",
-    //? if >= 26.1
     "client.perf.MixinFpsLimitOptions",
-    //? if >= 26.1
+    //? if >= 1.21.10
+    "client.perf.MixinFpsLimitDebugEntry",
     "client.perf.MixinFpsLimitMinecraft",
-    //? if >= 26.1
     "client.perf.MixinFpsLimitSodium",
-    //? if >= 26.1
     "client.perf.MixinFpsLimitSodiumFormatter",
+    "client.perf.MixinFpsLimitSodiumFormatterInterface",
     "client.perf.MixinSparkBackgroundProfiler",
     //? if >= 1.21.1
     "client.perf.MixinAnimateTickFluid",

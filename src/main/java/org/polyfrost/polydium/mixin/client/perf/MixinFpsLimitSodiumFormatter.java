@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 26.1 {
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.Constant;
@@ -14,4 +13,3 @@ public abstract class MixinFpsLimitSodiumFormatter {
         return 1500;
     }
 }
-//?}
