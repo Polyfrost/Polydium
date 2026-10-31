@@ -149,6 +149,8 @@
     "client.perf.MixinSubmitPosePool",
     //? if >= 1.21.10
     "client.perf.MixinSubmitPosePoolFrame",
+    //? if >= 1.21.10
+    "client.perf.MixinEtfSubmitDataPool",
     //? if >= 1.21.2
     "client.perf.MixinTransitionRefHolder",
     //? if >= 1.21.2
