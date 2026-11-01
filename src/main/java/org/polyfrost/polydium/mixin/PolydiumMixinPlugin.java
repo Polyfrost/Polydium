@@ -101,6 +101,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("PreparedLanguage", new String[]{"languagereload"}),
             Map.entry("ParticleRotationReuse", new String[]{"vulkanmod"}),
             Map.entry("FenceBatch", new String[]{"vulkanmod"}),
+            Map.entry("OutlineScissor", new String[]{"vulkanmod"}),
             Map.entry("SinglePassTextShadow", new String[]{"caxton"}),
             Map.entry("VulkanBackendList", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"}),
             Map.entry("GraphicsApiOption", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"})
