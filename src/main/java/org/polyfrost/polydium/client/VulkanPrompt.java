@@ -2,8 +2,10 @@ package org.polyfrost.polydium.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.AlertScreen;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import org.polyfrost.polydium.compat.Mods;
+//? if >= 1.21.11 && < 26.2
+/*import org.polyfrost.polydium.compat.Mods;*/
 //? if >= 1.21.11 {
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
@@ -32,7 +34,8 @@ public final class VulkanPrompt {
     private static final Identifier IMAGE = Identifier.fromNamespaceAndPath("polydium", "textures/gui/vulkan_prompt.png");
 
     private static boolean checked;
-    private static boolean vulkanModNoticed;
+    //? if >= 1.21.11 && < 26.2
+    /*private static boolean vulkanModNoticed;*/
 
     private VulkanPrompt() {
     }
@@ -41,18 +44,21 @@ public final class VulkanPrompt {
         public static final int MAX_WIDTH = 320;
 
         private Notice(Runnable callback) {
-            super(callback, Component.translatable("polydium.vulkanModNotice.title"), Component.translatable("polydium.vulkanModNotice"));
+            super(callback, Component.translatable("polydium.vulkanModNotice.title"), Component.translatable("polydium.vulkanModNotice"), CommonComponents.GUI_OK, true);
         }
     }
 
     public static void tick(Minecraft mc) {
-        if (Mods.VULKANMOD) {
-            if (!vulkanModNoticed && mc.player != null && mc/*? if >= 26.2 {*/.gui.screen()/*?} else {*//*.screen*//*?}*/ == null) {
+        // Only versions with Polydium's Vulkan backport and published VulkanMod releases
+        //? if >= 1.21.11 && < 26.2 {
+        /*if (Mods.VULKANMOD) {
+            if (!vulkanModNoticed && mc.player != null && mc.screen == null) {
                 vulkanModNoticed = true;
-                mc/*? if >= 26.2 {*/.gui/*?}*/.setScreen(new Notice(() -> mc/*? if >= 26.2 {*/.gui/*?}*/.setScreen(null)));
+                mc.setScreen(new Notice(() -> mc.setScreen(null)));
             }
             return;
         }
+        *///?}
         //? if >= 1.21.11 {
         if (checked || mc.player == null || mc/*? if >= 26.2 {*/.gui.screen()/*?} else {*//*.screen*//*?}*/ != null)
             return;
