@@ -142,6 +142,8 @@ public final class EarlyVulkan implements LanguageAdapter {
         if (Files.exists(marker()) && (switched()
                 || Files.getLastModifiedTime(marker()).toInstant().isAfter(Instant.now().minus(Duration.ofDays(30)))))
             return;
+        if (Boolean.getBoolean("polydium.disableAll"))
+            return;
         for (String fragment : System.getProperty("polydium.disable", "").split(","))
             if (!fragment.isBlank() && MIXIN.contains(fragment.trim()))
                 return;
