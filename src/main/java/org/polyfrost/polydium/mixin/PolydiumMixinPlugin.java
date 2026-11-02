@@ -106,7 +106,8 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("OutlineScissor", new String[]{"vulkanmod"}),
             Map.entry("SinglePassTextShadow", new String[]{"caxton"}),
             Map.entry("VulkanBackendList", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"}),
-            Map.entry("GraphicsApiOption", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"})
+            Map.entry("GraphicsApiOption", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"}),
+            Map.entry("HideReloadOverlay", new String[]{"forcecloseworldloadingscreen"})
     );
 
     private static final String[] OPT_IN = {"UnfocusedFullscreenThrottle"};
