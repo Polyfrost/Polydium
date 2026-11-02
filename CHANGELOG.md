@@ -4,3 +4,4 @@
 - The VulkanMod notice is no longer shown on Minecraft versions where Polydium doesn't have a Vulkan backend
 - Polydium can now be disabled entirely using the `-Dpolydium.disableAll=true` JVM argument
 - Fixed game inputs being bricked after a resource reload if Hide Reload Overlay is enabled with kennytvs-epic-force-close-loading-screen-mod-for-fabric installed
+- Fixed a crash with the Not Enough FPS mod
