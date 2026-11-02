@@ -1,4 +1,4 @@
-## Unreleased changes
+## 1.2.1
 - Fixed the "Unlimited" FPS limit being capped at 260 on 1.21.11 and below
 - Fixed a crash on launch and broken post-processing effects with VulkanMod
 - The VulkanMod notice is no longer shown on Minecraft versions where Polydium doesn't have a Vulkan backend
