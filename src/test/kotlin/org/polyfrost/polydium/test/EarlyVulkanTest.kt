@@ -1,11 +1,40 @@
 package org.polyfrost.polydium.test
 
+import net.fabricmc.loader.api.FabricLoader
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.Test
 import org.polyfrost.polydium.early.EarlyVulkan
+import java.nio.file.Files
 
 class EarlyVulkanTest {
+
+    @Test
+    fun onlyVulkanChoiceSupersedesFailure() {
+        val dir = FabricLoader.getInstance().gameDir.resolve("polydium")
+        val marker = dir.resolve("auto-vulkan")
+        val api = dir.resolve("graphics-api")
+        assumeFalse(Files.exists(marker) || Files.exists(api))
+        try {
+            EarlyVulkan.markFailed("test")
+
+            EarlyVulkan.setGraphicsApi("default")
+            assertTrue(EarlyVulkan.failed())
+            EarlyVulkan.setGraphicsApi("opengl")
+            assertTrue(EarlyVulkan.failed())
+
+            EarlyVulkan.setGraphicsApi("vulkan")
+            assertFalse(EarlyVulkan.failed())
+            assertTrue(EarlyVulkan.switched())
+            assertEquals("vulkan", EarlyVulkan.graphicsApi())
+        } finally {
+            Files.deleteIfExists(marker)
+            Files.deleteIfExists(api)
+            Files.deleteIfExists(dir)
+        }
+    }
 
     @Test
     fun discreteNames() {

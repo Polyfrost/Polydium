@@ -26,7 +26,7 @@ public final class EarlyVulkan implements LanguageAdapter {
 
     private static final String MIXIN = "org.polyfrost.polydium.mixin.client.perf.vulkan.MixinAutoVulkan";
 
-    private static final int BACKEND_FIX_VERSION = 4892;
+    public static final int BACKEND_FIX_VERSION = 4892;
 
     private static final Pattern DISCRETE_ARC = Pattern.compile("arc (pro )?(a\\d{2,3}|b[5-9]\\d{1,2})");
 
@@ -56,7 +56,10 @@ public final class EarlyVulkan implements LanguageAdapter {
         }
     }
 
-    // "" = auto-switched, first launch not checked yet; "done" = checked; "no" = not switched
+    // "" = auto-switched, first launch not checked yet; "no" = not switched
+    // "checked" = checked, so a default backend is the user's own choice
+    // "failed" = a Vulkan start failed and the backend was reset, not retried until the user picks Vulkan
+    // "done" = checked, but vanilla's backend datafix may have reset it, so 26.2+ retries once
     public static boolean switched() {
         String state = markerState();
         return state != null && !state.equals("no");
@@ -66,15 +69,24 @@ public final class EarlyVulkan implements LanguageAdapter {
         return "".equals(markerState());
     }
 
+    public static boolean failed() {
+        return "failed".equals(markerState());
+    }
+
     public static void finishSwitch() {
         try {
-            Files.writeString(marker(), "done");
+            Files.writeString(marker(), "checked");
         } catch (IOException ignored) {
         }
     }
 
-    public static void logReset(String reason) {
+    public static void markFailed(String reason) {
         LoggerFactory.getLogger("polydium/vulkan").warn("Resetting graphics API to Default: {}", reason);
+        try {
+            Files.createDirectories(marker().getParent());
+            Files.writeString(marker(), "failed");
+        } catch (IOException ignored) {
+        }
     }
 
     private static Path graphicsApiFile() {
@@ -94,7 +106,11 @@ public final class EarlyVulkan implements LanguageAdapter {
             Files.createDirectories(graphicsApiFile().getParent());
             Files.writeString(graphicsApiFile(), api);
         } catch (IOException ignored) {
+            return;
         }
+        // Vulkan can only be written after a failure if the user chose it, and a new failure records itself again.
+        if ("vulkan".equals(api) && failed())
+            finishSwitch();
     }
 
     public static boolean renderCrash(Throwable t) {
@@ -129,7 +145,7 @@ public final class EarlyVulkan implements LanguageAdapter {
             } catch (IOException ignored) {
             }
             if (vulkan && !clean) {
-                logReset("last game startup did not finish");
+                markFailed("last game startup did not finish");
                 setGraphicsApi("default");
             }
             vulkanAtStartup = vulkan && clean;
@@ -139,7 +155,12 @@ public final class EarlyVulkan implements LanguageAdapter {
 
     //? if >= 1.21.11 {
     private static void preferVulkan() throws IOException {
-        if (Files.exists(marker()) && (switched()
+        //? if >= 26.2 {
+        boolean retry = "done".equals(markerState());
+        //?} else {
+        /*boolean retry = false;
+        *///?}
+        if (!retry && Files.exists(marker()) && (switched()
                 || Files.getLastModifiedTime(marker()).toInstant().isAfter(Instant.now().minus(Duration.ofDays(30)))))
             return;
         for (String fragment : System.getProperty("polydium.disable", "").split(","))
@@ -164,7 +185,11 @@ public final class EarlyVulkan implements LanguageAdapter {
                 return;
         }
         //? if >= 26.2 {
-        if (version < BACKEND_FIX_VERSION || index >= 0 && !lines.get(index).contains("default"))
+        if (version < BACKEND_FIX_VERSION)
+            return;
+        if (retry)
+            finishSwitch();
+        if (index >= 0 && !lines.get(index).contains("default"))
             return;
         //?} else {
         /*if (!"default".equals(graphicsApi()))

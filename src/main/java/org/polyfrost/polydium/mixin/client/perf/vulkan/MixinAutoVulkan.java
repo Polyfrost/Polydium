@@ -15,6 +15,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.Slice;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -34,12 +35,19 @@ public abstract class MixinAutoVulkan {
             return device;
         if (this.options.preferredGraphicsBackend().get() == PreferredGraphicsApi.VULKAN
                 && !"Vulkan".equalsIgnoreCase(device.getDeviceInfo().backendName())) {
-            EarlyVulkan.logReset("automatic Vulkan switch failed, started on " + device.getDeviceInfo().backendName());
+            EarlyVulkan.markFailed("automatic Vulkan switch failed, started on " + device.getDeviceInfo().backendName());
             this.options.preferredGraphicsBackend().set(PreferredGraphicsApi.DEFAULT);
             this.options.save();
+            return device;
         }
         EarlyVulkan.finishSwitch();
         return device;
+    }
+
+    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;set(Ljava/lang/Object;)V", ordinal = 0), slice = @Slice(
+        from = @At(value = "CONSTANT", args = "stringValue=Detected unexpected shutdown during last game startup: resetting preferred graphics API to Default")))
+    private void polydium$markVanillaReset(CallbackInfo ci) {
+        EarlyVulkan.markFailed("last game startup did not finish");
     }
 
     @Inject(method = "saveReport(Ljava/io/File;Lnet/minecraft/CrashReport;I)I", at = @At("HEAD"))
@@ -91,8 +99,9 @@ public abstract class MixinAutoVulkan {
         if (!EarlyVulkan.switchPending())
             return;
         if (EarlyVulkan.vulkanAtStartup() && !VulkanActive.active) {
-            EarlyVulkan.logReset("automatic Vulkan switch failed");
+            EarlyVulkan.markFailed("automatic Vulkan switch failed");
             EarlyVulkan.setGraphicsApi("default");
+            return;
         }
         EarlyVulkan.finishSwitch();
     }
