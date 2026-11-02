@@ -5,3 +5,4 @@
 - Polydium can now be disabled entirely using the `-Dpolydium.disableAll=true` JVM argument
 - Fixed game inputs being bricked after a resource reload if Hide Reload Overlay is enabled with kennytvs-epic-force-close-loading-screen-mod-for-fabric installed
 - Fixed a crash with the Not Enough FPS mod
+- Fixed a crash on Vulkan with GPUs that lack push descriptor support, such as older AMD APUs

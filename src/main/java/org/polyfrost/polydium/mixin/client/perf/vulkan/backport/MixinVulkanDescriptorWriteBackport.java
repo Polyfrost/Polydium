@@ -51,7 +51,7 @@ public abstract class MixinVulkanDescriptorWriteBackport {
 
     @ModifyExpressionValue(method = "pushDescriptors", at = @At(value = "FIELD", target = "Lorg/polyfrost/polydium/vulkan/VulkanRenderPass;anyDescriptorDirty:Z", opcode = Opcodes.GETFIELD, ordinal = 0))
     private boolean polydium$writeDescriptors(boolean dirty) {
-        return dirty && !(this.pipeline != null && !VulkanRenderPass.VALIDATION && this.polydium$write());
+        return dirty && !(this.pipeline != null && !VulkanRenderPass.VALIDATION && this.device.pushDescriptors() && this.polydium$write());
     }
 
     @Unique
