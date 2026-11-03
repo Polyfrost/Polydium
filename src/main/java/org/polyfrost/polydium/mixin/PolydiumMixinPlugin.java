@@ -276,7 +276,8 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.contains("VulkanBackendList") && !vulkanBackend())
             return false;
 
-        if (mixinClassName.endsWith(".MixinEtfSubmitDataPool") && !Mods.loaded("entity_texture_features"))
+        // ETF 7.2.7 pools ETFSubmitData itself
+        if (mixinClassName.endsWith(".MixinEtfSubmitDataPool") && !Mods.loadedBefore("entity_texture_features", "7.2.7"))
             return false;
 
         if (mixinClassName.endsWith(".MixinGammaOptionGate") && !Mods.loaded("gammautils"))
