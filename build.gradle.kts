@@ -354,8 +354,3 @@ publishing {
         }
     }
 }
-
-tasks.register("publishAll") {
-    dependsOn("publishMods")
-    dependsOn("publishToMavenLocal")
-}
