@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan.backport;
 
-import com.mojang.blaze3d.systems.BackendCreationException;
 import com.mojang.blaze3d.systems.GpuBackend;
 import net.minecraft.client.Minecraft;
 import org.polyfrost.polydium.client.VulkanAvailability;
@@ -15,9 +14,7 @@ public class MixinVulkanBackendList {
 
     @ModifyVariable(method = "<init>", at = @At(value = "STORE", ordinal = 0))
     private GpuBackend[] polydium$tryVulkanFirst(GpuBackend[] backends) {
-        BackendCreationException unavailable = VulkanBackend.checkBackendAvailable();
-        VulkanAvailability.record(unavailable == null ? null : unavailable.getMessage());
-        if (unavailable != null)
+        if (VulkanAvailability.probe() != null)
             return backends;
 
         EssentialVulkan.registerMixins();

@@ -6,7 +6,6 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.Nullable;
 //? if >= 26.2 {
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.renderpearl.backend.vulkan.VulkanBackend;
 //?} else
 /*import org.polyfrost.polydium.vulkan.VulkanBackend;*/
@@ -23,16 +22,11 @@ public final class VulkanAvailability {
         unavailableReason = reason;
     }
 
-    // Why the Vulkan backend can't start on this machine, or null if it can. Probes once if startup didn't
-    public static @Nullable String unavailableReason() {
+    // Why the Vulkan backend can't start on this machine, or null if it can. Probes once, and only before the window
+    // exists: creating a Vulkan instance under a current GL context can break that context on some drivers
+    public static @Nullable String probe() {
         if (!checked) {
             try {
-                //? if >= 26.2 {
-                if ("Vulkan".equalsIgnoreCase(RenderSystem.getDevice().getDeviceInfo().backendName())) {
-                    record(null);
-                    return null;
-                }
-                //?}
                 var unavailable = VulkanBackend.checkBackendAvailable();
                 record(unavailable == null ? null : unavailable.getMessage());
             } catch (Throwable t) {
@@ -43,11 +37,14 @@ public final class VulkanAvailability {
         return unavailableReason;
     }
 
+    public static boolean available() {
+        return checked && unavailableReason == null;
+    }
+
     public static Component vulkanTooltip() {
-        String reason = unavailableReason();
         Component tooltip = Component.translatable("options.graphicsApi.tooltip.vulkan");
-        return reason == null ? tooltip : CommonComponents.joinLines(tooltip, CommonComponents.EMPTY,
-                Component.translatable("options.graphicsApi.tooltip.vulkanUnavailable", reason).withStyle(ChatFormatting.RED));
+        return unavailableReason == null ? tooltip : CommonComponents.joinLines(tooltip, CommonComponents.EMPTY,
+                Component.translatable("options.graphicsApi.tooltip.vulkanUnavailable", unavailableReason).withStyle(ChatFormatting.RED));
     }
 }
 //?}
