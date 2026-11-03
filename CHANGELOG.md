@@ -1,2 +1,2 @@
-## 1.2.3
-- Fixed a crash on some GPUs when joining a world for the first time or hovering the Vulkan graphics API option
+## Unreleased changes
+- Fixed a crash on the Vulkan backend with mods that rely on OpenGL keeping the previous transforms bound, such as Teamviewer (Hoplite)
