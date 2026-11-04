@@ -186,6 +186,8 @@
     //? if >= 1.21.5
     "client.perf.iris.MixinGlCommandEncoder",
     "client.perf.iris.MixinHandRenderer",
+    //? if >= 26.3
+    "client.perf.iris.MixinIrisRenderingPipeline",
     "client.perf.iris.MixinIrisTimeUniforms",
     "client.perf.iris.MixinLevelRenderer",
     //? if >= 1.21.4
