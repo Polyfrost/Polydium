@@ -17,6 +17,7 @@ import java.util.OptionalInt;
 *///?}
 //? if >= 26.3 {
 import com.mojang.renderpearl.api.pipeline.UniformType;
+import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 //?}
 import com.mojang.renderpearl.api.buffers.GpuBuffer;
@@ -27,6 +28,7 @@ import com.mojang.renderpearl.api.textures.GpuTexture;
 import com.mojang.renderpearl.api.textures.GpuTextureView;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.util.Arrays;
 import java.util.Optional;
 import net.minecraft.resources.Identifier;
@@ -45,16 +47,8 @@ public final class OcclusionDepth {
     private static final int             PUSH_CONSTANTS  = 16;
     private static final int             WRITE_RED       = 1;
     private static final BindGroupLayout SAMPLER         = BindGroupLayout.builder().withUniform("DepthSampler", UniformType.COMBINED_IMAGE_SAMPLER).build();
-    private static final RenderPipeline  PIPELINE        = RenderPipeline.builder()
-        .withLocation(Identifier.fromNamespaceAndPath("polydium", "pipeline/occlusion_depth"))
-        .withBindGroupLayout(SAMPLER)
-        .withPushConstantSize(PUSH_CONSTANTS)
-        .withCull(false)
-        .withVertexShader(Identifier.fromNamespaceAndPath("polydium", "core/occlusion_depth"))
-        .withFragmentShader(Identifier.fromNamespaceAndPath("polydium", "core/occlusion_depth"))
-        .withColorTargetState(new ColorTargetState(Optional.empty(), GpuFormat.R32_FLOAT, WRITE_RED))
-        .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
-        .build();
+    private static final RenderPipeline  PIPELINE        = pipelineBuilder().withLocation(Identifier.fromNamespaceAndPath("polydium", "pipeline/occlusion_depth")).build();
+    private static final RenderPipeline  FETCH_PIPELINE  = pipelineBuilder().withLocation(Identifier.fromNamespaceAndPath("polydium", "pipeline/occlusion_depth_fetch")).withShaderDefine("TEXEL_FETCH").build();
     //?} else if >= 26.2 {
     /*private static final RenderPipeline  PIPELINE        = RenderPipeline.builder()
         .withLocation(Identifier.fromNamespaceAndPath("polydium", "pipeline/occlusion_depth"))
@@ -81,10 +75,13 @@ public final class OcclusionDepth {
     private static final float[]         CAPTURED_MATRIX = new float[16];
     private static final float[]         LATEST_DEPTH    = new float[TEXELS];
     private static final float[]         LATEST_MATRIX   = new float[16];
+    private static final IntArrayList    FRAME_ANIMATED  = new IntArrayList();
+    private static final IntArrayList    LATEST_EXCLUDED = new IntArrayList();
 
     private static GpuTexture     target;
     private static GpuTextureView targetView;
-    private static boolean        frameKnown;
+    private static boolean        captureDue;
+    private static boolean        captureRequested;
     private static double         frameX;
     private static double         frameY;
     private static double         frameZ;
@@ -94,6 +91,8 @@ public final class OcclusionDepth {
     private static int            framesSinceCapture = STILL_INTERVAL;
     private static long           lastCaptureNanos;
     private static long           generation;
+    private static long           captures;
+    private static long           latestSequence;
     private static long           latestVersion;
     private static double         latestX;
     private static double         latestY;
@@ -104,26 +103,42 @@ public final class OcclusionDepth {
 
     public static void describeFrame(float[] viewProjection, double cameraX, double cameraY, double cameraZ) {
         System.arraycopy(viewProjection, 0, FRAME_MATRIX, 0, FRAME_MATRIX.length);
-        frameX     = cameraX;
-        frameY     = cameraY;
-        frameZ     = cameraZ;
-        frameKnown = true;
+        frameX = cameraX;
+        frameY = cameraY;
+        frameZ = cameraZ;
         framesSinceCapture ++;
+        FRAME_ANIMATED.clear();
+        captureDue = isCaptureDue();
+    }
+
+    public static void addFrameAnimated(int blockX, int blockY, int blockZ, int bounds) {
+        FRAME_ANIMATED.add(blockX);
+        FRAME_ANIMATED.add(blockY);
+        FRAME_ANIMATED.add(blockZ);
+        FRAME_ANIMATED.add(bounds);
     }
 
     public static boolean canCapture() {
-        if (!frameKnown || freeSlot() == null || System.nanoTime() - lastCaptureNanos < OcclusionCuller.captureInterval())
+        return captureDue;
+    }
+
+    public static void requestCapture() {
+        captureRequested = true;
+    }
+
+    private static boolean isCaptureDue() {
+        if (freeSlot() == null || System.nanoTime() - lastCaptureNanos < (captureRequested ? OcclusionCuller.MIN_INTERVAL : OcclusionCuller.captureInterval()))
             return false;
 
         boolean moved = frameX != capturedX || frameY != capturedY || frameZ != capturedZ || !Arrays.equals(FRAME_MATRIX, CAPTURED_MATRIX);
 
-        return moved || framesSinceCapture >= STILL_INTERVAL;
+        return captureRequested || moved || framesSinceCapture >= STILL_INTERVAL;
     }
 
     public static void capture(RenderTarget mainTarget) {
         Slot slot = freeSlot();
 
-        if (!frameKnown || slot == null)
+        if (!captureDue || slot == null)
             throw new IllegalStateException("Depth capture requested without a described frame or a free slot");
 
         createTarget();
@@ -137,7 +152,7 @@ public final class OcclusionDepth {
             ByteBuffer sizes = stack.malloc(PUSH_CONSTANTS);
 
             sizes.putInt(depth.getWidth(0)).putInt(depth.getHeight(0)).putInt(WIDTH).putInt(HEIGHT).flip();
-            pass.setPipeline(RenderSystem.getCompiledPipeline(PIPELINE));
+            pass.setPipeline(RenderSystem.getCompiledPipeline(canGather() ? PIPELINE : FETCH_PIPELINE));
             pass.setUniform("DepthSampler", mainTarget.getDepthTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
             pass.pushConstants(sizes);
             pass.draw(3, 1, 0, 0);
@@ -159,18 +174,22 @@ public final class OcclusionDepth {
 
         long captureGeneration = generation;
 
-        slot.pending = true;
-        slot.x       = frameX;
-        slot.y       = frameY;
-        slot.z       = frameZ;
+        slot.pending  = true;
+        slot.sequence = ++ captures;
+        slot.x        = frameX;
+        slot.y        = frameY;
+        slot.z        = frameZ;
         System.arraycopy(FRAME_MATRIX, 0, slot.matrix, 0, FRAME_MATRIX.length);
+        slot.excluded.clear();
+        slot.excluded.addAll(FRAME_ANIMATED);
         System.arraycopy(FRAME_MATRIX, 0, CAPTURED_MATRIX, 0, FRAME_MATRIX.length);
         capturedX          = frameX;
         capturedY          = frameY;
         capturedZ          = frameZ;
         framesSinceCapture = 0;
         lastCaptureNanos   = System.nanoTime();
-        frameKnown         = false;
+        captureDue         = false;
+        captureRequested   = false;
 
         RenderSystem.getDevice().createCommandEncoder().copyTextureToBuffer(target, slot.buffer, /*? if >= 1.21.11 {*/0L/*?} else {*//*0*//*?}*/, () -> complete(slot, captureGeneration), 0);
     }
@@ -178,8 +197,28 @@ public final class OcclusionDepth {
     public static void reset() {
         generation ++;
         latestVersion      = 0L;
-        frameKnown         = false;
+        captureDue         = false;
+        captureRequested   = false;
         framesSinceCapture = STILL_INTERVAL;
+    }
+
+    public static void excludeFromPending(int blockX, int blockY, int blockZ, int bounds, long drawnThrough) {
+        for (Slot slot : RING) {
+            if (slot != null && slot.pending && slot.sequence <= drawnThrough) {
+                slot.excluded.add(blockX);
+                slot.excluded.add(blockY);
+                slot.excluded.add(blockZ);
+                slot.excluded.add(bounds);
+            }
+        }
+    }
+
+    public static long captureCount() {
+        return captures;
+    }
+
+    public static long latestSequence() {
+        return latestSequence;
     }
 
     public static long latestVersion() {
@@ -188,6 +227,10 @@ public final class OcclusionDepth {
 
     public static float[] latestDepth() {
         return LATEST_DEPTH;
+    }
+
+    public static IntArrayList latestExcluded() {
+        return LATEST_EXCLUDED;
     }
 
     public static float[] latestMatrix() {
@@ -206,6 +249,23 @@ public final class OcclusionDepth {
         return latestZ;
     }
 
+    //? if >= 26.3 {
+    private static RenderPipeline.Builder pipelineBuilder() {
+        return RenderPipeline.builder()
+            .withBindGroupLayout(SAMPLER)
+            .withPushConstantSize(PUSH_CONSTANTS)
+            .withCull(false)
+            .withVertexShader(Identifier.fromNamespaceAndPath("polydium", "core/occlusion_depth"))
+            .withFragmentShader(Identifier.fromNamespaceAndPath("polydium", "core/occlusion_depth"))
+            .withColorTargetState(new ColorTargetState(Optional.empty(), GpuFormat.R32_FLOAT, WRITE_RED))
+            .withPrimitiveTopology(PrimitiveTopology.TRIANGLES);
+    }
+
+    private static boolean canGather() {
+        return !"OpenGL".equals(RenderSystem.getDevice().getDeviceInfo().backendName()) || GL.getCapabilities().GL_ARB_texture_gather;
+    }
+    //?}
+
     private static void complete(Slot slot, long captureGeneration) {
         slot.pending = false;
 
@@ -217,9 +277,12 @@ public final class OcclusionDepth {
         }
 
         System.arraycopy(slot.matrix, 0, LATEST_MATRIX, 0, LATEST_MATRIX.length);
+        LATEST_EXCLUDED.clear();
+        LATEST_EXCLUDED.addAll(slot.excluded);
         latestX = slot.x;
         latestY = slot.y;
-        latestZ = slot.z;
+        latestZ        = slot.z;
+        latestSequence = slot.sequence;
         latestVersion ++;
     }
 
@@ -247,7 +310,9 @@ public final class OcclusionDepth {
 
         private final GpuBuffer buffer = RenderSystem.getDevice().createBuffer(() -> "Polydium occlusion readback", BUFFER_USAGE, /*? if >= 1.21.11 {*/(long) TEXELS * Float.BYTES/*?} else {*//*TEXELS * Float.BYTES*//*?}*/);
         private final float[]   matrix = new float[16];
+        private final IntArrayList excluded = new IntArrayList();
         private boolean         pending;
+        private long            sequence;
         private double          x;
         private double          y;
         private double          z;

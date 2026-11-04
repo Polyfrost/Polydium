@@ -176,6 +176,14 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             "org.polyfrost.polydium.mixin.client.perf.opengl.MixinGlBufferStorageCoherent"
     };
 
+    private static final Map<String, String[]> REQUIRES = Map.of(
+            "OcclusionBoundsBuffers", new String[]{"OcclusionBoundsVertex"},
+            "OcclusionBoundsSection", new String[]{"OcclusionRegion", "OcclusionBoundsInfo", "OcclusionBoundsBuffers", "OcclusionBoundsVertex"},
+            "OcclusionBoundsSprite", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"},
+            "OcclusionBoundsConsumer", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"},
+            "OcclusionCull", new String[]{"OcclusionRegion", "OcclusionListAccessor"}
+    );
+
     public static boolean isDisabled(String mixinClassName) {
         if (ALL_DISABLED)
             return true;
@@ -195,6 +203,16 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
             for (String other : GL_BUFFER_UNIT) {
                 if (contains(DISABLED, other))
+                    return true;
+            }
+        }
+
+        for (Map.Entry<String, String[]> entry : REQUIRES.entrySet()) {
+            if (!mixinClassName.contains(entry.getKey()))
+                continue;
+
+            for (String required : entry.getValue()) {
+                if (contains(DISABLED, required))
                     return true;
             }
         }
@@ -271,6 +289,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             return xaeroCompatible(targetClassName, mixinClassName);
 
         if (contains(OPT_IN, mixinClassName) && !contains(ENABLED, mixinClassName))
+            return false;
+
+        if ((mixinClassName.contains("OcclusionBounds") || mixinClassName.contains("OcclusionRegion") || mixinClassName.contains("WaitMeter")) && !isEnabled("OcclusionCull"))
             return false;
 
         if (mixinClassName.contains("VulkanBackendList") && !vulkanBackend())

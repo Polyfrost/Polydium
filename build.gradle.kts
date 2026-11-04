@@ -224,7 +224,17 @@ loomExt.runs.configureEach {
     optionalProperty("polydium.quickPlay")?.let { programArgs("--quickPlaySingleplayer", it) }
 }
 
+val sodiumTestClasses = tasks.register<Sync>("sodiumTestClasses") {
+    val sodium = sourceSets.main.get().compileClasspath.filter { it.name.startsWith("sodium-") }
+
+    from({ sodium.map { zipTree(it) } }) {
+        include("net/caffeinemc/mods/sodium/**")
+    }
+    into(layout.buildDirectory.dir("sodium-test-classes"))
+}
+
 tasks.test {
+    classpath += files(sodiumTestClasses)
     useJUnitPlatform()
     systemProperty("fabric.classPathGroups", modOutputGroup)
     testLogging {
