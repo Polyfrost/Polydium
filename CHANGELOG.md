@@ -1,6 +1,3 @@
-## 1.2.1
-- Fixed the "Unlimited" FPS limit being capped at 260 on 1.21.11 and below
-- Fixed a crash on launch and broken post-processing effects with VulkanMod
-- The VulkanMod notice is no longer shown on Minecraft versions where Polydium doesn't have a Vulkan backend
-- Polydium can now be disabled entirely using the `-Dpolydium.disableAll=true` JVM argument
-- Fixed game inputs being bricked after a resource reload if Hide Reload Overlay is enabled with kennytvs-epic-force-close-loading-screen-mod-for-fabric installed
+## 1.2.4
+- Fixed a crash on the Vulkan backend with mods that rely on OpenGL keeping the previous transforms bound, such as Teamviewer (Hoplite)
+- Fixed a crash when opening the OneConfig menu on the Vulkan backend ("Cannot wait on a fence for the current submit")

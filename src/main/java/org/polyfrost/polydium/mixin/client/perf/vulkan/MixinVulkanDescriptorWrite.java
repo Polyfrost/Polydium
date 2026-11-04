@@ -24,6 +24,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.objectweb.asm.Opcodes;
 import org.polyfrost.polydium.client.perf.VulkanDescriptorWrites;
+import org.polyfrost.polydium.client.perf.VulkanLegacyRendering;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -68,7 +69,7 @@ public abstract class MixinVulkanDescriptorWrite {
 
     @ModifyExpressionValue(method = "pushDescriptors", at = @At(value = "FIELD", target = "Lcom/mojang/renderpearl/backend/vulkan/VulkanRenderPass;anyDescriptorDirty:Z", opcode = Opcodes.GETFIELD, ordinal = 0))
     private boolean polydium$writeDescriptors(boolean dirty) {
-        return dirty && !(this.pipeline != null && this.polydium$write());
+        return dirty && !(this.pipeline != null && ((VulkanLegacyRendering.Device) this.device).polydium$pushDescriptors() && this.polydium$write());
     }
 
     @Unique

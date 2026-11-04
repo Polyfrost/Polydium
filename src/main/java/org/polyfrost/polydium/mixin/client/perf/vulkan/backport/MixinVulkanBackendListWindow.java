@@ -4,7 +4,6 @@ package org.polyfrost.polydium.mixin.client.perf.vulkan.backport;
 /*import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.systems.BackendCreationException;
 import com.mojang.logging.LogUtils;
 import org.objectweb.asm.Opcodes;
 import org.polyfrost.polydium.client.VulkanAvailability;
@@ -29,10 +28,9 @@ public class MixinVulkanBackendListWindow {
 
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwCreateWindow(IILjava/lang/CharSequence;JJ)J", remap = false))
     private void polydium$pickVulkan(CallbackInfo ci) {
-        BackendCreationException unavailable = VulkanBackend.checkBackendAvailable();
-        VulkanAvailability.record(unavailable == null ? null : unavailable.getMessage());
+        String unavailable = VulkanAvailability.probe();
         if (unavailable != null) {
-            LogUtils.getLogger().info("Vulkan backend unavailable, using OpenGL: {}", unavailable.getMessage());
+            LogUtils.getLogger().info("Vulkan backend unavailable, using OpenGL: {}", unavailable);
             return;
         }
 

@@ -14,6 +14,7 @@ val renderpearlRenames = mapOf(
     "renderpearl.api.buffers.GpuBuffer" to "blaze3d.buffers.GpuBuffer",
     "renderpearl.api.buffers.GpuBufferSlice" to "blaze3d.buffers.GpuBufferSlice",
     "renderpearl.api.commands.CommandEncoder" to "blaze3d.systems.CommandEncoder",
+    "renderpearl.api.device.BackendCreationException" to "blaze3d.systems.BackendCreationException",
     "renderpearl.api.commands.GpuFence" to "blaze3d.buffers.GpuFence",
     "renderpearl.api.commands.RenderPass" to "blaze3d.systems.RenderPass",
     "renderpearl.api.commands.RenderPassDescriptor" to "blaze3d.systems.RenderPassDescriptor",

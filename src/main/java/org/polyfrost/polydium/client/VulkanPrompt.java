@@ -13,6 +13,7 @@ import net.minecraft.client.gui.components.ImageWidget;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.Nullable;
 import org.polyfrost.polydium.early.EarlyVulkan;
 
 import java.io.IOException;
@@ -33,7 +34,7 @@ public final class VulkanPrompt {
     //? if >= 1.21.11
     private static final Identifier IMAGE = Identifier.fromNamespaceAndPath("polydium", "textures/gui/vulkan_prompt.png");
 
-    private static boolean checked;
+    private static boolean pending;
     //? if >= 1.21.11 && < 26.2
     /*private static boolean vulkanModNoticed;*/
 
@@ -60,31 +61,21 @@ public final class VulkanPrompt {
         }
         *///?}
         //? if >= 1.21.11 {
-        if (checked || mc.player == null || mc/*? if >= 26.2 {*/.gui.screen()/*?} else {*//*.screen*//*?}*/ != null)
+        if (!pending || mc.player == null || mc/*? if >= 26.2 {*/.gui.screen()/*?} else {*//*.screen*//*?}*/ != null)
             return;
-        checked = true;
-        List<Path> markers = markers();
-        if (markers.stream().anyMatch(Files::exists) || EarlyVulkan.switched())
-            return;
+        pending = false;
         //? if >= 26.2 {
-        if ("Vulkan".equalsIgnoreCase(RenderSystem.getDevice().getDeviceInfo().backendName()))
-            return;
+        boolean active = "Vulkan".equalsIgnoreCase(RenderSystem.getDevice().getDeviceInfo().backendName());
         String key = "polydium.vulkanPrompt.message";
         //?} else {
-        /*if (VulkanActive.active)
-            return;
+        /*boolean active = VulkanActive.active;
         String key = "polydium.vulkanPrompt.message.backport";
         *///?}
-        if (VulkanAvailability.unavailableReason() != null)
+        if (!active && !VulkanAvailability.available())
             return;
-        for (Path marker : markers) {
-            try {
-                Files.createDirectories(marker.getParent());
-                Files.writeString(marker, "");
-                break;
-            } catch (IOException ignored) {
-            }
-        }
+        writeMarker(markers());
+        if (active)
+            return;
         mc/*? if >= 26.2 {*/.gui/*?}*/.setScreen(new ConfirmScreen(yes -> {
             if (yes) {
                 //? if >= 26.2 {
@@ -109,6 +100,37 @@ public final class VulkanPrompt {
     }
 
     //? if >= 1.21.11 {
+    // Called from Minecraft.<init> before the window exists, the only point where probing Vulkan is safe
+    public static void probeAtStartup() {
+        //? if < 26.2
+        /*if (Mods.VULKANMOD) return;*/
+        List<Path> markers = markers();
+        if (markers.stream().anyMatch(Files::exists) || EarlyVulkan.switched())
+            return;
+        // Java can't catch a native crash in the probe; the marker left behind keeps it from repeating every launch
+        Path guard = writeMarker(markers);
+        VulkanAvailability.probe();
+        pending = true;
+        if (guard != null) {
+            try {
+                Files.delete(guard);
+            } catch (IOException ignored) {
+            }
+        }
+    }
+
+    private static @Nullable Path writeMarker(List<Path> markers) {
+        for (Path marker : markers) {
+            try {
+                Files.createDirectories(marker.getParent());
+                Files.writeString(marker, "");
+                return marker;
+            } catch (IOException ignored) {
+            }
+        }
+        return null;
+    }
+
     private static List<Path> markers() {
         Path local = FabricLoader.getInstance().getGameDir().resolve("polydium").resolve("vulkan-prompt");
         try {
