@@ -22,7 +22,7 @@ import org.joml.Matrix4f;
 
 public final class OcclusionCuller {
 
-    private static final boolean                            ENABLED         = PolydiumMixinPlugin.isEnabled("OcclusionCull");
+    private static final boolean                            ENABLED         = !PolydiumMixinPlugin.isDisabled("OcclusionCull");
     private static final boolean                            FORCE           = Boolean.getBoolean("polydium.forceOcclusionCull");
     private static final int                                WIDTH           = OcclusionDepth.WIDTH;
     private static final int                                HEIGHT          = OcclusionDepth.HEIGHT;
@@ -137,6 +137,12 @@ public final class OcclusionCuller {
         }
         //?}
 
+        if (!FORCE && !GpuWaitMeter.isGpuBound()) {
+            stopCulling();
+
+            return;
+        }
+
         //? if < 26.2 {
         /*for (int column = 0; column < 16; column += 4)
             MATRIX[column + 2] = (MATRIX[column + 3] - MATRIX[column + 2]) * 0.5F;
@@ -148,12 +154,6 @@ public final class OcclusionCuller {
         //?}
         collectSections(lists);
         releaseAbsentRegions();
-
-        if (!FORCE && !GpuWaitMeter.isGpuBound()) {
-            stopCulling();
-
-            return;
-        }
 
         OcclusionDepth.describeFrame(MATRIX, cameraX, cameraY, cameraZ);
 

@@ -108,17 +108,14 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("VulkanBackendList", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"}),
             Map.entry("GraphicsApiOption", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"}),
             Map.entry("HideReloadOverlay", new String[]{"forcecloseworldloadingscreen"}),
-            Map.entry("FpsLimit", new String[]{"sodiumfpscapfix", "not-enough-fps"})
+            Map.entry("FpsLimit", new String[]{"sodiumfpscapfix", "not-enough-fps"}),
+            Map.entry("WaitMeter", new String[]{"vulkanmod"})
     );
 
     private static final String[] OPT_IN = {"UnfocusedFullscreenThrottle"};
 
     private static boolean vulkanBackend() {
         return !isDisabled("VulkanBackendList") && (contains(ENABLED, "VulkanBackendList") || EarlyVulkan.vulkanAtStartup());
-    }
-
-    public static boolean isEnabled(String fragment) {
-        return contains(ENABLED, fragment) && !isDisabled(fragment);
     }
 
     public static boolean skyboxifyFarSky() {
@@ -291,7 +288,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (contains(OPT_IN, mixinClassName) && !contains(ENABLED, mixinClassName))
             return false;
 
-        if ((mixinClassName.contains("OcclusionBounds") || mixinClassName.contains("OcclusionRegion") || mixinClassName.contains("WaitMeter")) && !isEnabled("OcclusionCull"))
+        if ((mixinClassName.contains("MixinOcclusion") || mixinClassName.contains("WaitMeter")) && isDisabled("OcclusionCull"))
             return false;
 
         if (mixinClassName.contains("VulkanBackendList") && !vulkanBackend())
