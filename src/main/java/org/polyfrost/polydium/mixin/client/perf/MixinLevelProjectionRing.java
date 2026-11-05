@@ -25,10 +25,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+// this cancels getBuffer at its head, so it has to apply after other mods' injectors there, such as Vitrail's projection capture
 //? if >= 26.1 {
-@Mixin(ProjectionMatrixBuffer.class)
+@Mixin(value = ProjectionMatrixBuffer.class, priority = 1100)
 //?} else {
-/*@Mixin(PerspectiveProjectionMatrixBuffer.class)
+/*@Mixin(value = PerspectiveProjectionMatrixBuffer.class, priority = 1100)
 *///?}
 public abstract class MixinLevelProjectionRing implements LevelProjectionRing {
     //? if >= 26.1 {
