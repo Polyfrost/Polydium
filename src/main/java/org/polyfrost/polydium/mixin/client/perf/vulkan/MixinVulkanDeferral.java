@@ -8,6 +8,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
 import com.mojang.renderpearl.api.commands.RenderPassDescriptor;
 import com.mojang.renderpearl.api.textures.GpuTexture;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import com.mojang.renderpearl.backend.api.RenderPassBackend;
 import com.mojang.renderpearl.backend.vulkan.VulkanCommandEncoder;
 import com.mojang.renderpearl.backend.vulkan.VulkanDevice;
@@ -16,7 +17,9 @@ import com.mojang.renderpearl.backend.vulkan.checkpoints.CheckpointExtension;
 import org.joml.Vector4fc;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkCommandBuffer;
+import org.lwjgl.vulkan.VkRect2D;
 import org.polyfrost.polydium.client.perf.VulkanDeferral;
+import org.polyfrost.polydium.client.perf.VulkanLegacyRendering;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -99,6 +102,21 @@ public abstract class MixinVulkanDeferral implements VulkanDeferral.Host {
     @Override
     public void polydium$memoryBarrier(MemoryStack stack) {
         this.memoryBarrier(stack);
+    }
+
+    @Override
+    public void polydium$sampled(GpuTextureView view) {
+        this.polydium$deferral.sampled(view);
+    }
+
+    @Override
+    public boolean polydium$dynamicRendering() {
+        return ((VulkanLegacyRendering.Device) this.device).polydium$dynamicRendering();
+    }
+
+    @Override
+    public void polydium$beginLegacyRenderPass(MemoryStack stack, RenderPassDescriptor descriptor, VkRect2D renderArea) {
+        VulkanLegacyRendering.beginRenderPass(this.device, (VulkanCommandEncoder) (Object) this, this.currentCommandBuffer, descriptor, renderArea);
     }
 
     @Inject(method = "commandBuffer", at = @At("HEAD"))
