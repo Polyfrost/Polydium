@@ -231,6 +231,8 @@ val sodiumTestClasses = tasks.register<Sync>("sodiumTestClasses") {
 }
 
 tasks.test {
+    workingDir = layout.buildDirectory.dir("test-run").get().asFile
+    doFirst { workingDir.mkdirs() }
     classpath += files(sodiumTestClasses)
     useJUnitPlatform()
     systemProperty("fabric.classPathGroups", modOutputGroup)

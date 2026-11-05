@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "id": "polydium-test",
+  "version": "1",
+  "provides": ["yosbr", "config_manager", "defaultoptions"]
+}
