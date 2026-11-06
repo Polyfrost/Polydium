@@ -187,6 +187,8 @@
     "client.perf.iris.MixinGlCommandEncoder",
     "client.perf.iris.MixinHandRenderer",
     //? if >= 26.3
+    "client.perf.iris.MixinIrisOverrideBaseClose",
+    //? if >= 26.3
     "client.perf.iris.MixinIrisRenderingPipeline",
     "client.perf.iris.MixinIrisTimeUniforms",
     "client.perf.iris.MixinLevelRenderer",

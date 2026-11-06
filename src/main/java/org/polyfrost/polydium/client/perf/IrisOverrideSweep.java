@@ -2,6 +2,7 @@ package org.polyfrost.polydium.client.perf;
 
 //? if >= 26.3 {
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.renderpearl.api.pipeline.CompiledRenderPipeline;
 import com.mojang.renderpearl.backend.opengl.GlProgram;
 import com.mojang.renderpearl.backend.opengl.GlRenderPipeline;
 import com.mojang.renderpearl.frontend.FrontendRenderPipeline;
@@ -22,11 +23,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public final class IrisOverrideSweep {
     private static final Logger LOGGER = LoggerFactory.getLogger("polydium/perf");
     private static final Set<Object> DESTROYED = Collections.newSetFromMap(new IdentityHashMap<>());
     private static boolean disabled;
+    private static boolean baseClosed;
 
     private IrisOverrideSweep() {
     }
@@ -43,27 +46,39 @@ public final class IrisOverrideSweep {
         }
     }
 
+    public static void baseClosed() {
+        baseClosed = !disabled;
+    }
+
     public static void tick() {
-        if (DESTROYED.isEmpty()) {
+        if (!baseClosed && DESTROYED.isEmpty()) {
             return;
         }
 
         try {
-            Api.removeLivePrograms(DESTROYED);
-            sweep(overrides());
+            if (!DESTROYED.isEmpty()) {
+                Api.removeLivePrograms(DESTROYED);
+            }
+
+            sweep(overrides(), DESTROYED, IrisOverrideSweep::closeVertexArray);
         } catch (Throwable e) {
             disable(e);
         } finally {
             DESTROYED.clear();
+            baseClosed = false;
         }
     }
 
-    private static void sweep(Map<?, ?> overrides) {
-        for (Object byProgram : overrides.values()) {
-            Iterator<? extends Map.Entry<?, ?>> entries = ((Map<?, ?>) byProgram).entrySet().iterator();
+    static void sweep(Map<?, ?> overrides, Set<Object> destroyedPrograms, Consumer<Object> closeVertexArray) {
+        Iterator<? extends Map.Entry<?, ?>> bases = overrides.entrySet().iterator();
+        while (bases.hasNext()) {
+            Map.Entry<?, ?> base = bases.next();
+            boolean closed = ((CompiledRenderPipeline) base.getKey()).isClosed();
+            Map<?, ?> byProgram = (Map<?, ?>) base.getValue();
+            Iterator<? extends Map.Entry<?, ?>> entries = byProgram.entrySet().iterator();
             while (entries.hasNext()) {
                 Map.Entry<?, ?> entry = entries.next();
-                if (!DESTROYED.contains(entry.getKey())) {
+                if (!closed && !destroyedPrograms.contains(entry.getKey())) {
                     continue;
                 }
 
@@ -78,13 +93,21 @@ public final class IrisOverrideSweep {
 
                 for (Object pipeline : pipelines) {
                     try {
-                        ((GlRenderPipeline) ((FrontendRenderPipeline) pipeline).backendRenderPipeline()).vertexArray().close();
+                        closeVertexArray.accept(pipeline);
                     } catch (RuntimeException e) {
                         LOGGER.warn("Failed to close a stale Iris override", e);
                     }
                 }
             }
+
+            if (byProgram.isEmpty()) {
+                bases.remove();
+            }
         }
+    }
+
+    private static void closeVertexArray(Object pipeline) {
+        ((GlRenderPipeline) ((FrontendRenderPipeline) pipeline).backendRenderPipeline()).vertexArray().close();
     }
 
     private static Map<?, ?> overrides() throws IllegalAccessException, NoSuchFieldException {
