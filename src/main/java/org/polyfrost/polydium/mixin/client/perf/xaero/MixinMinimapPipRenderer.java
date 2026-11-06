@@ -22,6 +22,7 @@ import org.polyfrost.polydium.compat.XaeroMinimapHudCache;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Unique;
+import xaero.common.minimap.MinimapProcessor;
 import xaero.hud.minimap.BuiltInHudModules;
 import xaero.hud.minimap.module.MinimapSession;
 import xaero.hud.minimap.render.MinimapPipRenderState;
@@ -47,10 +48,12 @@ public abstract class MixinMinimapPipRenderer extends PictureInPictureRenderer<P
 
     @Unique
     private boolean polydium$reuse(MinimapPipRenderState state) {
-        int key = Objects.hash(state.getWidth(), state.getHeight(), state.getScale(), state.getMinimapScale(), state.getSize(), state.getBoxSize());
-        if (!polydium$hudCache.reuse(key)) return false;
         MinimapSession session = BuiltInHudModules.MINIMAP.getCurrentSession();
-        if (session != null) session.getProcessor().updateZoom();
+        MinimapProcessor processor = session == null ? null : session.getProcessor();
+        boolean zooming = processor != null && processor.getMinimapZoom() != processor.getTargetZoom();
+        int key = Objects.hash(state.getWidth(), state.getHeight(), state.getScale(), state.getMinimapScale(), state.getSize(), state.getBoxSize());
+        if (!polydium$hudCache.reuse(key, zooming)) return false;
+        if (processor != null) processor.updateZoom();
         return true;
     }
 

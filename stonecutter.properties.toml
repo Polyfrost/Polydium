@@ -21,6 +21,7 @@ publish.curseforge = "1740837"
 
 ["1.21.1"]
 deps.xaerominimap = "ZD6hK4GV"
+deps.xaeroworldmap = "XIR7GzC3"
 mod.mc_compat = "1.21.1"
 mod.mc_releases = ["1.21.1"]
 deps.fabric_api = "0.116.15+1.21.1"
@@ -29,6 +30,7 @@ deps.iris = "1.8.14-beta.1+1.21.1-fabric"
 
 ["1.21.4"]
 deps.xaerominimap = "XsKw9RY8"
+deps.xaeroworldmap = "IoGJS3fE"
 mod.mc_compat = "1.21.4"
 mod.mc_releases = ["1.21.4"]
 deps.fabric_api = "0.119.4+1.21.4"
@@ -38,6 +40,7 @@ deps.skyboxify = "dNqmsXMW"
 
 ["1.21.5"]
 deps.xaerominimap = "UiyvcqIl"
+deps.xaeroworldmap = "kJhXAZVZ"
 mod.mc_compat = "1.21.5"
 mod.mc_releases = ["1.21.5"]
 deps.fabric_api = "0.128.2+1.21.5"
@@ -46,6 +49,7 @@ deps.iris = "1.8.11+1.21.5-fabric"
 
 ["1.21.8"]
 deps.xaerominimap = "bSWbd7fk"
+deps.xaeroworldmap = "WTWCNOyA"
 mod.mc_compat = "1.21.8"
 mod.mc_releases = ["1.21.8"]
 deps.fabric_api = "0.136.1+1.21.8"
@@ -55,6 +59,7 @@ deps.skyboxify = "amGtgssn"
 
 ["1.21.10"]
 deps.xaerominimap = "F8LrvYl9"
+deps.xaeroworldmap = "rWIkQfu0"
 mod.mc_compat = "1.21.10"
 mod.mc_releases = ["1.21.10"]
 deps.fabric_api = "0.138.4+1.21.10"
@@ -64,6 +69,7 @@ deps.skyboxify = "uCGJogDJ"
 
 ["1.21.11"]
 deps.xaerominimap = "VNYP3B0c"
+deps.xaeroworldmap = "ksfmc45B"
 mod.mc_compat = "1.21.11"
 mod.mc_releases = ["1.21.11"]
 deps.fabric_api = "0.141.6+1.21.11"
@@ -75,6 +81,7 @@ deps.skyboxify = "kANba6Nw"
 
 ["26.1"]
 deps.xaerominimap = "kWf58HtH"
+deps.xaeroworldmap = "ZpUBkoFm"
 mod.mc_compat = "~26.1"
 mod.mc_releases = ["26.1", "26.1.1", "26.1.2"]
 deps.fabric_api = "0.155.2+26.1.2"
@@ -85,6 +92,7 @@ deps.skyboxify = "3bBTLzlD"
 
 ["26.2"]
 deps.xaerominimap = "VlMbRW2O"
+deps.xaeroworldmap = "W8qSt5Gs"
 mod.mc_compat = "~26.2"
 mod.mc_releases = ["26.2"]
 deps.fabric_api = "0.157.0+26.2"
@@ -93,7 +101,8 @@ deps.iris = "1.11.4+26.2-fabric"
 deps.skyboxify = "XPGqw2i5"
 
 ["26.3"]
-deps.xaerominimap = "YPkAliDt"
+deps.xaerominimap = "MfxfgXaO"
+deps.xaeroworldmap = "VM8lNSSM"
 mod.mc_compat = "~26.3"
 mod.mc_releases = ["26.3"]
 deps.fabric_api = "0.160.3+26.3"

@@ -220,21 +220,41 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     }
 
     private static boolean xaeroCompatible(String targetClassName, String mixinClassName) {
-        if (!Mods.loaded("xaerominimap") && !Mods.loaded("xaerominimapfair")) return false;
+        boolean worldMap = mixinClassName.endsWith(".MixinMapProcessor");
+        if (worldMap ? !Mods.loaded("xaeroworldmap") : !Mods.loaded("xaerominimap") && !Mods.loaded("xaerominimapfair")) return false;
         boolean compatible;
         try {
-            compatible = xaeroMatches(xaeroNode(targetClassName));
+            ClassNode target = xaeroNode(targetClassName);
+            compatible = worldMap ? xaeroWorldMapMatches(target) : mixinClassName.endsWith(".MixinRadarIconManager") ? xaeroRadarMatches(target) : xaeroMatches(target);
         } catch (Exception e) {
             compatible = false;
         }
-        if (!compatible) LoggerFactory.getLogger("polydium/perf").warn("Installed Xaero's Minimap doesn't match {}, skipping it", mixinClassName);
+        if (!compatible) LoggerFactory.getLogger("polydium/perf").warn("Installed Xaero's {} doesn't match {}, skipping it", worldMap ? "World Map" : "Minimap", mixinClassName);
         return compatible;
+    }
+
+    private static boolean xaeroRadarMatches(ClassNode target) {
+        return xaeroMethod(target, "get") != null && xaeroMethod(target, "reset") != null
+            && target.fields.stream().anyMatch(f -> f.name.equals("DOT"))
+            && target.methods.stream().filter(m -> m.name.startsWith("get"))
+                .allMatch(m -> (m.desc.startsWith("(Lnet/minecraft/world/entity/Entity;") || m.desc.startsWith("(Lnet/minecraft/class_1297;")) && m.desc.endsWith(")Lxaero/common/icon/XaeroIcon;"));
+    }
+
+    private static boolean xaeroWorldMapMatches(ClassNode target) {
+        MethodNode process = xaeroMethod(target, "onRenderProcess");
+        return process != null
+            && xaeroInvokes(process, "xaero/map/region/LeveledRegion", "shouldBeProcessed", "()Z")
+            && xaeroInvokes(process, "xaero/map/region/texture/RegionTexture", "isUploaded", "()Z")
+            && xaeroInvokes(process, "xaero/map/graphics/TextureUploader", "uploadTextures", "()V");
     }
 
     private static boolean xaeroMatches(ClassNode target) throws Exception {
         //? if < 1.21.6 {
         /*MethodNode render = xaeroMethod(target, "renderChunksToFBO");
+        ClassNode processor = xaeroNode("xaero.common.minimap.MinimapProcessor");
         return render != null && target.fields.stream().anyMatch(f -> f.name.equals("rotationFramebuffer"))
+            && render.desc.contains("Lxaero/common/minimap/MinimapProcessor;")
+            && xaeroMethod(processor, "getMinimapZoom") != null && xaeroMethod(processor, "getTargetZoom") != null
             && xaeroArgs(render, Type.INT_TYPE) >= 3 && xaeroArgs(render, Type.BOOLEAN_TYPE) >= 3
             && xaeroMethod(xaeroNode("xaero.hud.compat.mods.ImmediatelyFastHelper"), "triggerBatchingBuffersFlush") != null;
         *///?} else {
@@ -242,7 +262,10 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         for (String getter : List.of("getWidth", "getHeight", "getScale", "getMinimapScale", "getSize", "getBoxSize")) {
             if (xaeroMethod(state, getter) == null) return false;
         }
-        if (xaeroMethod(xaeroNode("xaero.common.minimap.MinimapProcessor"), "updateZoom") == null) return false;
+        ClassNode processor = xaeroNode("xaero.common.minimap.MinimapProcessor");
+        for (String method : List.of("updateZoom", "getMinimapZoom", "getTargetZoom")) {
+            if (xaeroMethod(processor, method) == null) return false;
+        }
         if (xaeroMethod(target, "textureIsReadyToBlit") != null) return false;
         //? if >= 26.3 {
         MethodNode prepare = xaeroMethod(target, "prepare");
@@ -264,6 +287,13 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         int n = 0;
         for (Type arg : Type.getArgumentTypes(method.desc)) if (arg.equals(type)) n++;
         return n;
+    }
+
+    private static boolean xaeroInvokes(MethodNode method, String owner, String name, String desc) {
+        for (AbstractInsnNode insn : method.instructions) {
+            if (insn instanceof MethodInsnNode call && call.owner.equals(owner) && call.name.equals(name) && call.desc.equals(desc)) return true;
+        }
+        return false;
     }
 
     private static boolean xaeroInvokes(MethodNode method, String name) {

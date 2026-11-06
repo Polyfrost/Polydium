@@ -203,6 +203,10 @@
     //"client.perf.xaero.MixinMinimapFBORenderer",
     //? if xaerominimap && >= 1.21.6
     "client.perf.xaero.MixinMinimapPipRenderer",
+    //? if xaerominimap
+    "client.perf.xaero.MixinRadarIconManager",
+    //? if xaeroworldmap
+    "client.perf.xaero.MixinMapProcessor",
     "client.perf.sodium.MixinAnimatedSpriteMarksAnimationState",
     "client.perf.sodium.MixinAnimatedSpriteMarksManager",
     "client.perf.sodium.MixinAnimatedSpriteMarksRegion",
