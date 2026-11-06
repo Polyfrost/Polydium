@@ -30,7 +30,7 @@ public final class ImmediateDrawRing {
             ring = new MappableRingBuffer(() -> "Polydium immediate draw ring", USAGE, size);
         }
         GpuBuffer target = ring.currentBuffer();
-        ByteBuffer data = ((PersistentRingBuffer) ring).polydium$persistentData(target);
+        ByteBuffer data = PersistentRingBuffer.persistentData(ring, target);
         if (data != null) {
             data.put(offset, src, src.position(), length);
         } else {
@@ -53,12 +53,17 @@ public final class ImmediateDrawRing {
         }
         if (demand > size && size < MAX_SIZE) {
             size = (int) Math.min(MAX_SIZE, Long.highestOneBit(demand - 1) << 1);
-            if (ring != null) {
-                ring.close();
-                ring = null;
-            }
+            close();
         }
         demand = 0;
+    }
+
+    public static void close() {
+        if (ring != null) {
+            ring.close();
+            ring = null;
+        }
+        cursor = 0;
     }
 }
 *///?}

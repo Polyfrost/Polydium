@@ -86,7 +86,7 @@ public abstract class MixinDynamicGpuDataPersistentWrite {
     )
     private GpuBufferSlice.MappedView polydium$writeThroughPersistentView(GpuBufferSlice slice, boolean read, boolean write, Operation<GpuBufferSlice.MappedView> original) {
         if ((slice.buffer() instanceof VulkanGpuBuffer.Direct || slice.buffer() instanceof GlBuffer.Direct) && !slice.buffer().isClosed()) {
-            ByteBuffer data = ((PersistentRingBuffer) this.ringBuffer).polydium$persistentData(slice.buffer());
+            ByteBuffer data = PersistentRingBuffer.persistentData(this.ringBuffer, slice.buffer());
             if (data != null) {
                 ByteBuffer block = data.slice((int) slice.offset(), (int) slice.length()).order(ByteOrder.nativeOrder());
                 return new GpuBufferSlice.MappedView(slice, block, POLYDIUM$KEEP_MAPPED);

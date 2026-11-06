@@ -21,7 +21,7 @@ public final class UniformRing {
         GpuBuffer target = ring.currentBuffer();
         //? if >= 26.2 {
         if (target instanceof VulkanGpuBuffer.Direct || target instanceof GlBuffer.Direct) {
-            ByteBuffer data = ((PersistentRingBuffer) ring).polydium$persistentData(target);
+            ByteBuffer data = PersistentRingBuffer.persistentData(ring, target);
             if (data != null) {
                 data.put(0, src, src.position(), src.remaining());
                 return target;

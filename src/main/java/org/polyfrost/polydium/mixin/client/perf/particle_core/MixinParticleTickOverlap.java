@@ -95,7 +95,7 @@ public abstract class MixinParticleTickOverlap implements ParticleTickOverlap.Fi
             if (!group.add(particle))
                 particle.getParticleLimit().ifPresent(limit -> updateCount(limit, -1));
             //?} else if >= 1.21.11 {
-            /*if (ParticleReservoir.accepts(group.size()))
+            /*if (ParticleReservoir.accepts(group.getAll()))
                 group.add(particle);
             else
                 particle.getParticleLimit().ifPresent(limit -> updateCount(limit, -1));

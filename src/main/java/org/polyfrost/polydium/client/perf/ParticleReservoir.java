@@ -1,22 +1,27 @@
 package org.polyfrost.polydium.client.perf;
 
+import com.google.common.collect.EvictingQueue;
+
+import java.util.Queue;
 import java.util.concurrent.ThreadLocalRandom;
 
 public final class ParticleReservoir {
-    private static final int MAX = 16384;
-    private static final int SOFT = 12288;
-
     private ParticleReservoir() {
     }
 
-    public static boolean accepts(int size) {
-        if (size >= MAX) {
-            return false;
-        }
-        if (size < SOFT) {
+    public static boolean accepts(Queue<?> particles) {
+        if (!(particles instanceof EvictingQueue<?> bounded)) {
             return true;
         }
-        float free = (MAX - size) / (float) (MAX - SOFT);
-        return ThreadLocalRandom.current().nextFloat() < free * free;
+        int free = bounded.remainingCapacity();
+        if (free == 0) {
+            return false;
+        }
+        int band = (particles.size() + free) / 4;
+        if (free >= band) {
+            return true;
+        }
+        float fraction = free / (float) band;
+        return ThreadLocalRandom.current().nextFloat() < fraction * fraction;
     }
 }

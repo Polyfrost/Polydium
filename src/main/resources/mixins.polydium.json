@@ -658,6 +658,8 @@
     //"client.perf.MixinImmediateDrawRing",
     //? if >= 1.21.11 && < 26.2
     //"client.perf.MixinImmediateDrawRingFrame",
+    //? if >= 1.21.11 && < 26.2
+    //"client.perf.MixinImmediateDrawRingClose",
     //? if >= 1.21.8 && < 26.2
     //"client.perf.MixinFenceBatchRingBuffer",
     //? if >= 26.2

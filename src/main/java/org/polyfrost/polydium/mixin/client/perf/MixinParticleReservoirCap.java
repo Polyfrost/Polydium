@@ -18,7 +18,7 @@ public abstract class MixinParticleReservoirCap {
 
     @WrapOperation(method = "tick", require = 0, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/particle/ParticleGroup;add(Lnet/minecraft/client/particle/Particle;)V"))
     private void polydium$reservoirCap(ParticleGroup<?> group, Particle particle, Operation<Void> original) {
-        if (ParticleReservoir.accepts(group.size())) {
+        if (ParticleReservoir.accepts(group.getAll())) {
             original.call(group, particle);
         } else {
             particle.getParticleLimit().ifPresent(limit -> this.updateCount(limit, -1));
