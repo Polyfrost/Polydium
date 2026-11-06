@@ -31,6 +31,9 @@ public class PolydiumToggles {
     public static boolean spriteMipRelease = true;
     @Switch(title = "Merge Text Decorations", description = "Draws each underlined or strikethrough run of text as one quad instead of one per character.")
     public static boolean textEffectMerge = true;
+    //? if < 26.1
+    //@Switch(title = "Cutout Opaque Items", description = "Draws items whose textures have no semi-transparent pixels without blending, as MC 26.1+ does.")
+    public static boolean opaqueItemCutout = false;
     //? if < 1.21.4
     //@Switch(title = "Single-Pass Text Shadows", description = "Draws text shadows in the same pass as the text, as MC 1.21.4+ does.")
     public static boolean singlePassTextShadow = true;

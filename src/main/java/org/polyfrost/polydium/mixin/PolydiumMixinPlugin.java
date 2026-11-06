@@ -182,7 +182,13 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             "OcclusionBoundsSprite", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"},
             "OcclusionBoundsConsumer", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"},
             "OcclusionCull", new String[]{"OcclusionRegion", "OcclusionListAccessor"},
-            "ImmediateDrawRing", new String[]{"ImmediateDrawRingSeparate", "ImmediateDrawRingEmulated", "ImmediateDrawRingFrame", "ImmediateDrawRingClose"}
+            "ImmediateDrawRing", new String[]{"ImmediateDrawRingSeparate", "ImmediateDrawRingEmulated", "ImmediateDrawRingFrame", "ImmediateDrawRingClose"},
+            //? if < 1.21.10 {
+            /*"OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency", "OpaqueParticleRenderOrder"},
+            *///?} else {
+            "OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency"},
+            //?}
+            "OpaqueItemCutout", new String[]{"SpriteContentsTransparency", "ItemTintLayerAccessor"}
     );
 
     public static boolean isDisabled(String mixinClassName) {
@@ -380,7 +386,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith("MixinVulkanOwoBlur") && !Mods.loaded("owo"))
         return false;
 
-        if (mixinClassName.endsWith("MixinIrisUppercasePaths") && !Mods.loaded("iris"))
+        if ((mixinClassName.endsWith("MixinIrisUppercasePaths") || mixinClassName.endsWith("MixinIrisOverrideBaseClose")) && !Mods.loaded("iris"))
             return false;
 
         if (mixinClassName.endsWith("MixinBlocksParallelCache") && Mods.loaded("modernfix")
@@ -520,6 +526,12 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             for (MethodNode method : targetClass.methods)
                 if (method.name.equals("setTransitionEntity") && method.desc.endsWith(";)V"))
                     shareTransitionRef(method);
+            return;
+        }
+
+        if (mixinClassName.endsWith(".MixinFaceCullCacheFix")) {
+            for (MethodNode method : targetClass.methods)
+                fixBitMaskEqualsOne(method);
             return;
         }
 
@@ -1176,6 +1188,23 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             method.instructions.remove(flag);
             method.instructions.set(init, new MethodInsnNode(Opcodes.INVOKESTATIC, CALLBACK_INFO_POOL, "acquire", "(Ljava/lang/String;)L" + CALLBACK_INFO + ";"));
             method.instructions.set(check, new MethodInsnNode(Opcodes.INVOKESTATIC, CALLBACK_INFO_POOL, "release", "(L" + CALLBACK_INFO + ";)Z"));
+        }
+    }
+
+    private static void fixBitMaskEqualsOne(MethodNode method) {
+        Set<Integer> masks = new HashSet<>();
+        for (AbstractInsnNode insn : method.instructions)
+            if (insn.getOpcode() == Opcodes.ISHL && insn.getNext() instanceof VarInsnNode store && store.getOpcode() == Opcodes.ISTORE)
+                masks.add(store.var);
+
+        for (AbstractInsnNode insn = method.instructions.getFirst(); insn != null; insn = insn.getNext()) {
+            if (insn.getOpcode() != Opcodes.IAND || !(insn.getPrevious() instanceof VarInsnNode mask) || mask.getOpcode() != Opcodes.ILOAD || !masks.contains(mask.var))
+                continue;
+            AbstractInsnNode one = insn.getNext();
+            if (one == null || one.getOpcode() != Opcodes.ICONST_1 || !(one.getNext() instanceof JumpInsnNode jump) || jump.getOpcode() != Opcodes.IF_ICMPNE)
+                continue;
+            method.instructions.remove(one);
+            jump.setOpcode(Opcodes.IFEQ);
         }
     }
 
