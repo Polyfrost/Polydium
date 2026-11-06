@@ -12,6 +12,7 @@ public final class ImmediateDrawRing {
     private static final int MAX_SIZE = 1 << 30;
 
     private static MappableRingBuffer ring;
+    private static GpuBuffer active;
     private static int size = 4 << 20;
     private static int cursor;
     private static long demand;
@@ -29,7 +30,7 @@ public final class ImmediateDrawRing {
     }
 
     public static boolean holds(GpuBuffer buffer) {
-        return ring != null && buffer == ring.currentBuffer();
+        return buffer == active;
     }
 
     public static int upload(ByteBuffer src, int align) {
@@ -42,12 +43,12 @@ public final class ImmediateDrawRing {
         if (ring == null) {
             ring = new MappableRingBuffer(() -> "Polydium immediate draw ring", USAGE, size);
         }
-        GpuBuffer target = ring.currentBuffer();
-        ByteBuffer data = PersistentRingBuffer.persistentData(ring, target);
+        active = ring.currentBuffer();
+        ByteBuffer data = PersistentRingBuffer.persistentData(ring, active);
         if (data != null) {
             data.put(offset, src, src.position(), length);
         } else {
-            try (GpuBuffer.MappedView view = RenderSystem.getDevice().createCommandEncoder().mapBuffer(target.slice(offset, length), false, true)) {
+            try (GpuBuffer.MappedView view = RenderSystem.getDevice().createCommandEncoder().mapBuffer(active.slice(offset, length), false, true)) {
                 view.data().put(0, src, src.position(), length);
             }
         }
@@ -56,10 +57,11 @@ public final class ImmediateDrawRing {
     }
 
     public static GpuBuffer buffer() {
-        return ring.currentBuffer();
+        return active;
     }
 
     public static void endFrame() {
+        active = null;
         if (cursor > 0) {
             ring.rotate();
             cursor = 0;
@@ -76,6 +78,7 @@ public final class ImmediateDrawRing {
             ring.close();
             ring = null;
         }
+        active = null;
         cursor = 0;
     }
 }
