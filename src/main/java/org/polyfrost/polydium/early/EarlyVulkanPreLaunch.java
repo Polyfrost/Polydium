@@ -10,6 +10,14 @@ import oshi.hardware.GraphicsCard;
 public final class EarlyVulkanPreLaunch implements PreLaunchEntrypoint {
     @Override
     public void onPreLaunch() {
+        detect(/*? if >= 26.2 {*/true/*?} else {*//*false*//*?}*/);
+    }
+
+    public void beforeMixinSelection() {
+        detect(true);
+    }
+
+    private void detect(boolean decide) {
         //? if >= 1.21.11 {
         if (Boolean.getBoolean("polydium.disableAll") || EarlyVulkan.discreteGpuKnown())
             return;
@@ -18,10 +26,9 @@ public final class EarlyVulkanPreLaunch implements PreLaunchEntrypoint {
             for (GraphicsCard card : new SystemInfo().getHardware().getGraphicsCards())
                 discrete |= EarlyVulkan.isDiscreteName(card.getVendor() + " " + card.getName());
             EarlyVulkan.recordDiscreteGpu(discrete);
-            // 26.2+ reads options.txt after this, so the run that had no GPU result can still finish this launch.
-            // Older versions choose their mixins before now and pick this up on the next launch.
-            //? if >= 26.2
-            new EarlyVulkan();
+            // Older versions must not change the backend after their Vulkan mixins were selected.
+            if (decide)
+                new EarlyVulkan();
         } catch (Throwable ignored) {
         }
         //?}

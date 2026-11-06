@@ -136,16 +136,36 @@ class EarlyVulkanTest {
         assertFalse(EarlyVulkan.discreteGpuKnown())
     }
 
-    //? if >= 26.2 {
     @Test
-    fun preLaunchDecidesInTheSameLaunch() {
+    fun earlyGpuDetectionDecidesInTheSameLaunch() {
         useRealGpuCheck()
 
-        EarlyVulkanPreLaunch().onPreLaunch()
+        EarlyVulkanPreLaunch().beforeMixinSelection()
 
         assertTrue(Files.exists(marker))
     }
 
+    //? if < 26.2 {
+    /*@Test
+    fun gpuDetectionSelectsVulkanBeforeMixinDecision() {
+        EarlyVulkanPreLaunch().beforeMixinSelection()
+
+        assertEquals("vulkan", EarlyVulkan.graphicsApi())
+        assertTrue(EarlyVulkan.switchPending())
+        assertTrue(EarlyVulkan.vulkanAtStartup())
+    }
+
+    @Test
+    fun lateGpuDetectionDoesNotChangeBackendAfterMixinDecision() {
+        EarlyVulkanPreLaunch().onPreLaunch()
+
+        assertTrue(EarlyVulkan.discreteGpuKnown())
+        assertEquals("default", EarlyVulkan.graphicsApi())
+        assertFalse(Files.exists(marker))
+    }
+    *///?}
+
+    //? if >= 26.2 {
     @Test
     fun preLaunchFinishesRetryMarker() {
         useRealGpuCheck()
