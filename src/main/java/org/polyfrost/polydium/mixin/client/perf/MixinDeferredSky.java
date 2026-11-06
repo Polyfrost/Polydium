@@ -31,6 +31,8 @@ import net.minecraft.client.renderer.state.level.SkyRenderState;
 //?} else {
 /*import net.minecraft.client.renderer.state.SkyRenderState;
 *///?}
+//? if >= 26.3
+import org.polyfrost.polydium.client.perf.MainPassSwap;
 import org.polyfrost.polydium.client.perf.SkyFarPlane;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -46,9 +48,6 @@ public abstract class MixinDeferredSky {
     //? if >= 26.3 {
     @Shadow @Final
     private GameRenderer gameRenderer;
-
-    @Unique
-    private RenderPass polydium$afterSkyPass;
 
     @Unique
     private Boolean polydium$vulkan;
@@ -87,15 +86,12 @@ public abstract class MixinDeferredSky {
             original.call(frame, pass);
             return;
         }
-        if (this.polydium$afterSkyPass != null) {
-            this.polydium$afterSkyPass.close();
-        }
         RenderTarget mainTarget = this.gameRenderer.mainRenderTarget();
         pass.close();
         SkyFarPlane.drawDeferred(null);
         RenderPass afterSky = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "Main", mainTarget.getColorTextureView(), Optional.empty(), mainTarget.getDepthTextureView(), OptionalDouble.empty());
         RenderSystem.bindDefaultUniforms(afterSky);
-        this.polydium$afterSkyPass = afterSky;
+        MainPassSwap.reopened(afterSky);
         original.call(frame, afterSky);
     }
 
@@ -105,10 +101,9 @@ public abstract class MixinDeferredSky {
     )
     private void polydium$continueAfterSky(LevelRenderer renderer, ChunkSectionsToRender sections, FeatureRenderDispatcher.PreparedFrame frame, RenderPass pass, Operation<Void> original, @Local LocalRef<RenderPass> mainPass) {
         original.call(renderer, sections, frame, pass);
-        RenderPass afterSky = this.polydium$afterSkyPass;
-        if (afterSky != null) {
-            this.polydium$afterSkyPass = null;
-            mainPass.set(afterSky);
+        RenderPass reopened = MainPassSwap.take();
+        if (reopened != null) {
+            mainPass.set(reopened);
         }
     }
     //?} else if >= 26.2 {

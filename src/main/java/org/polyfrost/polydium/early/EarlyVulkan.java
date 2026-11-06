@@ -26,6 +26,10 @@ public final class EarlyVulkan implements LanguageAdapter {
 
     private static final String MIXIN = "org.polyfrost.polydium.mixin.client.perf.vulkan.MixinAutoVulkan";
 
+    //? if >= 26.2 {
+    private static final String CLEANUP_MIXIN = "org.polyfrost.polydium.mixin.client.perf.vulkan.MixinKeepVulkanOptions";
+    //?}
+
     public static final int BACKEND_FIX_VERSION = 4892;
 
     private static final Pattern DISCRETE_ARC = Pattern.compile("arc (pro )?(a\\d{2,3}|b[5-9]\\d{1,2})");
@@ -34,6 +38,10 @@ public final class EarlyVulkan implements LanguageAdapter {
             + "|radeon vii|vega frontier|radeon (ai )?pro (wx? ?\\d{4}|r\\d{4})");
 
     private static Boolean vulkanAtStartup;
+
+    //? if >= 26.2 {
+    private static List<String> createdOptions;
+    //?}
 
     public EarlyVulkan() {
         //? if >= 1.21.11 {
@@ -139,41 +147,124 @@ public final class EarlyVulkan implements LanguageAdapter {
     public static boolean vulkanAtStartup() {
         if (vulkanAtStartup == null) {
             boolean vulkan = "vulkan".equals(graphicsApi());
-            boolean clean = true;
+            boolean unclean = false;
+            boolean startFailed = false;
             try {
-                clean = !Files.readAllLines(FabricLoader.getInstance().getGameDir().resolve("options.txt")).contains("startedCleanly:false");
+                Path options = FabricLoader.getInstance().getGameDir().resolve("options.txt");
+                boolean exists = Files.exists(options);
+                List<String> lines = exists ? Files.readAllLines(options) : packOptions();
+                unclean = lines.contains("startedCleanly:false");
+                startFailed = unclean && exists && !lines.equals(packOptions());
             } catch (IOException ignored) {
             }
-            if (vulkan && !clean) {
+            if (vulkan && startFailed) {
                 markFailed("last game startup did not finish");
                 setGraphicsApi("default");
             }
-            vulkanAtStartup = vulkan && clean;
+            vulkanAtStartup = vulkan && !unclean;
         }
         return vulkanAtStartup;
     }
 
+    private static List<String> modIds() {
+        List<String> ids = new ArrayList<>();
+        for (ModContainer mod : FabricLoader.getInstance().getAllMods()) {
+            ids.add(mod.getMetadata().getId());
+            ids.addAll(mod.getMetadata().getProvides());
+        }
+        return ids;
+    }
+
+    public static Path firstCopied(Path configDir, List<String> modIds, String file) {
+        for (String id : modIds) {
+            Path copied = switch (id) {
+                case "yosbr" -> configDir.resolve("yosbr").resolve(file);
+                case "config_manager" -> configDir.resolve("modpack_defaults").resolve(file);
+                default -> null;
+            };
+            if (copied != null && Files.exists(copied))
+                return copied;
+        }
+        return null;
+    }
+
+    private static List<String> packOptions() throws IOException {
+        FabricLoader loader = FabricLoader.getInstance();
+        Path copied = firstCopied(loader.getConfigDir(), modIds(), "options.txt");
+        if (copied != null)
+            return Files.readAllLines(copied);
+        if (!loader.isModLoaded("defaultoptions"))
+            return List.of();
+        Path defaults = loader.getConfigDir().resolve("defaultoptions");
+        Path extraOptions = defaults.resolve("extra").resolve("options.txt");
+        if (Files.exists(extraOptions))
+            return Files.readAllLines(extraOptions);
+        Path defaultOptions = defaults.resolve("options.txt");
+        if (Files.exists(defaultOptions))
+            return Files.readAllLines(defaultOptions).stream().filter(line -> !line.startsWith("key_")).toList();
+        return List.of();
+    }
+
     //? if >= 1.21.11 {
+    private static boolean mixinDisabled(String mixin) {
+        for (String fragment : System.getProperty("polydium.disable", "").split(","))
+            if (!fragment.isBlank() && mixin.contains(fragment.trim()))
+                return true;
+        return false;
+    }
+
+    private static void carryPackGraphicsApi() throws IOException {
+        if (Files.exists(graphicsApiFile()))
+            return;
+        FabricLoader loader = FabricLoader.getInstance();
+        Path config = loader.getConfigDir();
+        List<String> mods = modIds();
+        Path pack = firstCopied(config, mods, "polydium/graphics-api");
+        if (pack == null && loader.isModLoaded("defaultoptions")) {
+            String extra = "defaultoptions/extra/polydium/graphics-api";
+            pack = Files.exists(config.resolve(extra)) ? config.resolve(extra) : firstCopied(config, mods, "config/" + extra);
+        }
+        if (pack == null)
+            return;
+        Files.createDirectories(graphicsApiFile().getParent());
+        Files.copy(pack, graphicsApiFile());
+    }
+
     private static void preferVulkan() throws IOException {
+        if (Boolean.getBoolean("polydium.disableAll") || mixinDisabled(MIXIN))
+            return;
+        carryPackGraphicsApi();
+
         //? if >= 26.2 {
         boolean retry = "done".equals(markerState());
         //?} else {
         /*boolean retry = false;
         *///?}
-        if (!retry && Files.exists(marker()) && (switched()
-                || Files.getLastModifiedTime(marker()).toInstant().isAfter(Instant.now().minus(Duration.ofDays(30)))))
+        boolean decided = !retry && Files.exists(marker()) && (switched()
+                || Files.getLastModifiedTime(marker()).toInstant().isAfter(Instant.now().minus(Duration.ofDays(30))));
+        //? if < 26.2 {
+        /*if (decided)
             return;
-        if (Boolean.getBoolean("polydium.disableAll"))
-            return;
-        for (String fragment : System.getProperty("polydium.disable", "").split(","))
-            if (!fragment.isBlank() && MIXIN.contains(fragment.trim()))
-                return;
+        *///?}
 
         Path options = FabricLoader.getInstance().getGameDir().resolve("options.txt");
-        if (!Files.exists(options))
+        //? if >= 26.2 {
+        if (Files.isSymbolicLink(options) && !Files.exists(options))
             return;
-        options = options.toRealPath();
-        List<String> lines = new ArrayList<>(Files.readAllLines(options));
+        //?}
+        List<String> lines = new ArrayList<>();
+        if (Files.exists(options)) {
+            options = options.toRealPath();
+            lines.addAll(Files.readAllLines(options));
+        }
+        List<String> pack = packOptions();
+        //? if >= 26.2 {
+        if (!Files.exists(options) && pack.isEmpty() && mixinDisabled(CLEANUP_MIXIN))
+            return;
+        boolean saved = !lines.isEmpty() && !lines.equals(pack);
+        //?}
+        if (!Files.exists(options))
+            lines.addAll(pack);
 
         int version = 0;
         int index = -1;
@@ -187,19 +278,33 @@ public final class EarlyVulkan implements LanguageAdapter {
                 return;
         }
         //? if >= 26.2 {
-        if (version < BACKEND_FIX_VERSION)
+        String api = graphicsApi();
+        boolean apiUsable = !("vulkan".equals(api) && failed());
+        boolean backendInFile = index >= 0 && !lines.get(index).contains("default");
+        boolean savedOverPack = apiUsable && backendInFile && !Files.exists(options) && Files.exists(graphicsApiFile());
+        if (!savedOverPack && !lines.isEmpty() && version < BACKEND_FIX_VERSION)
             return;
+        if (savedOverPack || (apiUsable && !saved && !backendInFile && !"default".equals(api))) {
+            writeBackend(options, lines, index, api);
+            if (retry)
+                finishSwitch();
+            return;
+        }
         if (retry)
             finishSwitch();
-        if (index >= 0 && !lines.get(index).contains("default"))
+        if (backendInFile) {
+            if (!Files.exists(options))
+                writeOptions(options, lines);
+            return;
+        }
+        if (decided)
             return;
         //?} else {
         /*if (!"default".equals(graphicsApi()))
             return;
         *///?}
 
-        boolean appleArm = System.getProperty("os.name", "").startsWith("Mac") && "aarch64".equals(System.getProperty("os.arch"));
-        boolean vulkan = appleArm || hasDiscreteGpu();
+        boolean vulkan = vulkanEligible();
 
         Files.createDirectories(marker().getParent());
         Files.writeString(marker(), vulkan ? "" : "no");
@@ -209,9 +314,24 @@ public final class EarlyVulkan implements LanguageAdapter {
         //? if < 26.2 {
         /*setGraphicsApi("vulkan");
         *///?} else {
+        writeBackend(options, lines, index, "vulkan");
+        //?}
+    }
+
+    //? if >= 26.2 {
+    private static void writeBackend(Path options, List<String> lines, int index, String api) throws IOException {
+        boolean created = lines.isEmpty() && !Files.exists(options);
+        if (lines.isEmpty())
+            lines.add("version:" + BACKEND_FIX_VERSION);
         if (index >= 0)
             lines.remove(index);
-        lines.add(KEY + "\"vulkan\"");
+        lines.add(KEY + '"' + api + '"');
+        writeOptions(options, lines);
+        if (created)
+            createdOptions = List.copyOf(lines);
+    }
+
+    private static void writeOptions(Path options, List<String> lines) throws IOException {
         Path temp = options.resolveSibling("options.txt.polydium");
         try {
             Files.write(temp, lines);
@@ -219,7 +339,30 @@ public final class EarlyVulkan implements LanguageAdapter {
         } finally {
             Files.deleteIfExists(temp);
         }
-        //?}
+    }
+
+    public static void removeCreatedOptions() {
+        List<String> created = createdOptions;
+        if (created == null)
+            return;
+        createdOptions = null;
+        try {
+            Path options = FabricLoader.getInstance().getGameDir().resolve("options.txt");
+            // Any other content came from another mod during startup
+            if (created.equals(Files.readAllLines(options)))
+                Files.delete(options);
+        } catch (IOException ignored) {
+        }
+    }
+
+    //?}
+
+    private static boolean vulkanEligible() {
+        String forced = System.getProperty("polydium.vulkanEligible");
+        if (forced != null)
+            return Boolean.parseBoolean(forced);
+        boolean appleArm = System.getProperty("os.name", "").startsWith("Mac") && "aarch64".equals(System.getProperty("os.arch"));
+        return appleArm || hasDiscreteGpu();
     }
 
     private static boolean hasDiscreteGpu() {

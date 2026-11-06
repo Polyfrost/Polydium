@@ -4,6 +4,7 @@ package org.polyfrost.polydium.mixin.client.perf.vulkan;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.datafixers.DataFixer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.Options;
 import net.minecraft.client.PreferredGraphicsApi;
@@ -16,7 +17,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(Options.class)
+import java.io.File;
+
+@Mixin(value = Options.class, priority = 900)
 public abstract class MixinKeepVulkanOptions {
     private static final String KEY = "preferredGraphicsBackend";
 
@@ -31,6 +34,11 @@ public abstract class MixinKeepVulkanOptions {
         if (version < EarlyVulkan.BACKEND_FIX_VERSION && backend != null && !(backend.contains("vulkan") && EarlyVulkan.failed()))
             fixed.putString(KEY, backend);
         return fixed;
+    }
+
+    @Inject(method = "<init>", at = @At("TAIL"))
+    private void polydium$removeCreatedOptions(Minecraft minecraft, File gameDirectory, CallbackInfo ci) {
+        EarlyVulkan.removeCreatedOptions();
     }
 
     @Inject(method = "save", at = @At("HEAD"))
