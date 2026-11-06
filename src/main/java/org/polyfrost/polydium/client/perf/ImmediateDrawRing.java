@@ -30,7 +30,7 @@ public final class ImmediateDrawRing {
     }
 
     public static boolean holds(GpuBuffer buffer) {
-        return buffer == active;
+        return buffer != null && buffer == active;
     }
 
     public static int upload(ByteBuffer src, int align) {
