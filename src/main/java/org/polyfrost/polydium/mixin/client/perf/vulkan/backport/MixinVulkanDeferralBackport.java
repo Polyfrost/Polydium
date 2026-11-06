@@ -7,12 +7,15 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.systems.RenderPassBackend;
 import com.mojang.blaze3d.textures.GpuTexture;
+import com.mojang.blaze3d.textures.GpuTextureView;
 import org.joml.Vector4fc;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkCommandBuffer;
+import org.lwjgl.vulkan.VkRect2D;
 import org.polyfrost.polydium.client.perf.VulkanDeferral;
 import org.polyfrost.polydium.vulkan.VulkanCommandEncoder;
 import org.polyfrost.polydium.vulkan.VulkanDevice;
+import org.polyfrost.polydium.vulkan.VulkanGpuTextureView;
 import org.polyfrost.polydium.vulkan.VulkanRenderPass;
 import org.polyfrost.polydium.vulkan.checkpoints.CheckpointExtension;
 import org.polyfrost.polydium.vulkan.compat.RenderPassDescriptor;
@@ -27,6 +30,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.nio.ByteBuffer;
+import java.util.OptionalDouble;
 
 @Mixin(VulkanCommandEncoder.class)
 public abstract class MixinVulkanDeferralBackport implements VulkanDeferral.Host {
@@ -68,6 +72,11 @@ public abstract class MixinVulkanDeferralBackport implements VulkanDeferral.Host
         throw new AssertionError();
     }
 
+    @Shadow
+    private void beginLegacyRenderPass(MemoryStack stack, RenderPassDescriptor descriptor, VulkanGpuTextureView[] colorTextures, RenderPassDescriptor.Attachment<OptionalDouble> depthAttachment, VkRect2D renderArea, int width, int height) {
+        throw new AssertionError();
+    }
+
     @Override
     public VkCommandBuffer polydium$currentCommandBuffer() {
         return this.currentCommandBuffer;
@@ -106,6 +115,26 @@ public abstract class MixinVulkanDeferralBackport implements VulkanDeferral.Host
     @Override
     public void polydium$memoryBarrier(MemoryStack stack) {
         this.memoryBarrier(stack);
+    }
+
+    @Override
+    public void polydium$sampled(GpuTextureView view) {
+        this.polydium$deferral.sampled(view);
+    }
+
+    @Override
+    public boolean polydium$dynamicRendering() {
+        return this.device.dynamicRendering();
+    }
+
+    @Override
+    public void polydium$beginLegacyRenderPass(MemoryStack stack, RenderPassDescriptor descriptor, VkRect2D renderArea) {
+        VulkanGpuTextureView[] colorTextures = new VulkanGpuTextureView[descriptor.colorAttachments().size()];
+        for (int index = 0; index < colorTextures.length; index++) {
+            RenderPassDescriptor.Attachment<?> color = descriptor.colorAttachments().get(index);
+            colorTextures[index] = color != null ? (VulkanGpuTextureView) color.textureView() : null;
+        }
+        this.beginLegacyRenderPass(stack, descriptor, colorTextures, descriptor.depthAttachment(), renderArea, VulkanDeferral.outputWidth(descriptor), VulkanDeferral.outputHeight(descriptor));
     }
 
     @Inject(method = "commandBuffer", at = @At("HEAD"))
