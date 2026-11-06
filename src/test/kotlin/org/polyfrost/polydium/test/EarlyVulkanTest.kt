@@ -3,6 +3,7 @@ package org.polyfrost.polydium.test
 import net.fabricmc.loader.api.FabricLoader
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -10,8 +11,12 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.polyfrost.polydium.early.EarlyVulkan
+import org.polyfrost.polydium.early.EarlyVulkanPreLaunch
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.FileTime
+import java.time.Duration
+import java.time.Instant
 
 class EarlyVulkanTest {
 
@@ -59,6 +64,120 @@ class EarlyVulkanTest {
     }
 
     //? if >= 1.21.11 {
+    private fun useRealGpuCheck() {
+        assumeFalse(System.getProperty("os.name", "").startsWith("Mac") && System.getProperty("os.arch") == "aarch64")
+        System.clearProperty("polydium.vulkanEligible")
+    }
+
+    @Test
+    fun unknownGpuKeepsRetryMarker() {
+        useRealGpuCheck()
+        Files.createDirectories(polydiumDir)
+        Files.writeString(marker, "done")
+
+        EarlyVulkan()
+
+        assertEquals("done", Files.readString(marker))
+    }
+
+    @Test
+    fun foundGpuOverridesNegativeMarker() {
+        Files.createDirectories(polydiumDir)
+        Files.writeString(marker, "no")
+
+        EarlyVulkan()
+
+        assertEquals("", Files.readString(marker))
+    }
+
+    @Test
+    fun negativeMarkerStandsWithoutGpu() {
+        System.setProperty("polydium.vulkanEligible", "false")
+        Files.createDirectories(polydiumDir)
+        Files.writeString(marker, "no")
+        val written = FileTime.from(Instant.now().minus(Duration.ofDays(1)))
+        Files.setLastModifiedTime(marker, written)
+
+        EarlyVulkan()
+
+        assertEquals(written, Files.getLastModifiedTime(marker))
+    }
+
+    @Test
+    fun staleGpuResultDecidesNothing() {
+        useRealGpuCheck()
+        EarlyVulkan.recordDiscreteGpu(true)
+        Files.setLastModifiedTime(polydiumDir.resolve("discrete-gpu"), FileTime.from(Instant.now().minus(Duration.ofDays(31))))
+
+        EarlyVulkan()
+
+        assertFalse(Files.exists(marker))
+    }
+
+    @Test
+    fun preLaunchDetectsGpuWhereEarlyVulkanCannot() {
+        useRealGpuCheck()
+
+        EarlyVulkanPreLaunch().onPreLaunch()
+
+        assertTrue(EarlyVulkan.discreteGpuKnown())
+    }
+
+    @Test
+    fun disableAllSkipsGpuDetection() {
+        useRealGpuCheck()
+        System.setProperty("polydium.disableAll", "true")
+        try {
+            EarlyVulkanPreLaunch().onPreLaunch()
+        } finally {
+            System.clearProperty("polydium.disableAll")
+        }
+
+        assertFalse(EarlyVulkan.discreteGpuKnown())
+    }
+
+    @Test
+    fun earlyGpuDetectionDecidesInTheSameLaunch() {
+        useRealGpuCheck()
+
+        EarlyVulkanPreLaunch().beforeMixinSelection()
+
+        assertTrue(Files.exists(marker))
+    }
+
+    //? if < 26.2 {
+    /*@Test
+    fun gpuDetectionSelectsVulkanBeforeMixinDecision() {
+        EarlyVulkanPreLaunch().beforeMixinSelection()
+
+        assertEquals("vulkan", EarlyVulkan.graphicsApi())
+        assertTrue(EarlyVulkan.switchPending())
+        assertTrue(EarlyVulkan.vulkanAtStartup())
+    }
+
+    @Test
+    fun lateGpuDetectionDoesNotChangeBackendAfterMixinDecision() {
+        EarlyVulkanPreLaunch().onPreLaunch()
+
+        assertTrue(EarlyVulkan.discreteGpuKnown())
+        assertEquals("default", EarlyVulkan.graphicsApi())
+        assertFalse(Files.exists(marker))
+    }
+    *///?}
+
+    //? if >= 26.2 {
+    @Test
+    fun preLaunchFinishesRetryMarker() {
+        useRealGpuCheck()
+        Files.createDirectories(polydiumDir)
+        Files.writeString(marker, "done")
+
+        EarlyVulkanPreLaunch().onPreLaunch()
+
+        assertNotEquals("done", Files.readString(marker))
+    }
+    //?}
+
     @Test
     fun freshInstallSelectsVulkanOnEligibleHardware() {
         EarlyVulkan()

@@ -712,7 +712,11 @@
     "client.perf.sodium.MixinOcclusionReset",
     //? if >= 1.21.8
     "client.perf.sodium.MixinOcclusionSectionFilter",
+    //? if >= 26.3
+    "client.perf.MixinBlockEntityCullBox",
     "client.perf.MixinBlockEntityLightCache",
+    //? if >= 26.3
+    "client.perf.MixinEntityCullingBlockEntityBox",
     "client.perf.MixinBlockEntityLightCacheChunks",
     "client.perf.MixinBlockEntityLightCacheCombiner",
     "client.perf.MixinBlockEntityLightCacheHolder",
