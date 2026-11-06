@@ -1,9 +1,12 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
 //? if >= 1.21.5 && < 26.1 {
-/*import net.minecraft.client.renderer.Sheets;
+/*import com.llamalad7.mixinextras.sugar.Local;
+import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.item.BlockModelWrapper;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.util.ARGB;
 import org.polyfrost.polydium.client.PolydiumToggles;
 import org.polyfrost.polydium.client.perf.SpriteTransparency;
 import org.spongepowered.asm.mixin.Final;
@@ -44,9 +47,14 @@ public abstract class MixinOpaqueItemCutout {
     //?} else {
     /^@ModifyArg(method = "update", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/item/ItemStackRenderState$LayerRenderState;setRenderType(Lnet/minecraft/client/renderer/RenderType;)V"))
     ^///?}
-    private RenderType polydium$cutoutOpaqueItem(RenderType type) {
+    private RenderType polydium$cutoutOpaqueItem(RenderType type, @Local ItemStackRenderState.LayerRenderState layer) {
         if (!PolydiumToggles.opaqueItemCutout || type != Sheets.translucentItemSheet()) {
             return type;
+        }
+        for (int tint : ((ItemTintLayerAccessor) layer).polydium$tintLayers()) {
+            if (ARGB.alpha(tint) != 255) {
+                return type;
+            }
         }
         byte state = this.polydium$translucent;
         if (state == 0) {

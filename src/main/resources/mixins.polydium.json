@@ -119,6 +119,8 @@
     //"client.perf.MixinFaceCullCacheFix",
     //? if >= 1.21.5 && < 26.1
     //"client.perf.MixinOpaqueItemCutout",
+    //? if >= 1.21.5 && < 26.1
+    //"client.perf.ItemTintLayerAccessor",
     //? if < 1.21.5
     //"client.perf.MixinOpaqueItemCutoutModel",
     //? if >= 1.21.8

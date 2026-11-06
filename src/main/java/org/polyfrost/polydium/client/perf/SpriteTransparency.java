@@ -34,7 +34,7 @@ public final class SpriteTransparency {
     }
 
     //? if < 1.21.5 {
-    /*/^* True when the model has a quad with a translucent sprite, no quads, or emits geometry the quad lists can't show. ^/
+    /*/^* True when the model has a quad that is tinted or has a translucent sprite, no quads, or emits geometry the quad lists can't show. ^/
     public static boolean modelHasTranslucent(BakedModel model) {
         Boolean cached = MODELS.get(model);
         if (cached == null) {
@@ -53,7 +53,7 @@ public final class SpriteTransparency {
             RANDOM.setSeed(42L);
             for (BakedQuad quad : model.getQuads(null, i == 6 ? null : Direction.values()[i], RANDOM)) {
                 empty = false;
-                if (hasTranslucent(quad.getSprite())) {
+                if (quad.isTinted() || hasTranslucent(quad.getSprite())) {
                     return true;
                 }
             }
