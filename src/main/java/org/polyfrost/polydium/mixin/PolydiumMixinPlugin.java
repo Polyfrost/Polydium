@@ -413,7 +413,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void onLoad(String mixinPackage) {
-        if (!isDisabled("OperationInliner") && (Mods.loaded("particle_core") || Mods.loaded("mountopacity") || Mods.loaded("overflowparticles") || Mods.loaded("lambdynlights") || Mods.loaded("obe")))
+        if (!isDisabled("OperationInliner") && (Mods.loaded("particle_core") || Mods.loaded("mountopacity") || Mods.loaded("overflowparticles") || Mods.loaded("lambdynlights") || Mods.loaded("obe") || Mods.loaded("entityculling")))
             MixinInternals.registerExtension(new OperationInliner("particle_core", "mountopacity", "overflowparticles", "obe", "inline"));
         if (!isDisabled("LocalRefHoister") && Mods.loaded("sodium"))
             MixinInternals.registerExtension(new LocalRefHoister());

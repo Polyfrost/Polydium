@@ -10,14 +10,22 @@ import org.spongepowered.asm.mixin.Unique;
 public abstract class MixinBlockEntityCullBox implements BlockEntityCullBox {
     @Unique
     private AABB polydium$cullBox;
+    @Unique
+    private Object polydium$cullBoxRenderer;
 
     @Override
-    public AABB polydium$cullBox() {
+    public AABB polydium$storedCullBox() {
         return this.polydium$cullBox;
     }
 
     @Override
-    public void polydium$setCullBox(AABB box) {
+    public Object polydium$cullBoxRenderer() {
+        return this.polydium$cullBoxRenderer;
+    }
+
+    @Override
+    public void polydium$setCullBox(AABB box, Object renderer) {
         this.polydium$cullBox = box;
+        this.polydium$cullBoxRenderer = renderer;
     }
 }

@@ -22,7 +22,13 @@ public interface BlockEntityCullBox {
         return FIXED_BOUNDS.get(renderer);
     }
 
-    AABB polydium$cullBox();
+    AABB polydium$storedCullBox();
 
-    void polydium$setCullBox(AABB box);
+    Object polydium$cullBoxRenderer();
+
+    void polydium$setCullBox(AABB box, Object renderer);
+
+    default AABB polydium$cullBox(Object renderer) {
+        return renderer == this.polydium$cullBoxRenderer() ? this.polydium$storedCullBox() : null;
+    }
 }
