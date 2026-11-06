@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.polyfrost.polydium.early.EarlyVulkan
 import java.nio.file.Files
+import java.nio.file.Path
 
 class EarlyVulkanTest {
 
@@ -248,7 +249,7 @@ class EarlyVulkanTest {
     }
 
     //? if >= 26.2 {
-    private fun writePack(file: java.nio.file.Path, vararg lines: String) {
+    private fun writePack(file: Path, vararg lines: String) {
         Files.createDirectories(file.parent)
         Files.write(file, lines.toList())
     }
