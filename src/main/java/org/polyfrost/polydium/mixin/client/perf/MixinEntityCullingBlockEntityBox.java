@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
-//? if >= 26.3 {
+//? if >= 1.21.10 {
 import com.bawnorton.mixinsquared.TargetHandler;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;

@@ -5,7 +5,6 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.rendering.v1.FabricRenderState;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
-//? if >= 26.3
 import net.minecraft.client.renderer.entity.state.ItemEntityRenderState;
 import net.minecraft.client.renderer.entity.state.SheepRenderState;
 import net.minecraft.client.renderer.entity.state.SlimeRenderState;
@@ -62,9 +61,7 @@ public final class EntityStateReuse {
         Class<?> cls = state.getClass();
         // Exact classes only: a state can be reused when its renderer rewrites every field on each extract
         if (cls == SlimeRenderState.class || cls == SheepRenderState.class || cls == VillagerRenderState.class
-                //? if >= 26.3
-                || cls == ItemEntityRenderState.class
-        ) {
+                || cls == ItemEntityRenderState.class) {
             holder.polydium$setReusedState(state, renderer, pass);
             EtfStateReuse.expect(entity, false);
         }
