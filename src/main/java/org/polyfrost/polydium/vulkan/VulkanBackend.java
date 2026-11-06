@@ -657,7 +657,7 @@ public class VulkanBackend implements GpuBackend {
       deviceCreateInfo.pEnabledFeatures(deviceFeatures.features());
       PointerBuffer pointer = stack.callocPointer(1);
       VulkanUtils.throwIfFailure(
-        VK12.vkCreateDevice(physicalDevice.vkPhysicalDevice(), deviceCreateInfo, null, pointer),
+        SlipstreamMac.createDevice(physicalDevice.vkPhysicalDevice(), deviceCreateInfo, pointer),
         "Failed to create device"
       );
       var10 = new VkDevice(pointer.get(0), physicalDevice.vkPhysicalDevice(), deviceCreateInfo);

@@ -5,6 +5,7 @@ import org.polyfrost.polydium.vulkan.compat.GpuSurface;
 import org.polyfrost.polydium.vulkan.compat.GpuSurfaceBackend;
 import org.polyfrost.polydium.vulkan.compat.SurfaceException;
 import com.mojang.blaze3d.textures.GpuTextureView;
+import net.minecraft.client.Minecraft;
 import org.polyfrost.polydium.vulkan.checkpoints.CheckpointExtension;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongArrays;
@@ -52,7 +53,7 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
   private int swapchainWidth;
   private int swapchainHeight;
   private final LongList swapchainImages = new LongArrayList();
-  private final long[] acquireSemaphores = new long[2];
+  private final long[] acquireSemaphores = new long[VulkanCommandEncoder.MAX_SUBMITS_IN_FLIGHT];
   private int currentAcquireSemaphore = 0;
   private long[] presentSemaphores = LongArrays.EMPTY_ARRAY;
   private int currentImageIndex = -1;
@@ -60,9 +61,20 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
   private boolean swapchainSuboptimal;
   private boolean swapchainOutOfDate;
   private final Set<GpuSurface.PresentMode> supportedPresentModes;
+  private final long windowHandle;
+  private final boolean primary;
+  private SlipstreamMac.@Nullable Presenter directPresenter;
+  private boolean directPresenterFailed;
 
   public VulkanGpuSurface(final VulkanDevice device, final long windowHandle) {
+    this(device, windowHandle, false);
+  }
+
+  /** @param primary whether this is the game window's surface, the only one Slipstream may present for */
+  public VulkanGpuSurface(final VulkanDevice device, final long windowHandle, final boolean primary) {
     this.device = device;
+    this.windowHandle = windowHandle;
+    this.primary = primary;
     this.presentQueue = device.graphicsQueue().vkQueue();
     MemoryStack stack = MemoryStack.stackPush();
 
@@ -176,6 +188,7 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
   }
 
   private void destroySwapchain() {
+    this.closeDirectPresenter();
     if (this.swapchain != 0L) {
       this.device.graphicsQueue().waitIdle();
       KHRSwapchain.vkDestroySwapchainKHR(this.device.vkDevice(), this.swapchain, null);
@@ -293,8 +306,47 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
     return this.swapchainSuboptimal;
   }
 
+  private void closeDirectPresenter() {
+    if (this.directPresenter != null) {
+      this.directPresenter.close();
+      this.directPresenter = null;
+      this.currentImageIndex = -1;
+    }
+  }
+
+  /**
+   * With vsync off on macOS, present through Slipstream's IOSurfaces instead of the MoltenVK swapchain, so
+   * frame submissions stop waiting on CAMetalLayer drawables. Returns true if this frame uses the presenter.
+   */
+  private boolean acquireDirect() {
+    if (!this.primary || this.directPresenterFailed || !SlipstreamMac.available()) {
+      return false;
+    }
+
+    Minecraft minecraft = Minecraft.getInstance();
+    if (minecraft.options.enableVsync().get() || minecraft.getWindow().isIconified()) {
+      this.closeDirectPresenter();
+      return false;
+    }
+
+    if (this.directPresenter == null) {
+      this.directPresenter = SlipstreamMac.create(this.device.vkDevice(), this.windowHandle, this.swapchainWidth, this.swapchainHeight, this.swapchainImageFormat);
+      this.directPresenterFailed = this.directPresenter == null;
+      if (this.directPresenter == null) {
+        return false;
+      }
+    }
+
+    this.currentImageIndex = 0;
+    return true;
+  }
+
   @Override
   public void acquireNextTexture() throws SurfaceException {
+    if (this.acquireDirect()) {
+      return;
+    }
+
     if (this.eatenException != null) {
       SurfaceException toThrow = this.eatenException;
       this.eatenException = null;
@@ -353,9 +405,15 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
     } else {
       assert this.currentImageIndex != -1;
 
+      SlipstreamMac.Presenter direct = this.directPresenter;
+      if (direct != null && !direct.acquire()) {
+        // every IOSurface is still queued on the GPU; drop this frame's blit instead of stalling
+        return;
+      }
+
       VulkanCommandEncoder vulkanCommandEncoder = (VulkanCommandEncoder)commandEncoder;
       VkCommandBuffer blitCommandBuffer = vulkanCommandEncoder.allocateAndBeginTransientCommandBuffer();
-      long swapchainImage = this.swapchainImages.getLong(this.currentImageIndex);
+      long swapchainImage = direct != null ? direct.image() : this.swapchainImages.getLong(this.currentImageIndex);
       MemoryStack stack = MemoryStack.stackGet();
       MemoryStack var8 = stack.push();
 
@@ -454,7 +512,8 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
         imageBarrier.dstStageMask(65536L);
         imageBarrier.dstAccessMask(0L);
         imageBarrier.oldLayout(7);
-        imageBarrier.newLayout(1000001002);
+        // IOSurfaces are read by Core Animation, not vkQueuePresentKHR, so they stay in GENERAL
+        imageBarrier.newLayout(direct != null ? 1 : 1000001002);
         imageBarrier.srcQueueFamilyIndex(-1);
         imageBarrier.dstQueueFamilyIndex(-1);
         imageBarrier.image(swapchainImage);
@@ -490,6 +549,12 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
       }
 
       VulkanUtils.crashIfFailure(this.device, VK12.vkEndCommandBuffer(blitCommandBuffer), "Failed to end VkCommandBuffer");
+      if (direct != null) {
+        vulkanCommandEncoder.execute(blitCommandBuffer);
+        vulkanCommandEncoder.signalSemaphore(direct.semaphore(), direct.submitted(), 65536L);
+        return;
+      }
+
       vulkanCommandEncoder.waitSemaphore(this.acquireSemaphores[this.currentAcquireSemaphore], 0L, 65536L);
       vulkanCommandEncoder.execute(blitCommandBuffer);
       vulkanCommandEncoder.signalSemaphore(this.presentSemaphores[this.currentImageIndex], 0L, 4096L);
@@ -498,6 +563,12 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
 
   @Override
   public void present() {
+    if (this.directPresenter != null) {
+      this.directPresenter.present();
+      this.currentImageIndex = -1;
+      return;
+    }
+
     if (this.swapchainOutOfDate) {
       throw new IllegalStateException("Attempt to use out of date swapchain");
     } else {

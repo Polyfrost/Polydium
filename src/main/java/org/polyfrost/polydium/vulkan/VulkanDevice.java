@@ -423,7 +423,7 @@ public class VulkanDevice implements GpuDeviceBackend {
 
   public void initSurface(final long window) {
     this.window = window;
-    this.surface = new GpuSurface(new VulkanGpuSurface(this, window));
+    this.surface = new GpuSurface(new VulkanGpuSurface(this, window, true));
   }
 
   @Override

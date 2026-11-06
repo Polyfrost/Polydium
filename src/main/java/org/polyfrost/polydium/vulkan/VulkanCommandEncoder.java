@@ -60,7 +60,12 @@ import org.lwjgl.vulkan.VkSubpassEndInfo;
 import org.lwjgl.vulkan.VkMemoryBarrier2.Buffer;
 
 public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable {
-  public static final int MAX_SUBMITS_IN_FLIGHT = 2;
+  /**
+   * Submissions the CPU may run ahead of the GPU. Mojang's backend uses 2; at four-digit framerates on MoltenVK the
+   * timeline-semaphore completion latency alone is a large slice of the frame, so a third submission keeps the render
+   * thread recording instead of stalling in {@link #awaitSubmitCompletion}. Override with {@code -Dpolydium.framesInFlight=2..4}.
+   */
+  public static final int MAX_SUBMITS_IN_FLIGHT = Math.max(2, Math.min(4, Integer.getInteger("polydium.framesInFlight", 3)));
   private final VulkanDevice device;
   private final VulkanTransientMemory transientMemory;
   private final long submitSemaphore;
@@ -68,8 +73,8 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
   private long completedSubmitIndex = 0L;
   private final CheckpointExtension.CheckpointStorage checkpointStorage;
   private VulkanQueue.Submission submissionBuilder;
-  private final DestructionQueue<Destroyable> destroyQueue = new DestructionQueue<>(2, Destroyable::destroy);
-  private final VulkanCommandPool[] commandPools = new VulkanCommandPool[2];
+  private final DestructionQueue<Destroyable> destroyQueue = new DestructionQueue<>(MAX_SUBMITS_IN_FLIGHT, Destroyable::destroy);
+  private final VulkanCommandPool[] commandPools = new VulkanCommandPool[MAX_SUBMITS_IN_FLIGHT];
   private @Nullable VkCommandBuffer currentInitCommandBuffer;
   private @Nullable VkCommandBuffer currentCommandBuffer;
   private @Nullable VulkanRenderPass currentRenderPass;
@@ -111,11 +116,11 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
       stack.close();
     }
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < MAX_SUBMITS_IN_FLIGHT; i++) {
       this.commandPools[i] = new VulkanCommandPool(device, device.graphicsQueue());
     }
 
-    this.checkpointStorage = device.checkpointExtension().createStorage(device, device.graphicsQueue(), 2);
+    this.checkpointStorage = device.checkpointExtension().createStorage(device, device.graphicsQueue(), MAX_SUBMITS_IN_FLIGHT);
     this.submissionBuilder = device.graphicsQueue().beginSubmit();
     this.transientMemory.beginSubmit();
   }
@@ -130,7 +135,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
     this.transientMemory.destroy();
     this.destroyQueue.close();
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < MAX_SUBMITS_IN_FLIGHT; i++) {
       this.commandPools[i].destroy();
     }
 
@@ -147,7 +152,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
   }
 
   private VulkanCommandPool currentCommandPool() {
-    return this.commandPools[(int)(this.currentSubmitIndex % 2L)];
+    return this.commandPools[(int)(this.currentSubmitIndex % MAX_SUBMITS_IN_FLIGHT)];
   }
 
   public VkCommandBuffer allocateAndBeginTransientCommandBuffer() {
@@ -281,7 +286,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
     this.submissionBuilder.close();
     this.submissionBuilder = this.device.graphicsQueue().beginSubmit();
     this.currentSubmitIndex++;
-    if (!this.awaitSubmitCompletion(this.currentSubmitIndex - 2L, 5000000000L)) {
+    if (!this.awaitSubmitCompletion(this.currentSubmitIndex - MAX_SUBMITS_IN_FLIGHT, 5000000000L)) {
       List<CheckpointExtension.QueueCheckpoints> checkpoints = this.device.checkpointExtension().retrieveCheckpoints(false);
       throw new IllegalStateException("5s timeout reached when waiting for VK semaphore: " + VulkanUtils.formatCheckpoints(checkpoints));
     } else {
