@@ -1,5 +1,6 @@
 package org.polyfrost.polydium.vulkan;
 
+import org.polyfrost.polydium.client.perf.ImmediateDrawRing;
 import org.polyfrost.polydium.client.perf.VulkanDynamicState;
 import org.polyfrost.polydium.vulkan.compat.RenderArea;
 import com.mojang.blaze3d.buffers.GpuBuffer;
@@ -231,7 +232,7 @@ public class VulkanRenderPass implements RenderPassBackend {
     MemoryStack stack = MemoryStack.stackPush();
 
     try {
-      VK12.vkCmdBindVertexBuffers(this.commandBuffer(), slot, stack.longs(((VulkanGpuBuffer)vertexBuffer).vkBuffer()), stack.longs(0L));
+      VK12.vkCmdBindVertexBuffers(this.commandBuffer(), slot, stack.longs(((VulkanGpuBuffer)vertexBuffer).vkBuffer()), stack.longs(ImmediateDrawRing.holds(vertexBuffer) ? ImmediateDrawRing.vertexOffset() : 0L));
     } catch (Throwable var9) {
       if (stack != null) {
         try {

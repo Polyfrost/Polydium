@@ -9,9 +9,11 @@ import net.minecraft.client.particle.ParticleGroup;
 import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.TrackingEmitter;
 import net.minecraft.core.particles.ParticleLimit;
+import org.polyfrost.polydium.client.perf.ParticleReservoir;
 import org.polyfrost.polydium.client.perf.ParticleTickOverlap;
 //? if >= 26.1
 import org.polyfrost.polydium.client.perf.ParticleLightBatch;
+import org.polyfrost.polydium.mixin.PolydiumMixinPlugin;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -41,10 +43,14 @@ public abstract class MixinParticleTickOverlap implements ParticleTickOverlap.Fi
         throw new AssertionError();
     }
 
-    //? if >= 26.2
+    //? if >= 1.21.11
     @Shadow protected abstract void updateCount(ParticleLimit limit, int change);
 
     @Unique private static MethodHandle polydium$finalize;
+
+    //? if >= 1.21.11 && < 26.2 {
+    /*@Unique private static final boolean polydium$RESERVOIR_CAP = !PolydiumMixinPlugin.isDisabled("org.polyfrost.polydium.mixin.client.perf.MixinParticleReservoirCap");
+    *///?}
 
     @Inject(method = {"tick", "extract", "setLevel", "clearParticles"}, at = @At("HEAD"), order = 900)
     private void polydium$finishPendingTick(CallbackInfo ci) {
@@ -93,8 +99,14 @@ public abstract class MixinParticleTickOverlap implements ParticleTickOverlap.Fi
             //? if >= 26.2 {
             if (!group.add(particle))
                 particle.getParticleLimit().ifPresent(limit -> updateCount(limit, -1));
-            //?} else
-            /*group.add(particle);*/
+            //?} else if >= 1.21.11 {
+            /*if (!polydium$RESERVOIR_CAP || ParticleReservoir.accepts(group.getAll()))
+                group.add(particle);
+            else
+                particle.getParticleLimit().ifPresent(limit -> updateCount(limit, -1));
+            *///?} else {
+            /*group.add(particle);
+            *///?}
         }
 
         //? if >= 26.1

@@ -4,11 +4,23 @@ package org.polyfrost.polydium.client.perf;
 import org.joml.Matrix4fc;
 import org.joml.Vector3fc;
 import org.joml.Vector4fc;
+//? if >= 1.21.11 && < 26.2 {
+/*import org.joml.Matrix4f;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
+*///?}
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 public final class TransformWrites {
+    //? if >= 1.21.11 && < 26.2 {
+    /*// Shared, never mutated: DynamicUniformStorage keeps the last Transform to dedupe against.
+    public static final Vector4f WHITE = new Vector4f(1.0F, 1.0F, 1.0F, 1.0F);
+    public static final Vector3f ZERO = new Vector3f();
+    public static final Matrix4f IDENTITY = new Matrix4f();
+    *///?}
+
     //? if >= 26.3 {
     public static final int SIZE = 156;
     //?} else if >= 1.21.11 {

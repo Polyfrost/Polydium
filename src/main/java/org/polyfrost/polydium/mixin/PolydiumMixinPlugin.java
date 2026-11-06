@@ -105,6 +105,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("PreparedLanguage", new String[]{"languagereload"}),
             Map.entry("ParticleRotationReuse", new String[]{"vulkanmod"}),
             Map.entry("FenceBatch", new String[]{"vulkanmod"}),
+            Map.entry("ImmediateDrawRing", new String[]{"vulkanmod"}),
             Map.entry("OutlineScissor", new String[]{"vulkanmod"}),
             Map.entry("SinglePassTextShadow", new String[]{"caxton"}),
             Map.entry("VulkanBackendList", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"}),
@@ -183,6 +184,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             "OcclusionBoundsSprite", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"},
             "OcclusionBoundsConsumer", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"},
             "OcclusionCull", new String[]{"OcclusionRegion", "OcclusionListAccessor"},
+            "ImmediateDrawRing", new String[]{"ImmediateDrawRingSeparate", "ImmediateDrawRingEmulated", "ImmediateDrawRingFrame", "ImmediateDrawRingClose"},
             "EntityCullingBlockEntityBox", new String[]{"MixinBlockEntityCullBox"},
             //? if < 1.21.10 {
             /*"OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency", "OpaqueParticleRenderOrder"},

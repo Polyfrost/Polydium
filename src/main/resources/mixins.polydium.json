@@ -130,7 +130,11 @@
     "client.perf.ChestLidHolderAccessor",
     "client.perf.EnderChestLidHolderAccessor",
     "client.perf.MixinIdleBlockEntityTick",
+    //? if >= 1.21.11 && < 26.2
+    //"client.perf.MixinGuiSharedVertexMap",
     "client.perf.MixinParticleTickCycle",
+    //? if >= 1.21.11 && < 26.2
+    //"client.perf.MixinParticleReservoirCap",
     //? if >= 26.2
     "client.perf.MixinOutlineScissorDraw",
     //? if >= 26.2
@@ -185,10 +189,14 @@
     "client.perf.MixinLevelProjectionRingOwner",
     //? if >= 1.21.8
     "client.perf.MixinTransformEquality",
+    //? if >= 1.21.11 && < 26.2
+    //"client.perf.MixinTransformSharedDefaults",
     //? if >= 1.21.1
     "client.perf.MixinTranslationTemplateCache",
     //? if >= 1.21.1
     "client.perf.MixinTranslucentSortCentroids",
+    //? if >= 1.21.11 && < 26.2
+    //"client.perf.MixinTranslucentModelSortKeys",
     "client.perf.ParticleBufferBuilderAccessor",
     //? if >= 1.21.10
     "client.perf.QuadParticleStorageAccessor",
@@ -664,6 +672,16 @@
     //"client.perf.MixinGlSwapWaitMeter",
     //? if >= 1.21.8 && < 26.2
     //"client.perf.MixinFenceBatchFlush",
+    //? if >= 1.21.11 && < 26.2
+    //"client.perf.MixinImmediateDrawRing",
+    //? if >= 1.21.11 && < 26.2
+    //"client.perf.opengl.MixinImmediateDrawRingSeparate",
+    //? if >= 1.21.11 && < 26.2
+    //"client.perf.opengl.MixinImmediateDrawRingEmulated",
+    //? if >= 1.21.11 && < 26.2
+    //"client.perf.MixinImmediateDrawRingFrame",
+    //? if >= 1.21.11 && < 26.2
+    //"client.perf.MixinImmediateDrawRingClose",
     //? if >= 1.21.8 && < 26.2
     //"client.perf.MixinFenceBatchRingBuffer",
     //? if >= 26.2
