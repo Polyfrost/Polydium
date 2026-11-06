@@ -24,11 +24,11 @@ public interface BlockEntityCullBox {
 
     AABB polydium$storedCullBox();
 
-    Object polydium$cullBoxRenderer();
+    int polydium$cullBoxEpoch();
 
-    void polydium$setCullBox(AABB box, Object renderer);
+    void polydium$setCullBox(AABB box, int rendererEpoch);
 
-    default AABB polydium$cullBox(Object renderer) {
-        return renderer == this.polydium$cullBoxRenderer() ? this.polydium$storedCullBox() : null;
+    default AABB polydium$cullBox(int rendererEpoch) {
+        return rendererEpoch == this.polydium$cullBoxEpoch() ? this.polydium$storedCullBox() : null;
     }
 }

@@ -11,7 +11,7 @@ public abstract class MixinBlockEntityCullBox implements BlockEntityCullBox {
     @Unique
     private AABB polydium$cullBox;
     @Unique
-    private Object polydium$cullBoxRenderer;
+    private int polydium$cullBoxEpoch;
 
     @Override
     public AABB polydium$storedCullBox() {
@@ -19,13 +19,13 @@ public abstract class MixinBlockEntityCullBox implements BlockEntityCullBox {
     }
 
     @Override
-    public Object polydium$cullBoxRenderer() {
-        return this.polydium$cullBoxRenderer;
+    public int polydium$cullBoxEpoch() {
+        return this.polydium$cullBoxEpoch;
     }
 
     @Override
-    public void polydium$setCullBox(AABB box, Object renderer) {
+    public void polydium$setCullBox(AABB box, int rendererEpoch) {
         this.polydium$cullBox = box;
-        this.polydium$cullBoxRenderer = renderer;
+        this.polydium$cullBoxEpoch = rendererEpoch;
     }
 }

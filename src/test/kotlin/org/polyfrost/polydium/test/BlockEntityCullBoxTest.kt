@@ -24,22 +24,21 @@ class BlockEntityCullBoxTest {
     }
 
     @Test
-    fun `a box does not outlive its renderer`() {
+    fun `a box does not outlive its reload`() {
         val holder = object : BlockEntityCullBox {
             var box: AABB? = null
-            var renderer: Any? = null
+            var epoch = 0
             override fun `polydium$storedCullBox`() = box
-            override fun `polydium$cullBoxRenderer`() = renderer
-            override fun `polydium$setCullBox`(box: AABB?, renderer: Any?) {
+            override fun `polydium$cullBoxEpoch`() = epoch
+            override fun `polydium$setCullBox`(box: AABB?, rendererEpoch: Int) {
                 this.box = box
-                this.renderer = renderer
+                epoch = rendererEpoch
             }
         }
         val box = AABB(0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
-        val renderer = Any()
-        assertNull(holder.`polydium$cullBox`(renderer))
-        holder.`polydium$setCullBox`(box, renderer)
-        assertSame(box, holder.`polydium$cullBox`(renderer))
-        assertNull(holder.`polydium$cullBox`(Any()))
+        assertNull(holder.`polydium$cullBox`(1))
+        holder.`polydium$setCullBox`(box, 1)
+        assertSame(box, holder.`polydium$cullBox`(1))
+        assertNull(holder.`polydium$cullBox`(2))
     }
 }
