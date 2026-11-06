@@ -56,7 +56,8 @@ public final class SkyFarPlane {
     private static final String POSITION = "gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);";
     private static final Set<String> SHADERS = Set.of("minecraft:shaders/core/sky.vsh", "minecraft:shaders/core/stars.vsh", "minecraft:shaders/core/position_color.vsh", "minecraft:shaders/core/position_tex.vsh");
     private static final Set<String> PATCHED = ConcurrentHashMap.newKeySet();
-    private static final boolean SKY_MOD = Stream.of("optiboxes", "nuit").anyMatch(FabricLoader.getInstance()::isModLoaded);
+    // Vitrail closes the pass SkyRenderer opens, which the deferred sky shares with the main pass, and its pack programs drop the far-plane depth test
+    private static final boolean SKY_MOD = Stream.of("optiboxes", "nuit", "vitrail").anyMatch(FabricLoader.getInstance()::isModLoaded);
     private static final boolean SKYBOXIFY = FabricLoader.getInstance().isModLoaded("skyboxify");
     private static final String SKYBOXIFY_SHADER = "skyboxify:shaders/core/custom_skybox.vsh";
     private static final Map<RenderPipeline, RenderPipeline> FAR = new IdentityHashMap<>();

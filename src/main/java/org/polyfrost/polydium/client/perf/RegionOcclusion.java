@@ -6,7 +6,15 @@ public interface RegionOcclusion {
 
     long[] polydium$getTestedSections();
 
+    long[] polydium$getSectionBounds();
+
+    int[] polydium$getAnimatedBounds();
+
     int polydium$getTestedGeneration();
 
     void polydium$setTestedGeneration(int generation);
+
+    long polydium$getHiddenAfter();
+
+    void polydium$setHiddenAfter(long captures);
 }

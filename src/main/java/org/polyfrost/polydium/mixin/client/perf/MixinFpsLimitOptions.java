@@ -22,13 +22,12 @@ public abstract class MixinFpsLimitOptions {
         return PolydiumConstants.UNLIMITED_FRAMERATE_CUTOFF;
     }
 
-    // a stored 260 is vanilla's unlimited, so a real 260 cap is stored as 261 to stay distinct
     @ModifyExpressionValue(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/serialization/Codec;intRange(II)Lcom/mojang/serialization/Codec;", ordinal = 0), slice = @Slice(
         from = @At(value = "CONSTANT", args = "stringValue=options.framerateLimit")))
-    private Codec<Integer> polydium$readVanillaUnlimited(Codec<Integer> original) {
+    private Codec<Integer> polydium$storeUnlimitedAsVanilla(Codec<Integer> original) {
         return original.xmap(
             value -> value == 260 ? PolydiumConstants.UNLIMITED_FRAMERATE_CUTOFF : (value == 261 ? 260 : value),
-            value -> value == 260 ? 261 : value);
+            value -> value == PolydiumConstants.UNLIMITED_FRAMERATE_CUTOFF ? 260 : (value == 260 ? 261 : value));
     }
 
     //~ if >= 26.1 '"method_42559"' -> '{"lambda$new$4", "lambda$new$5"}'

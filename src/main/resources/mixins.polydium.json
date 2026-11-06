@@ -207,6 +207,10 @@
     //"client.perf.xaero.MixinMinimapFBORenderer",
     //? if xaerominimap && >= 1.21.6
     "client.perf.xaero.MixinMinimapPipRenderer",
+    //? if xaerominimap
+    "client.perf.xaero.MixinRadarIconManager",
+    //? if xaeroworldmap
+    "client.perf.xaero.MixinMapProcessor",
     "client.perf.sodium.MixinAnimatedSpriteMarksAnimationState",
     "client.perf.sodium.MixinAnimatedSpriteMarksManager",
     "client.perf.sodium.MixinAnimatedSpriteMarksRegion",
@@ -642,7 +646,7 @@
     "client.perf.MixinOrderedRecyclePolling",
     //? if >= 1.21.8
     "client.perf.MixinOcclusionDepthCapture",
-    //? if < 26.2
+    //? if >= 1.21.8 && < 26.2
     //"client.perf.MixinGlSwapWaitMeter",
     //? if >= 1.21.8 && < 26.2
     //"client.perf.MixinFenceBatchFlush",
@@ -650,8 +654,24 @@
     //"client.perf.MixinFenceBatchRingBuffer",
     //? if >= 26.2
     "client.perf.MixinGlPresentWaitMeter",
+    //? if >= 26.2
+    "client.perf.MixinGlSubmitWaitMeter",
     //? if >= 26.3
     "client.perf.sodium.MixinOcclusionCull",
+    //? if >= 1.21.8
+    "client.perf.sodium.MixinOcclusionBoundsBuffers",
+    //? if >= 1.21.8
+    "client.perf.sodium.MixinOcclusionBoundsConsumer",
+    //? if >= 1.21.8
+    "client.perf.sodium.MixinOcclusionBoundsInfo",
+    //? if >= 1.21.8
+    "client.perf.sodium.MixinOcclusionBoundsSection",
+    //? if >= 1.21.8
+    "client.perf.sodium.MixinOcclusionBoundsSprite",
+    //? if >= 1.21.8
+    "client.perf.sodium.MixinOcclusionBoundsSpriteFluid",
+    //? if >= 1.21.8
+    "client.perf.sodium.MixinOcclusionBoundsVertex",
     //? if >= 1.21.8
     "client.perf.sodium.MixinOcclusionListAccessor",
     //? if >= 1.21.8
