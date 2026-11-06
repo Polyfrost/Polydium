@@ -181,8 +181,12 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             "OcclusionBoundsSprite", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"},
             "OcclusionBoundsConsumer", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"},
             "OcclusionCull", new String[]{"OcclusionRegion", "OcclusionListAccessor"},
+            //? if < 1.21.10 {
+            /*"OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency", "OpaqueParticleRenderOrder"},
+            *///?} else {
             "OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency"},
-            "OpaqueItemCutout", new String[]{"SpriteContentsTransparency"}
+            //?}
+            "OpaqueItemCutout", new String[]{"SpriteContentsTransparency", "ItemTintLayerAccessor"}
     );
 
     public static boolean isDisabled(String mixinClassName) {

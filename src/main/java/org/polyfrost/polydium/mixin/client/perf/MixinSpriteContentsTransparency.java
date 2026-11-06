@@ -6,6 +6,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.renderer.texture.SpriteContents;
 import net.minecraft.client.resources.metadata.animation.AnimationMetadataSection;
 import org.polyfrost.polydium.client.perf.SpriteTransparency;
+//? if >= 1.21.11
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -16,9 +17,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(SpriteContents.class)
 public abstract class MixinSpriteContentsTransparency implements SpriteTransparency.Holder {
+    //? if >= 1.21.11 {
     @Shadow
     @Final
     private NativeImage originalImage;
+    //?} else {
+    /^@Shadow
+    NativeImage[] byMipLevel;
+    ^///?}
 
     @Unique
     private byte polydium$translucent;
@@ -39,31 +45,38 @@ public abstract class MixinSpriteContentsTransparency implements SpriteTranspare
     public boolean polydium$hasTranslucent() {
         byte state = this.polydium$translucent;
         if (state == 0) {
-            state = polydium$scan(this.originalImage, this.polydium$interpolated) ? (byte) 1 : (byte) -1;
+            //? if >= 1.21.11 {
+            NativeImage[] images = {this.originalImage};
+            //?} else {
+            /^NativeImage[] images = this.byMipLevel;
+            ^///?}
+            state = polydium$scan(images, this.polydium$interpolated) ? (byte) 1 : (byte) -1;
             this.polydium$translucent = state;
         }
         return state > 0;
     }
 
     @Unique
-    private static boolean polydium$scan(NativeImage image, boolean interpolated) {
-        if (image.format() != NativeImage.Format.RGBA) {
-            return false;
-        }
+    private static boolean polydium$scan(NativeImage[] images, boolean interpolated) {
         boolean clear = false, solid = false;
-        int width = image.getWidth(), height = image.getHeight();
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                //? if >= 1.21.4 {
-                int alpha = image.getPixel(x, y) >>> 24;
-                //?} else {
-                /^int alpha = image.getPixelRGBA(x, y) >>> 24;
-                ^///?}
-                if (alpha != 0 && alpha != 255) {
-                    return true;
+        for (NativeImage image : images) {
+            if (image.format() != NativeImage.Format.RGBA) {
+                continue;
+            }
+            int width = image.getWidth(), height = image.getHeight();
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    //? if >= 1.21.4 {
+                    int alpha = image.getPixel(x, y) >>> 24;
+                    //?} else {
+                    /^int alpha = image.getPixelRGBA(x, y) >>> 24;
+                    ^///?}
+                    if (alpha != 0 && alpha != 255) {
+                        return true;
+                    }
+                    clear |= alpha == 0;
+                    solid |= alpha == 255;
                 }
-                clear |= alpha == 0;
-                solid |= alpha == 255;
             }
         }
         return interpolated && clear && solid;
