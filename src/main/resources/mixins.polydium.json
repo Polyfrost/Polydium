@@ -76,7 +76,7 @@
     "client.perf.MixinGlowSpectatorCache",
     //? if >= 26.3
     "client.perf.MixinWindowMinimizedPoll",
-    //? if >= 1.21.9 && < 26.1
+    //? if < 26.3
     //"client.perf.MixinUnboundKeyPoll",
     //? if >= 1.21.8
     "client.perf.MixinItemBoundsCache",
