@@ -81,6 +81,29 @@ class EarlyVulkanTest {
     }
 
     @Test
+    fun foundGpuOverridesNegativeMarker() {
+        Files.createDirectories(polydiumDir)
+        Files.writeString(marker, "no")
+
+        EarlyVulkan()
+
+        assertEquals("", Files.readString(marker))
+    }
+
+    @Test
+    fun negativeMarkerStandsWithoutGpu() {
+        System.setProperty("polydium.vulkanEligible", "false")
+        Files.createDirectories(polydiumDir)
+        Files.writeString(marker, "no")
+        val written = FileTime.from(Instant.now().minus(Duration.ofDays(1)))
+        Files.setLastModifiedTime(marker, written)
+
+        EarlyVulkan()
+
+        assertEquals(written, Files.getLastModifiedTime(marker))
+    }
+
+    @Test
     fun staleGpuResultDecidesNothing() {
         useRealGpuCheck()
         EarlyVulkan.recordDiscreteGpu(true)

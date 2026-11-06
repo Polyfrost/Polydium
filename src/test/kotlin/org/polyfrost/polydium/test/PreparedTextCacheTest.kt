@@ -46,6 +46,28 @@ class PreparedTextCacheTest {
     }
 
     @Test
+    fun `repeated hits leave room for other text`() {
+        val cache = PreparedTextCache<String>(4)
+        PerfClock.frame++
+        repeat(8) { lookup(cache, 0) }
+        (1 until 4).forEach { lookup(cache, it) }
+        PerfClock.frame++
+        (0 until 4).forEach { assertEquals("v$it", lookup(cache, it)) }
+    }
+
+    @Test
+    fun `repeated seen hits leave room for other text`() {
+        val cache = PreparedTextCache<String>(4)
+        PerfClock.frame++
+        repeat(8) { seen(cache, 0) }
+        (1 until 4).forEach { seen(cache, it) }
+        PerfClock.frame++
+        (1 until 4).forEach { id -> assertNull(seen(cache, id)); cache.remember("v$id") }
+        PerfClock.frame++
+        (1 until 4).forEach { assertEquals("v$it", seen(cache, it)) }
+    }
+
+    @Test
     fun `text from older frames still ages out`() {
         val cache = PreparedTextCache<String>(4)
         frame(cache, 0 until 4)

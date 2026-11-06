@@ -266,8 +266,8 @@ public final class EarlyVulkan implements LanguageAdapter {
         //?} else {
         /*boolean retry = false;
         *///?}
-        boolean decided = !retry && Files.exists(marker()) && (switched()
-                || Files.getLastModifiedTime(marker()).toInstant().isAfter(Instant.now().minus(Duration.ofDays(30))));
+        boolean decided = !retry && Files.exists(marker()) && (switched() || (!Boolean.TRUE.equals(vulkanEligible())
+                && Files.getLastModifiedTime(marker()).toInstant().isAfter(Instant.now().minus(Duration.ofDays(30)))));
         //? if < 26.2 {
         /*if (decided)
             return;

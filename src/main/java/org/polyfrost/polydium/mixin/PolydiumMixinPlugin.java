@@ -180,7 +180,8 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             "OcclusionBoundsSection", new String[]{"OcclusionRegion", "OcclusionBoundsInfo", "OcclusionBoundsBuffers", "OcclusionBoundsVertex"},
             "OcclusionBoundsSprite", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"},
             "OcclusionBoundsConsumer", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"},
-            "OcclusionCull", new String[]{"OcclusionRegion", "OcclusionListAccessor"}
+            "OcclusionCull", new String[]{"OcclusionRegion", "OcclusionListAccessor"},
+            "EntityCullingBlockEntityBox", new String[]{"MixinBlockEntityCullBox"}
     );
 
     public static boolean isDisabled(String mixinClassName) {
