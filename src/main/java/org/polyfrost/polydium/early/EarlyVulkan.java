@@ -4,10 +4,6 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.LanguageAdapter;
 import net.fabricmc.loader.api.ModContainer;
 import org.slf4j.LoggerFactory;
-//? if >= 1.21.11 {
-import oshi.SystemInfo;
-import oshi.hardware.GraphicsCard;
-//?}
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -94,6 +90,36 @@ public final class EarlyVulkan implements LanguageAdapter {
             Files.createDirectories(marker().getParent());
             Files.writeString(marker(), "failed");
         } catch (IOException ignored) {
+        }
+    }
+
+    private static Path discreteGpuFile() {
+        return FabricLoader.getInstance().getGameDir().resolve("polydium").resolve("discrete-gpu");
+    }
+
+    public static boolean discreteGpuKnown() {
+        try {
+            return Files.getLastModifiedTime(discreteGpuFile()).toInstant().isAfter(Instant.now().minus(Duration.ofDays(30)));
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    public static void recordDiscreteGpu(boolean discrete) {
+        try {
+            Files.createDirectories(discreteGpuFile().getParent());
+            Files.writeString(discreteGpuFile(), Boolean.toString(discrete));
+        } catch (IOException ignored) {
+        }
+    }
+
+    private static Boolean discreteGpu() {
+        if (!discreteGpuKnown())
+            return null;
+        try {
+            return Boolean.valueOf(Files.readString(discreteGpuFile()).strip());
+        } catch (IOException e) {
+            return null;
         }
     }
 
@@ -240,8 +266,8 @@ public final class EarlyVulkan implements LanguageAdapter {
         //?} else {
         /*boolean retry = false;
         *///?}
-        boolean decided = !retry && Files.exists(marker()) && (switched()
-                || Files.getLastModifiedTime(marker()).toInstant().isAfter(Instant.now().minus(Duration.ofDays(30))));
+        boolean decided = !retry && Files.exists(marker()) && (switched() || (!Boolean.TRUE.equals(vulkanEligible())
+                && Files.getLastModifiedTime(marker()).toInstant().isAfter(Instant.now().minus(Duration.ofDays(30)))));
         //? if < 26.2 {
         /*if (decided)
             return;
@@ -290,9 +316,9 @@ public final class EarlyVulkan implements LanguageAdapter {
                 finishSwitch();
             return;
         }
-        if (retry)
-            finishSwitch();
         if (backendInFile) {
+            if (retry)
+                finishSwitch();
             if (!Files.exists(options))
                 writeOptions(options, lines);
             return;
@@ -304,7 +330,13 @@ public final class EarlyVulkan implements LanguageAdapter {
             return;
         *///?}
 
-        boolean vulkan = vulkanEligible();
+        // oshi can't load this early, so an unknown GPU waits for EarlyVulkanPreLaunch. Checked before the marker
+        // changes, so nothing here is lost when that run decides.
+        Boolean vulkan = vulkanEligible();
+        if (vulkan == null)
+            return;
+        if (retry)
+            finishSwitch();
 
         Files.createDirectories(marker().getParent());
         Files.writeString(marker(), vulkan ? "" : "no");
@@ -357,22 +389,12 @@ public final class EarlyVulkan implements LanguageAdapter {
 
     //?}
 
-    private static boolean vulkanEligible() {
+    private static Boolean vulkanEligible() {
         String forced = System.getProperty("polydium.vulkanEligible");
         if (forced != null)
             return Boolean.parseBoolean(forced);
         boolean appleArm = System.getProperty("os.name", "").startsWith("Mac") && "aarch64".equals(System.getProperty("os.arch"));
-        return appleArm || hasDiscreteGpu();
-    }
-
-    private static boolean hasDiscreteGpu() {
-        try {
-            for (GraphicsCard card : new SystemInfo().getHardware().getGraphicsCards())
-                if (isDiscreteName(card.getVendor() + " " + card.getName()))
-                    return true;
-        } catch (Throwable ignored) {
-        }
-        return false;
+        return appleArm ? Boolean.TRUE : discreteGpu();
     }
     //?}
 

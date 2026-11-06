@@ -16,7 +16,7 @@ import java.util.Map;
 
 // Geometry-cache idea ported from Argentum (TextBatcher), with permission from rdh.
 public final class PreparedTextCache<V> {
-    public static final int LIMIT = Integer.getInteger("polydium.preparedTextCache", 2048);
+    public static final int LIMIT = Integer.getInteger("polydium.preparedTextCache", 8192);
     private static final int MAX_LENGTH = 256;
 
     public static boolean cacheable(Style style) {
@@ -103,15 +103,30 @@ public final class PreparedTextCache<V> {
     private record Seen(Object text, int x, int y, int color, int background, int flags) {
     }
 
-    private final LinkedHashMap<Key, V> entries;
-    private final LinkedHashMap<Seen, Object> seen;
-    private Seen pending;
+    private static final class Slot<T> {
+        private T value;
+        private long frame;
+
+        private Slot(T value, long frame) {
+            this.value = value;
+            this.frame = frame;
+        }
+    }
+
+    private final int limit;
+    private final LinkedHashMap<Key, Slot<V>> entries;
+    private final LinkedHashMap<Seen, Slot<Object>> seen;
+    private long frame = -1;
+    private int entriesUsed;
+    private int seenUsed;
+    private Slot<Object> pending;
     private final Key scratch = new Key();
     private int generation;
     private int runHash;
     private Object lastStyle;
 
     public PreparedTextCache(int limit) {
+        this.limit = limit;
         this.entries = lru(limit);
         this.seen = lru(limit);
         this.scratch.chars = new int[2 * MAX_LENGTH];
@@ -130,14 +145,24 @@ public final class PreparedTextCache<V> {
     @SuppressWarnings("unchecked")
     public V seen(Object text, float x, float y, int color, int background, int flags) {
         Seen key = new Seen(text, Float.floatToIntBits(x), Float.floatToIntBits(y), color, background, flags);
-        Object value = this.seen.get(key);
+        Slot<Object> slot = this.seen.get(key);
         this.pending = null;
-        if (value == null) {
-            this.seen.put(key, SEEN);
-        } else if (value == SEEN) {
-            this.seen.put(key, MUTABLE);
+        if (slot == null) {
+            if (this.seenUsed < this.limit) {
+                this.seenUsed++;
+                this.seen.put(key, new Slot<>(SEEN, this.frame));
+            }
+            return null;
+        }
+        if (slot.frame != this.frame) {
+            slot.frame = this.frame;
+            this.seenUsed++;
+        }
+        Object value = slot.value;
+        if (value == SEEN) {
+            slot.value = MUTABLE;
             if (immutable(text)) {
-                this.pending = key;
+                this.pending = slot;
             }
         } else if (value != MUTABLE) {
             return (V) value;
@@ -147,7 +172,7 @@ public final class PreparedTextCache<V> {
 
     public V remember(V value) {
         if (this.pending != null) {
-            this.seen.put(this.pending, value);
+            this.pending.value = value;
             this.pending = null;
         }
         return value;
@@ -190,6 +215,13 @@ public final class PreparedTextCache<V> {
             this.seen.clear();
             this.generation = generation;
         }
+        // Once a frame has touched every slot, more inserts only evict text the next frame needs, so every lookup
+        // would miss and still pay for the insert. Past that point keep what's cached and let the rest go uncached.
+        if (PerfClock.frame != this.frame) {
+            this.frame = PerfClock.frame;
+            this.entriesUsed = 0;
+            this.seenUsed = 0;
+        }
         this.scratch.length = 0;
         this.runHash = 0;
         this.lastStyle = null;
@@ -221,7 +253,15 @@ public final class PreparedTextCache<V> {
         key.background = background;
         key.flags = flags;
         key.hash = 31 * (31 * (31 * (31 * (31 * this.runHash + key.x) + key.y) + color) + background) + flags;
-        return this.entries.get(key);
+        Slot<V> slot = this.entries.get(key);
+        if (slot == null) {
+            return null;
+        }
+        if (slot.frame != this.frame) {
+            slot.frame = this.frame;
+            this.entriesUsed++;
+        }
+        return slot.value;
     }
 
     public Key miss() {
@@ -240,6 +280,9 @@ public final class PreparedTextCache<V> {
     }
 
     public void put(Key key, V value) {
-        this.entries.put(key, value);
+        if (this.entriesUsed < this.limit) {
+            this.entriesUsed++;
+            this.entries.put(key, new Slot<>(value, this.frame));
+        }
     }
 }

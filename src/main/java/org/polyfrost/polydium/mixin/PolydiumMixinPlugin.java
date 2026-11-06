@@ -28,6 +28,8 @@ import org.spongepowered.asm.service.MixinService;
 
 import org.polyfrost.polydium.compat.Mods;
 import org.polyfrost.polydium.early.EarlyVulkan;
+//? if >= 1.21.11 && < 26.2
+/*import org.polyfrost.polydium.early.EarlyVulkanPreLaunch;*/
 import org.polyfrost.polydium.early.LocalRefHoister;
 import org.polyfrost.polydium.early.OperationInliner;
 //? if >= 1.21.11 && < 26.2
@@ -181,6 +183,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             "OcclusionBoundsSprite", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"},
             "OcclusionBoundsConsumer", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"},
             "OcclusionCull", new String[]{"OcclusionRegion", "OcclusionListAccessor"},
+            "EntityCullingBlockEntityBox", new String[]{"MixinBlockEntityCullBox"},
             //? if < 1.21.10 {
             /*"OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency", "OpaqueParticleRenderOrder"},
             *///?} else {
@@ -370,6 +373,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".MixinC2meSamplePoolKeep") && !Mods.loaded("c2me-opts-allocs"))
             return false;
 
+        if ((mixinClassName.endsWith(".MixinEntityCullingBlockEntityBox") || mixinClassName.endsWith(".MixinBlockEntityCullBox")) && !Mods.loaded("entityculling"))
+            return false;
+
         if (mixinClassName.endsWith(".MixinBlockModelHookPrecheck") && !Mods.loaded("obe") && !Mods.loaded("overflowanimations"))
             return false;
 
@@ -415,7 +421,11 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void onLoad(String mixinPackage) {
-        if (!isDisabled("OperationInliner") && (Mods.loaded("particle_core") || Mods.loaded("mountopacity") || Mods.loaded("overflowparticles") || Mods.loaded("lambdynlights") || Mods.loaded("obe")))
+        //? if >= 1.21.11 && < 26.2 {
+        /*// The game libraries are available now, before vulkanBackend() selects mixins or gates Iris.
+        new EarlyVulkanPreLaunch().beforeMixinSelection();
+        *///?}
+        if (!isDisabled("OperationInliner") && (Mods.loaded("particle_core") || Mods.loaded("mountopacity") || Mods.loaded("overflowparticles") || Mods.loaded("lambdynlights") || Mods.loaded("obe") || Mods.loaded("entityculling")))
             MixinInternals.registerExtension(new OperationInliner("particle_core", "mountopacity", "overflowparticles", "obe", "inline"));
         if (!isDisabled("LocalRefHoister") && Mods.loaded("sodium"))
             MixinInternals.registerExtension(new LocalRefHoister());

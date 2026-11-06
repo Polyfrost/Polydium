@@ -27,6 +27,7 @@ public final class OperationInliner implements IExtension {
     private static final String OPERATION = "com/llamalad7/mixinextras/injector/wrapoperation/Operation";
     private static final String SUGAR_BRIDGE = "$mixinextras$bridge$";
     private static final String OPERATION_CALL_DESC = "([Ljava/lang/Object;)Ljava/lang/Object;";
+    private static final Type OBJECT = Type.getObjectType("java/lang/Object");
 
     private final String[] mods;
 
@@ -210,7 +211,11 @@ public final class OperationInliner implements IExtension {
         for (int i = 0; i < types.size(); i++) {
             Type type = types.get(i);
             if (insn.getOpcode() != Opcodes.DUP || intConst(insn.getNext()) != i || !(insn.getNext().getNext() instanceof VarInsnNode load)
-                    || load.getOpcode() != type.getOpcode(Opcodes.ILOAD) || !type.equals(paramAt(params, isStatic, load.var)))
+                    || load.getOpcode() != type.getOpcode(Opcodes.ILOAD))
+                return null;
+            Type param = paramAt(params, isStatic, load.var);
+            boolean coerced = OBJECT.equals(param) && !type.equals(param) && type.getSort() >= Type.ARRAY;
+            if (!coerced && !type.equals(param))
                 return null;
             insn = load.getNext();
             if (type.getSort() <= Type.DOUBLE) {
@@ -222,6 +227,8 @@ public final class OperationInliner implements IExtension {
                 return null;
             insn = insn.getNext();
             out.add(new VarInsnNode(load.getOpcode(), load.var));
+            if (coerced)
+                out.add(new TypeInsnNode(Opcodes.CHECKCAST, type.getInternalName()));
         }
         return insn;
     }
