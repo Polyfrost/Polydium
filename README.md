@@ -9,7 +9,9 @@ The magic of this mod is how it works with other mods. Polydium works the best a
 
 Notable features:
 - Global text width caching
-- Occlusion culling, applying only intelligently when it is needed
+- 2nd occlusion culling pass
+  - When Minecraft is GPU-bound, Polydium runs an additional occlusion pass on top of Sodium's occlusion culling which relies more on the CPU.
+  - Can help especially on integrated graphics or intense worlds
 - Batched particle rendering, writing whole particle layers straight into the vertex buffer
 - Particle section culling, skipping particles in chunk sections Sodium has already culled
 - Faster entity, item, and text vertex writing through Sodium's vertex pipeline
