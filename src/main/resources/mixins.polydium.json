@@ -109,6 +109,18 @@
     "client.perf.MixinPrecipitationCacheWeather",
     //? if >= 1.21.10
     "client.perf.MixinQuadParticleLayerCache",
+    //? if < 26.1
+    //"client.perf.MixinSpriteContentsTransparency",
+    //? if < 26.1
+    //"client.perf.MixinOpaqueSpriteParticle",
+    //? if < 1.21.10
+    //"client.perf.MixinOpaqueParticleRenderOrder",
+    //? if >= 1.21.5 && < 26.2
+    //"client.perf.MixinFaceCullCacheFix",
+    //? if >= 1.21.5 && < 26.1
+    //"client.perf.MixinOpaqueItemCutout",
+    //? if < 1.21.5
+    //"client.perf.MixinOpaqueItemCutoutModel",
     //? if >= 1.21.8
     "client.perf.MixinRainFogTickCache",
     "client.perf.BaseSpawnerSpinAccessor",
@@ -679,6 +691,8 @@
     "client.perf.MixinGuiItemBakeTick",
     //? if >= 26.1
     "client.perf.MixinGuiItemBakeAtlas",
+    //? if >= 1.21.8 && < 26.1
+    //"client.perf.MixinGuiItemAtlasReuse",
     "client.perf.MixinSpriteMipRelease",
     "client.perf.SpriteContentsMipAccessor",
     "client.perf.MixinTextEffectMerge",
