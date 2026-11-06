@@ -20,13 +20,13 @@ import java.nio.ByteBuffer;
 @Mixin(RenderType.class)
 public class MixinImmediateDrawRing {
     @WrapOperation(method = "draw", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/VertexFormat;uploadImmediateVertexBuffer(Ljava/nio/ByteBuffer;)Lcom/mojang/blaze3d/buffers/GpuBuffer;"))
-    private GpuBuffer polydium$ringVertices(VertexFormat format, ByteBuffer data, Operation<GpuBuffer> original, @Share("baseVertex") LocalIntRef baseVertex) {
+    private GpuBuffer polydium$ringVertices(VertexFormat format, ByteBuffer data, Operation<GpuBuffer> original) {
         int vertexSize = format.getVertexSize();
         int offset = ImmediateDrawRing.upload(data, vertexSize);
         if (offset < 0) {
             return original.call(format, data);
         }
-        baseVertex.set(offset / vertexSize);
+        ImmediateDrawRing.setVertexOffset(offset);
         return ImmediateDrawRing.buffer();
     }
 
@@ -42,8 +42,9 @@ public class MixinImmediateDrawRing {
     }
 
     @WrapOperation(method = "draw", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderPass;drawIndexed(IIII)V"))
-    private void polydium$ringOffsets(RenderPass pass, int baseVertex, int firstIndex, int indexCount, int instanceCount, Operation<Void> original, @Share("baseVertex") LocalIntRef ringBaseVertex, @Share("firstIndex") LocalIntRef ringFirstIndex) {
-        original.call(pass, baseVertex + ringBaseVertex.get(), firstIndex + ringFirstIndex.get(), indexCount, instanceCount);
+    private void polydium$ringOffsets(RenderPass pass, int baseVertex, int firstIndex, int indexCount, int instanceCount, Operation<Void> original, @Share("firstIndex") LocalIntRef ringFirstIndex) {
+        original.call(pass, baseVertex, firstIndex + ringFirstIndex.get(), indexCount, instanceCount);
+        ImmediateDrawRing.setVertexOffset(0);
     }
 }
 *///?}

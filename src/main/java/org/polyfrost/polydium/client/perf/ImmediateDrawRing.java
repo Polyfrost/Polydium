@@ -15,8 +15,21 @@ public final class ImmediateDrawRing {
     private static int size = 4 << 20;
     private static int cursor;
     private static long demand;
+    private static int vertexOffset;
 
     private ImmediateDrawRing() {
+    }
+
+    public static void setVertexOffset(int offset) {
+        vertexOffset = offset;
+    }
+
+    public static long vertexOffset() {
+        return vertexOffset;
+    }
+
+    public static boolean holds(GpuBuffer buffer) {
+        return ring != null && buffer == ring.currentBuffer();
     }
 
     public static int upload(ByteBuffer src, int align) {

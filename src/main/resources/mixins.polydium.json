@@ -657,6 +657,10 @@
     //? if >= 1.21.11 && < 26.2
     //"client.perf.MixinImmediateDrawRing",
     //? if >= 1.21.11 && < 26.2
+    //"client.perf.opengl.MixinImmediateDrawRingSeparate",
+    //? if >= 1.21.11 && < 26.2
+    //"client.perf.opengl.MixinImmediateDrawRingEmulated",
+    //? if >= 1.21.11 && < 26.2
     //"client.perf.MixinImmediateDrawRingFrame",
     //? if >= 1.21.11 && < 26.2
     //"client.perf.MixinImmediateDrawRingClose",
