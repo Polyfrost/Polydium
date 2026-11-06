@@ -364,6 +364,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".MixinC2meSamplePoolKeep") && !Mods.loaded("c2me-opts-allocs"))
             return false;
 
+        if ((mixinClassName.endsWith(".MixinEntityCullingBlockEntityBox") || mixinClassName.endsWith(".MixinBlockEntityCullBox")) && !Mods.loaded("entityculling"))
+            return false;
+
         if (mixinClassName.endsWith(".MixinBlockModelHookPrecheck") && !Mods.loaded("obe") && !Mods.loaded("overflowanimations"))
             return false;
 

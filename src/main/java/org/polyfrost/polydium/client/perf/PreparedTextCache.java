@@ -16,7 +16,7 @@ import java.util.Map;
 
 // Geometry-cache idea ported from Argentum (TextBatcher), with permission from rdh.
 public final class PreparedTextCache<V> {
-    public static final int LIMIT = Integer.getInteger("polydium.preparedTextCache", 2048);
+    public static final int LIMIT = Integer.getInteger("polydium.preparedTextCache", 8192);
     private static final int MAX_LENGTH = 256;
 
     public static boolean cacheable(Style style) {
@@ -103,8 +103,12 @@ public final class PreparedTextCache<V> {
     private record Seen(Object text, int x, int y, int color, int background, int flags) {
     }
 
+    private final int limit;
     private final LinkedHashMap<Key, V> entries;
     private final LinkedHashMap<Seen, Object> seen;
+    private long frame = -1;
+    private int entriesUsed;
+    private int seenUsed;
     private Seen pending;
     private final Key scratch = new Key();
     private int generation;
@@ -112,6 +116,7 @@ public final class PreparedTextCache<V> {
     private Object lastStyle;
 
     public PreparedTextCache(int limit) {
+        this.limit = limit;
         this.entries = lru(limit);
         this.seen = lru(limit);
         this.scratch.chars = new int[2 * MAX_LENGTH];
@@ -133,8 +138,14 @@ public final class PreparedTextCache<V> {
         Object value = this.seen.get(key);
         this.pending = null;
         if (value == null) {
-            this.seen.put(key, SEEN);
-        } else if (value == SEEN) {
+            if (this.seenUsed < this.limit) {
+                this.seenUsed++;
+                this.seen.put(key, SEEN);
+            }
+            return null;
+        }
+        this.seenUsed++;
+        if (value == SEEN) {
             this.seen.put(key, MUTABLE);
             if (immutable(text)) {
                 this.pending = key;
@@ -190,6 +201,13 @@ public final class PreparedTextCache<V> {
             this.seen.clear();
             this.generation = generation;
         }
+        // Once a frame has touched the whole cache, more inserts only evict text the next frame needs, so every lookup
+        // would miss and still pay for the insert. Past that point keep what's cached and let the rest go uncached.
+        if (PerfClock.frame != this.frame) {
+            this.frame = PerfClock.frame;
+            this.entriesUsed = 0;
+            this.seenUsed = 0;
+        }
         this.scratch.length = 0;
         this.runHash = 0;
         this.lastStyle = null;
@@ -221,7 +239,11 @@ public final class PreparedTextCache<V> {
         key.background = background;
         key.flags = flags;
         key.hash = 31 * (31 * (31 * (31 * (31 * this.runHash + key.x) + key.y) + color) + background) + flags;
-        return this.entries.get(key);
+        V value = this.entries.get(key);
+        if (value != null) {
+            this.entriesUsed++;
+        }
+        return value;
     }
 
     public Key miss() {
@@ -240,6 +262,9 @@ public final class PreparedTextCache<V> {
     }
 
     public void put(Key key, V value) {
-        this.entries.put(key, value);
+        if (this.entriesUsed < this.limit) {
+            this.entriesUsed++;
+            this.entries.put(key, value);
+        }
     }
 }
