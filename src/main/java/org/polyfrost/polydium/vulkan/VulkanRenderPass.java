@@ -45,6 +45,7 @@ import org.lwjgl.vulkan.VkViewport.Buffer;
 
 public class VulkanRenderPass implements RenderPassBackend {
   public static final boolean VALIDATION = SharedConstants.IS_RUNNING_IN_IDE;
+  private static @Nullable GpuBufferSlice lastDynamicTransforms;
   private final VulkanDevice device;
   private final VulkanCommandEncoder encoder;
   private final CheckpointExtension.CheckpointStorage checkpointStorage;
@@ -164,15 +165,14 @@ public class VulkanRenderPass implements RenderPassBackend {
 
   @Override
   public void setUniform(final String name, final GpuBuffer value) {
-    GpuBufferSlice slice = value.slice();
-    if (!slice.equals(this.uniforms.put(name, slice))) {
-      this.uniformSlots = VulkanDynamicState.setSlot(this.uniformSlots, name, slice);
-      this.anyDescriptorDirty = true;
-    }
+    this.setUniform(name, value.slice());
   }
 
   @Override
   public void setUniform(final String name, final GpuBufferSlice value) {
+    if (name.equals("DynamicTransforms")) {
+      lastDynamicTransforms = value;
+    }
     if (!value.equals(this.uniforms.put(name, value))) {
       this.uniformSlots = VulkanDynamicState.setSlot(this.uniformSlots, name, value);
       this.anyDescriptorDirty = true;
@@ -443,6 +443,11 @@ public class VulkanRenderPass implements RenderPassBackend {
           set.descriptorCount(1);
           if (entry.type() == VulkanBindGroupLayout.VulkanBindGroupEntryType.UNIFORM_BUFFER) {
             GpuBufferSlice buffer = this.uniforms.get(entry.name());
+            // OpenGL leaves the previous draw's transforms bound, which some mods (e.g. Teamviewer) rely on by never setting their own
+            if (buffer == null && entry.name().equals("DynamicTransforms") && lastDynamicTransforms != null && !lastDynamicTransforms.buffer().isClosed()) {
+              buffer = lastDynamicTransforms;
+            }
+
             if (buffer == null && !this.uniforms.isEmpty() && this.pipeline.info().getUniforms().stream().noneMatch(u -> u.name().equals(entry.name()))) {
               buffer = this.uniforms.values().iterator().next();
             }

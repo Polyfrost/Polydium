@@ -73,6 +73,10 @@ public class PolydiumToggles {
     //? if >= 26.2
     @Switch(title = "Background Vertex Copy", description = "On Vulkan, copies the world's entity, text, item and particle vertices into GPU memory on a separate thread while terrain is prepared.")
     public static boolean backgroundVertexCopy = true;
-    @Switch(title = "Xaero's Minimap HUD Caching", description = "Caches Xaero's Minimap and redraws it at most 60 times per second.")
+    @Switch(title = "Xaero's Minimap HUD Caching", description = "Caches Xaero's Minimap and redraws it at most 60 times per second, or 20 while the camera is still.")
     public static boolean xaeroMinimapHudCache = true;
+    @Switch(title = "Xaero's Radar Icon Caching", description = "Remembers each entity's radar icon for a second instead of looking it up on every minimap redraw.")
+    public static boolean xaeroRadarIconCache = true;
+    @Switch(title = "Xaero's World Map Region Throttling", description = "Checks map regions with nothing to upload every 8 frames instead of every frame.")
+    public static boolean xaeroWorldMapRegionThrottle = true;
 }

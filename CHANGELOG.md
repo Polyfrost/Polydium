@@ -1,2 +1,2 @@
-## 1.2.3
-- Fixed a crash on some GPUs when joining a world for the first time or hovering the Vulkan graphics API option
+## 1.3.1
+- Properly fix unlimited fps

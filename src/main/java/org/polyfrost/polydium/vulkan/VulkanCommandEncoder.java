@@ -976,13 +976,14 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
   public boolean awaitSubmitCompletion(final long submitIndex, final long timeoutNS) {
     if (this.completedSubmitIndex >= submitIndex) {
       return true;
-    } else if (submitIndex == this.currentSubmitIndex) {
-      if (timeoutNS == 0L) {
-        return false;
-      } else {
-        throw new IllegalStateException("Cannot wait on a fence for the current submit");
-      }
+    } else if (submitIndex == this.currentSubmitIndex && timeoutNS == 0L) {
+      return false;
     } else {
+      // GL fences can be waited on mid-frame, which MappableRingBuffer does once a GuiRenderer renders over 3 times in one frame
+      if (submitIndex == this.currentSubmitIndex) {
+        this.submit();
+      }
+
       MemoryStack stack = MemoryStack.stackPush();
 
       boolean var9;

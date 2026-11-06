@@ -34,6 +34,7 @@ fun optionalProperty(name: String): String? = findProperty(name)?.toString()?.ta
 stonecutter constants {
     put("skyboxify", optionalProperty("deps.skyboxify") != null)
     put("xaerominimap", optionalProperty("deps.xaerominimap") != null)
+    put("xaeroworldmap", optionalProperty("deps.xaeroworldmap") != null)
 }
 
 val minecraftPredicate = property("mod.mc_compat") as String
@@ -176,6 +177,9 @@ dependencies {
     optionalProperty("deps.xaerominimap")?.let {
         modCompileOnly("maven.modrinth:xaeros-minimap:$it") { isTransitive = false }
     }
+    optionalProperty("deps.xaeroworldmap")?.let {
+        modCompileOnly("maven.modrinth:xaeros-world-map:$it") { isTransitive = false }
+    }
 
     if (vulkanBackport) {
         val lwjgl = property("deps.lwjgl") as String
@@ -221,7 +225,19 @@ loomExt.runs.configureEach {
     optionalProperty("polydium.quickPlay")?.let { programArgs("--quickPlaySingleplayer", it) }
 }
 
+val sodiumTestClasses = tasks.register<Sync>("sodiumTestClasses") {
+    val sodium = sourceSets.main.get().compileClasspath.filter { it.name.startsWith("sodium-") }
+
+    from({ sodium.map { zipTree(it) } }) {
+        include("net/caffeinemc/mods/sodium/**")
+    }
+    into(layout.buildDirectory.dir("sodium-test-classes"))
+}
+
 tasks.test {
+    workingDir = layout.buildDirectory.dir("test-run").get().asFile
+    doFirst { workingDir.mkdirs() }
+    classpath += files(sodiumTestClasses)
     useJUnitPlatform()
     systemProperty("fabric.classPathGroups", modOutputGroup)
     testLogging {

@@ -15,7 +15,13 @@ public abstract class MixinOcclusionRegion implements RegionOcclusion {
     @Unique
     private final long[] polydium$testedSections = new long[RenderRegion.REGION_SIZE / Long.SIZE];
     @Unique
+    private final long[] polydium$sectionBounds = new long[RenderRegion.REGION_SIZE];
+    @Unique
+    private final int[] polydium$animatedBounds = new int[RenderRegion.REGION_SIZE];
+    @Unique
     private int polydium$testedGeneration;
+    @Unique
+    private long polydium$hiddenAfter;
 
     @Override
     public long[] polydium$getHiddenSections() {
@@ -28,6 +34,16 @@ public abstract class MixinOcclusionRegion implements RegionOcclusion {
     }
 
     @Override
+    public long[] polydium$getSectionBounds() {
+        return this.polydium$sectionBounds;
+    }
+
+    @Override
+    public int[] polydium$getAnimatedBounds() {
+        return this.polydium$animatedBounds;
+    }
+
+    @Override
     public int polydium$getTestedGeneration() {
         return this.polydium$testedGeneration;
     }
@@ -35,6 +51,16 @@ public abstract class MixinOcclusionRegion implements RegionOcclusion {
     @Override
     public void polydium$setTestedGeneration(int generation) {
         this.polydium$testedGeneration = generation;
+    }
+
+    @Override
+    public long polydium$getHiddenAfter() {
+        return this.polydium$hiddenAfter;
+    }
+
+    @Override
+    public void polydium$setHiddenAfter(long captures) {
+        this.polydium$hiddenAfter = captures;
     }
 }
 //?}

@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import xaero.common.graphics.ImprovedFramebuffer;
+import xaero.common.minimap.MinimapProcessor;
 import xaero.hud.compat.mods.ImmediatelyFastHelper;
 
 import java.util.Objects;
@@ -29,13 +30,14 @@ public class MixinMinimapFBORenderer {
     private void polydium$reuseFramebuffer(
             CallbackInfo ci,
             @Local(argsOnly = true) GuiGraphics guiGraphics,
+            @Local(argsOnly = true) MinimapProcessor processor,
             @Local(argsOnly = true, ordinal = 0) int viewW,
             @Local(argsOnly = true, ordinal = 2) int shape,
             @Local(argsOnly = true, ordinal = 1) boolean lockedNorth,
             @Local(argsOnly = true, ordinal = 2) boolean cave
     ) {
         int key = Objects.hash(System.identityHashCode(rotationFramebuffer), viewW, shape, lockedNorth, cave);
-        if (!polydium$hudCache.reuse(key)) return;
+        if (!polydium$hudCache.reuse(key, processor.getMinimapZoom() != processor.getTargetZoom())) return;
         guiGraphics.flush();
         ImmediatelyFastHelper.triggerBatchingBuffersFlush(guiGraphics);
         ci.cancel();
