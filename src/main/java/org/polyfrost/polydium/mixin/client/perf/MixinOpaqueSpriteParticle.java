@@ -26,7 +26,7 @@ public abstract class MixinOpaqueSpriteParticle extends SingleQuadParticle {
 
     @ModifyReturnValue(method = "getLayer", at = @At("RETURN"))
     private SingleQuadParticle.Layer polydium$opaqueLayer(SingleQuadParticle.Layer layer) {
-        return OpaqueParticles.layer(layer, this.sprite);
+        return OpaqueParticles.layer(layer, this.sprite, this.alpha);
     }
 }
 //?} else {
@@ -37,7 +37,7 @@ public abstract class MixinOpaqueSpriteParticle extends SingleQuadParticle {
 
     @ModifyReturnValue(method = "getRenderType", at = @At("RETURN"))
     private ParticleRenderType polydium$opaqueRenderType(ParticleRenderType type) {
-        return OpaqueParticles.renderType(type, this.sprite);
+        return OpaqueParticles.renderType(type, this.sprite, this.alpha, this.getClass());
     }
 }
 ^///?}

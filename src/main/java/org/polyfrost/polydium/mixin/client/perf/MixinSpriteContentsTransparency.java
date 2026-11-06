@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(SpriteContents.class)
@@ -41,6 +42,15 @@ public abstract class MixinSpriteContentsTransparency implements SpriteTranspare
         ^///?}
     }
 
+    //? if < 1.21.11 {
+    /^// Generated mip levels can be released after upload, so the scan has to run while they all exist.
+    @Inject(method = "increaseMipLevel", at = @At("TAIL"))
+    private void polydium$scanMipLevels(int mipLevel, CallbackInfo ci) {
+        this.polydium$translucent = 0;
+        this.polydium$hasTranslucent();
+    }
+
+    ^///?}
     @Override
     public boolean polydium$hasTranslucent() {
         byte state = this.polydium$translucent;
