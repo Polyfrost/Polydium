@@ -1,5 +1,6 @@
 package org.polyfrost.polydium.client;
 
+import org.polyfrost.oneconfig.api.config.v1.annotations.Slider;
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch;
 
 public class PolydiumToggles {
@@ -47,6 +48,9 @@ public class PolydiumToggles {
     //? if >= 1.21.11
     @Switch(title = "Early Swapchain Acquire", description = "With vsync off on Vulkan, takes the next screen image right after the GPU wait instead of after the client tick.")
     public static boolean earlyAcquire = true;
+    //? if >= 1.21.11 && < 26.2
+    //@Slider(title = "Vulkan Frames In Flight", description = "How many frames the CPU may queue ahead of the GPU on Vulkan. Higher can raise FPS at the cost of input latency. Applies after restarting the game.", min = 2, max = 4, step = 1)
+    public static int framesInFlight = 2;
     @Switch(title = "Lock-free Dynamic Light Reads", description = "Lets chunk meshing read LambDynamicLights' light sources without taking its shared lock for every block, falling back to the lock only when the sources changed during the read.")
     public static boolean dynamicLightOptimisticRead = true;
     @Switch(title = "Spread Light Updates", description = "Spreads ScalableLux's client light updates over a few frames instead of doing a whole burst of block changes in one frame, and keeps them out of frames that also ran a game tick.")

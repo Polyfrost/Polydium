@@ -1,6 +1,7 @@
 package org.polyfrost.polydium.vulkan;
 
 import java.util.function.Supplier;
+import org.polyfrost.polydium.client.PolydiumToggles;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 import org.polyfrost.polydium.vulkan.compat.RenderArea;
@@ -61,11 +62,8 @@ import org.lwjgl.vulkan.VkMemoryBarrier2.Buffer;
 
 public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable {
   /**
-   * Submissions the CPU may run ahead of the GPU. Mojang's backend uses 2; at four-digit framerates on MoltenVK the
-   * timeline-semaphore completion latency alone is a large slice of the frame, so a third submission keeps the render
-   * thread recording instead of stalling in {@link #awaitSubmitCompletion}. Override with {@code -Dpolydium.framesInFlight=2..4}.
    */
-  public static final int MAX_SUBMITS_IN_FLIGHT = Math.max(2, Math.min(4, Integer.getInteger("polydium.framesInFlight", 3)));
+  public static final int MAX_SUBMITS_IN_FLIGHT = Math.max(2, Math.min(4, PolydiumToggles.framesInFlight));
   private final VulkanDevice device;
   private final VulkanTransientMemory transientMemory;
   private final long submitSemaphore;
