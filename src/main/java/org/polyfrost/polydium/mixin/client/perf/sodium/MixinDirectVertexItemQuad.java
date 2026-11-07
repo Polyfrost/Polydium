@@ -31,7 +31,11 @@ public abstract class MixinDirectVertexItemQuad {
 
     @WrapOperation(
             method = /*? if >= 26.1 {*/"writeQuadVertices"/*?} else {*//*{"writeQuadVertices(Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/caffeinemc/mods/sodium/client/model/quad/ModelQuadView;IIIZ)V", /^? if >= 1.21.11 {^/"writeQuadVertices(Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/caffeinemc/mods/sodium/client/model/quad/ModelQuadView;FFFF[F[II)V"/^?} else {^//^"writeQuadVertices(Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lnet/caffeinemc/mods/sodium/client/model/quad/ModelQuadView;FFFF[FZ[II)V"^//^?}^/}*//*?}*/,
-            at = @At(value = "INVOKE", target = "Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;push(Lorg/lwjgl/system/MemoryStack;JILcom/mojang/renderpearl/api/vertex/VertexFormat;)V")
+            at = {
+                    @At(value = "INVOKE", target = "Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;push(Lorg/lwjgl/system/MemoryStack;JILcom/mojang/renderpearl/api/vertex/VertexFormat;)V"),
+                    // Sodium 0.9.3-beta.2 and above
+                    @At(value = "INVOKE", target = "Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;sodium$push(Lorg/lwjgl/system/MemoryStack;JILcom/mojang/renderpearl/api/vertex/VertexFormat;)V")
+            }
     )
     private static void polydium$skipCopy(VertexBufferWriter writer, MemoryStack stack, long source, int count, VertexFormat format, Operation<Void> original,
                                           @Share("polydium$direct") LocalBooleanRef direct) {

@@ -5,6 +5,7 @@
 - Reduced per-frame allocations with Entity Culling's block entity checks
 - Fixed a crash on the Vulkan backend with mods that rely on OpenGL keeping the previous transforms bound, such as Teamviewer (Hoplite)
 - Fixed VRAM growing with every Iris shader or resource reload on 26.3
+- Fixed a crash with Sodium 0.9.3-beta.2 and above
 
 ## 1.3.1
 - Properly fix unlimited fps
