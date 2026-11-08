@@ -3,7 +3,7 @@ package org.polyfrost.polydium.client.perf;
 public final class GpuWaitMeter {
 
     private static final long   WINDOW     = 500_000_000L;
-    private static final double ENABLE_AT  = 0.10;
+    private static final double ENABLE_AT  = 0.05;
     private static final double DISABLE_AT = 0.03;
 
     private static long    windowStart = System.nanoTime();
