@@ -4,6 +4,7 @@ package org.polyfrost.polydium.client.perf;
 
 //? if >= 26.3
 import net.minecraft.client.Minecraft;
+import org.polyfrost.polydium.client.PolydiumToggles;
 import org.polyfrost.polydium.mixin.PolydiumMixinPlugin;
 import org.polyfrost.polydium.mixin.client.perf.sodium.MixinOcclusionListAccessor;
 import it.unimi.dsi.fastutil.HashCommon;
@@ -123,7 +124,7 @@ public final class OcclusionCuller {
     }
 
     private static void update(ChunkRenderListIterable lists, ChunkRenderMatrices matrices, double cameraX, double cameraY, double cameraZ) {
-        if (IrisShaders.packInUse()) {
+        if (!PolydiumToggles.occlusionCulling || IrisShaders.packInUse()) {
             stopCulling();
 
             return;
