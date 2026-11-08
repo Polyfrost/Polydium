@@ -1,4 +1,4 @@
-## Unreleased changes
+## 1.3.2
 - Fixed the automatic Vulkan switch never turning on, since the GPU check ran too early in startup to see the GPU
 - Fixed text caching falling behind when a frame draws more text than the cache holds, such as rooms full of signs
 - Dropped items now reuse their render state between frames
