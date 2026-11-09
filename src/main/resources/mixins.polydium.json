@@ -507,6 +507,8 @@
     "client.perf.vulkan.MixinVulkanPushConstantCall",
     //? if >= 1.21.8
     "client.perf.GlBufferAccessor",
+    //? if >= 26.2
+    "client.perf.GlBufferDirectAccessor",
     //? if >= 1.21.11
     "client.perf.GizmoLineAccessor",
     //? if >= 1.21.8
