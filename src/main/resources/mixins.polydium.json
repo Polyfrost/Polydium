@@ -660,6 +660,8 @@
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLegacyFeatures",
     //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanCheckpointsOff",
+    //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLegacyPipeline",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLazyTransient",
