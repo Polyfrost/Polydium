@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
+import org.polyfrost.polydium.client.perf.GpuWaitMeter;
 import org.polyfrost.polydium.client.perf.MainPassSwap;
 //?} else {
 /*import org.spongepowered.asm.mixin.injection.Inject;
@@ -35,14 +36,21 @@ public abstract class MixinOcclusionDepthCapture {
         }
 
         RenderTarget mainTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        long         start      = System.nanoTime();
 
         pass.close();
+
+        long closed = System.nanoTime();
+
         OcclusionDepth.capture(mainTarget);
+
+        long reopen = System.nanoTime();
 
         RenderPass features = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "Main", mainTarget.getColorTextureView(), Optional.empty(), mainTarget.getDepthTextureView(), OptionalDouble.empty());
 
         RenderSystem.bindDefaultUniforms(features);
         MainPassSwap.reopened(features);
+        GpuWaitMeter.addCullCost(closed - start + System.nanoTime() - reopen);
         original.call(frame, features);
     }
 

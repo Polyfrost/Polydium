@@ -1,5 +1,6 @@
 package org.polyfrost.polydium.vulkan;
 
+import org.polyfrost.polydium.client.perf.VmaPolicy;
 import org.polyfrost.polydium.vulkan.compat.GpuFormat;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.TextureFormat;
@@ -55,9 +56,12 @@ public class VulkanGpuTexture extends GpuTexture implements Destroyable {
       allocationCreateInfo.usage(8);
       LongBuffer imageHandlePtr = stack.callocLong(1);
       PointerBuffer allocationHandlePtr = stack.callocPointer(1);
-      VulkanUtils.crashIfFailure(
-        device, Vma.vmaCreateImage(device.vma(), imageCreateInfo, allocationCreateInfo, imageHandlePtr, allocationHandlePtr, null), "Failed to create image"
-      );
+      long imageBytes = VmaPolicy.imageBytes(format.blockSize(), width, height, depthOrLayers, mipLevels);
+      int result = VmaPolicy.create(device.vma(), imageBytes, 0, flags -> {
+        allocationCreateInfo.flags(flags);
+        return Vma.vmaCreateImage(device.vma(), imageCreateInfo, allocationCreateInfo, imageHandlePtr, allocationHandlePtr, null);
+      });
+      VulkanUtils.crashIfFailure(device, result, "Failed to create image");
       this.vkImage = imageHandlePtr.get(0);
       this.vmaAllocation = allocationHandlePtr.get(0);
       Buffer barrier = VkImageMemoryBarrier.calloc(1, stack).sType$Default();

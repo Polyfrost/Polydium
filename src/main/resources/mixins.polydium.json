@@ -328,6 +328,7 @@
     "client.perf.vulkan.backport.MixinVulkanFancyMenuScissor",
     "client.perf.vulkan.backport.MixinVulkanGpuSurfacePresentThreadBackport",
     "client.perf.vulkan.backport.MixinVulkanImGui",
+    "client.perf.vulkan.backport.MixinVulkanJourneyMap",
     "client.perf.vulkan.backport.MixinVulkanLazyTransientBackport",
     "client.perf.vulkan.backport.MixinVulkanLazyTransientEncoderAccessorBackport",
     "client.perf.vulkan.backport.MixinVulkanLazyTransientStageAccessorBackport",
@@ -349,7 +350,6 @@
     /*"client.perf.sodium.vulkan.MixinVulkanChunkRenderer",
     "client.perf.sodium.vulkan.MixinVulkanGlTexelBuffer",
     "client.perf.sodium.vulkan.MixinVulkanGpuBufferHandle",
-    "client.perf.vulkan.backport.MixinVulkanJourneyMap",
     "client.perf.vulkan.backport.MixinVulkanOdin",
     "client.perf.vulkan.backport.MixinVulkanOwoBlur",
     "client.perf.vulkan.backport.MixinVulkanOwoBraid",
@@ -362,6 +362,12 @@
     "client.perf.vulkan.MixinVulkanBindSkip",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanBufferMapping",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVmaAllocatorPolicy",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVmaBufferPolicy",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVmaImagePolicy",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanBufferMappingUnmap",
     //? if >= 26.2
@@ -577,6 +583,8 @@
     "client.perf.vulkan.MixinMinecraftPresentThread",
     //? if >= 1.21.11
     "client.perf.vulkan.MixinAutoVulkan",
+    //? if >= 26.3
+    "client.perf.MixinGlSdlContextApi",
     //? if >= 26.2
     "client.perf.vulkan.MixinKeepVulkanOptions",
     //? if >= 1.21.11
@@ -661,6 +669,8 @@
     "client.perf.vulkan.MixinVulkanLegacyEncoder",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLegacyFeatures",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanCheckpointsOff",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLegacyPipeline",
     //? if >= 26.2

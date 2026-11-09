@@ -1,5 +1,6 @@
 package org.polyfrost.polydium.vulkan;
 
+import org.polyfrost.polydium.client.perf.VmaPolicy;
 import com.mojang.blaze3d.GLFWErrorCapture;
 import com.mojang.blaze3d.shaders.GpuDebugOptions;
 import com.mojang.blaze3d.shaders.ShaderSource;
@@ -273,6 +274,7 @@ public class VulkanBackend implements GpuBackend {
         .vulkanApiVersion(VK12.VK_API_VERSION_1_2)
         .device(vkDevice)
         .physicalDevice(vkDevice.getPhysicalDevice())
+        .preferredLargeHeapBlockSize(VmaPolicy.BLOCK_BYTES)
         .pVulkanFunctions(vmaVulkanFunctions);
       PointerBuffer pointer = stack.callocPointer(1);
       VulkanUtils.throwIfFailure(Vma.vmaCreateAllocator(createInfo, pointer), "Failed to create VMA allocator");

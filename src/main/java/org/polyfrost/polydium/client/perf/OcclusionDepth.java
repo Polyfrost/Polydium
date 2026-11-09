@@ -136,7 +136,8 @@ public final class OcclusionDepth {
     }
 
     public static void capture(RenderTarget mainTarget) {
-        Slot slot = freeSlot();
+        long start = System.nanoTime();
+        Slot slot  = freeSlot();
 
         if (!captureDue || slot == null)
             throw new IllegalStateException("Depth capture requested without a described frame or a free slot");
@@ -192,6 +193,7 @@ public final class OcclusionDepth {
         captureRequested   = false;
 
         RenderSystem.getDevice().createCommandEncoder().copyTextureToBuffer(target, slot.buffer, /*? if >= 1.21.11 {*/0L/*?} else {*//*0*//*?}*/, () -> complete(slot, captureGeneration), 0);
+        GpuWaitMeter.addCullCost(System.nanoTime() - start);
     }
 
     public static void reset() {
@@ -272,6 +274,8 @@ public final class OcclusionDepth {
         if (captureGeneration != generation)
             return;
 
+        long start = System.nanoTime();
+
         try (var view = /*? if >= 26.2 {*/slot.buffer.map(true, false)/*?} else {*//*RenderSystem.getDevice().createCommandEncoder().mapBuffer(slot.buffer, true, false)*//*?}*/) {
             view.data().order(ByteOrder.nativeOrder()).asFloatBuffer().get(0, LATEST_DEPTH);
         }
@@ -284,6 +288,7 @@ public final class OcclusionDepth {
         latestZ        = slot.z;
         latestSequence = slot.sequence;
         latestVersion ++;
+        GpuWaitMeter.addCullCost(System.nanoTime() - start);
     }
 
     private static Slot freeSlot() {
