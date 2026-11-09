@@ -389,7 +389,7 @@ public final class EarlyVulkan implements LanguageAdapter {
 
     //?}
 
-    private static Boolean vulkanEligible() {
+    public static Boolean vulkanEligible() {
         String forced = System.getProperty("polydium.vulkanEligible");
         if (forced != null)
             return Boolean.parseBoolean(forced);
