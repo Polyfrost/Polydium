@@ -541,6 +541,8 @@
     "client.perf.vulkan.MixinVulkanBackgroundDestroy",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanBackgroundDestroyDrain",
+    //? if >= 26.2 && < 26.3
+    //"client.perf.vulkan.MixinVulkanDeferPipelineDestroy",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanPipelineCache",
     //? if >= 26.2

@@ -170,8 +170,9 @@ public class VulkanDevice implements GpuDeviceBackend {
     }
 
     this.checkpointExtension.close();
-    this.commandEncoder.destroy();
+    // must precede the encoder's destroy, which drains the destroy queue this fills
     this.clearPipelineCache();
+    this.commandEncoder.destroy();
     this.renderPassCache.destroy();
     Vma.vmaDestroyAllocator(this.vma);
     VK12.vkDestroyDevice(this.vkDevice, null);
@@ -396,10 +397,10 @@ public class VulkanDevice implements GpuDeviceBackend {
 
   @Override
   public void clearPipelineCache() {
-    this.graphicsQueue.waitIdle();
-    this.pipelineCache.values().forEach(VulkanRenderPipeline::destroy);
+    // the command buffer being recorded may still have these bound
+    this.pipelineCache.values().forEach(this.commandEncoder::queueForDestroy);
     this.pipelineCache.clear();
-    this.depthVariantCache.values().forEach(VulkanRenderPipeline::destroy);
+    this.depthVariantCache.values().forEach(this.commandEncoder::queueForDestroy);
     this.depthVariantCache.clear();
     this.shaderCache.values().forEach(IntermediaryShaderModule::close);
     this.shaderCache.clear();
