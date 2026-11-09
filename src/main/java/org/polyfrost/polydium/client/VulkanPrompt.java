@@ -104,6 +104,8 @@ public final class VulkanPrompt {
     public static void probeAtStartup() {
         //? if < 26.2
         /*if (Mods.VULKANMOD) return;*/
+        if (!Boolean.TRUE.equals(EarlyVulkan.vulkanEligible()))
+            return;
         List<Path> markers = markers();
         if (markers.stream().anyMatch(Files::exists) || EarlyVulkan.switched())
             return;

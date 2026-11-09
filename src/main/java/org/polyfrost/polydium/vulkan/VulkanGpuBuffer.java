@@ -1,5 +1,6 @@
 package org.polyfrost.polydium.vulkan;
 
+import org.polyfrost.polydium.client.perf.VmaPolicy;
 import org.polyfrost.polydium.vulkan.compat.VkMappedView;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
@@ -92,7 +93,10 @@ public abstract class VulkanGpuBuffer extends GpuBuffer implements Destroyable {
 
         LongBuffer bufferPtr = stack.callocLong(1);
         PointerBuffer allocPtr = stack.callocPointer(1);
-        int result = Vma.vmaCreateBuffer(device.vma(), bufferCreateInfo, allocCreateInfo, bufferPtr, allocPtr, null);
+        int result = VmaPolicy.create(device.vma(), size, allocCreateInfo.flags(), flags -> {
+          allocCreateInfo.flags(flags);
+          return Vma.vmaCreateBuffer(device.vma(), bufferCreateInfo, allocCreateInfo, bufferPtr, allocPtr, null);
+        });
         VulkanUtils.crashIfFailure(device, result, "Failed to allocate VkBuffer");
         vkBuffer = bufferPtr.get(0);
         vmaAllocation = allocPtr.get(0);

@@ -51,6 +51,9 @@ public class MixinVulkanBackendListWindow {
 
     @Unique
     private void polydium$macReduce() {
+        if (VulkanDevice.active != null) {
+            VulkanDevice.active.markSurfaceResized();
+        }
         if (VulkanActive.backend != null && SodiumExtraMac.isHighDpi(this.framebufferWidth, this.framebufferHeight, this.width, this.height) && SodiumExtraMac.enabled()) {
             this.framebufferWidth = Math.max(1, this.framebufferWidth / 2);
             this.framebufferHeight = Math.max(1, this.framebufferHeight / 2);

@@ -45,6 +45,7 @@ import java.util.regex.Pattern;
 /*import java.util.regex.Matcher;
 import net.minecraft.util.Mth;
 *///?}
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderDefines;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;
@@ -420,6 +421,8 @@ public class VulkanDevice implements GpuDeviceBackend {
   private long window;
   private boolean vsync;
   private boolean surfaceNeedsReconfiguring = true;
+  private boolean surfaceIsInvalid = true;
+  private boolean wasIconified;
 
   public void initSurface(final long window) {
     this.window = window;
@@ -432,34 +435,48 @@ public class VulkanDevice implements GpuDeviceBackend {
     this.surfaceNeedsReconfiguring = true;
   }
 
+  public void markSurfaceResized() {
+    this.surfaceNeedsReconfiguring = true;
+  }
+
   void presentTexture(final GpuTextureView texture) {
-    int[] width = new int[1];
-    int[] height = new int[1];
-    GLFW.glfwGetFramebufferSize(this.window, width, height);
-    if (width[0] == 0 || height[0] == 0) {
-      return;
+    boolean iconified = Minecraft.getInstance().getWindow().isIconified();
+    if (iconified != this.wasIconified) {
+      this.wasIconified = iconified;
+      this.surfaceNeedsReconfiguring = true;
     }
-    SodiumExtraMac.reduceSwapchain(this.window, width, height);
 
-    GpuSurface.Configuration current = this.surface.currentConfiguration().orElse(null);
-    if (this.surfaceNeedsReconfiguring || current == null || current.width() != width[0] || current.height() != height[0] || this.surface.isSuboptimal()) {
-      GpuSurface.Configuration config = new GpuSurface.Configuration(
-        width[0], height[0], GpuSurface.PresentMode.getSupportedVsyncMode(this.surface.supportedPresentModes(), this.vsync)
-      );
+    if ((this.surfaceNeedsReconfiguring || this.surface.isSuboptimal() && !this.surfaceIsInvalid) && !iconified) {
+      int[] width = new int[1];
+      int[] height = new int[1];
+      GLFW.glfwGetFramebufferSize(this.window, width, height);
+      if (width[0] != 0 && height[0] != 0) {
+        SodiumExtraMac.reduceSwapchain(this.window, width, height);
+        GpuSurface.Configuration config = new GpuSurface.Configuration(
+          width[0], height[0], GpuSurface.PresentMode.getSupportedVsyncMode(this.surface.supportedPresentModes(), this.vsync)
+        );
 
-      try {
-        this.surface.configure(config);
-        this.surfaceNeedsReconfiguring = false;
-      } catch (SurfaceException e) {
-        LOGGER.warn("Couldn't configure surface to {}: {}", config, e);
-        return;
+        try {
+          this.surface.configure(config);
+          this.surfaceIsInvalid = false;
+          this.surfaceNeedsReconfiguring = false;
+        } catch (SurfaceException e) {
+          LOGGER.warn("Couldn't configure surface to {}: {}", config, e);
+          this.surfaceIsInvalid = true;
+          this.surfaceNeedsReconfiguring = true;
+        }
       }
+    }
+
+    if (this.surfaceIsInvalid) {
+      return;
     }
 
     try {
       this.surface.acquireNextTexture();
     } catch (SurfaceException e) {
       LOGGER.warn("Couldn't acquire next surface texture with config {}: {}", this.surface.currentConfiguration(), e);
+      this.surfaceIsInvalid = true;
       this.surfaceNeedsReconfiguring = true;
       return;
     }

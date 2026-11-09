@@ -367,6 +367,12 @@
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanBufferMapping",
     //? if >= 26.2
+    "client.perf.vulkan.MixinVmaAllocatorPolicy",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVmaBufferPolicy",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVmaImagePolicy",
+    //? if >= 26.2
     "client.perf.vulkan.MixinVulkanBufferMappingUnmap",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanDynamicState",
@@ -511,6 +517,8 @@
     "client.perf.vulkan.MixinVulkanPushConstantCall",
     //? if >= 1.21.8
     "client.perf.GlBufferAccessor",
+    //? if >= 26.2
+    "client.perf.GlBufferDirectAccessor",
     //? if >= 1.21.11
     "client.perf.GizmoLineAccessor",
     //? if >= 1.21.8
@@ -579,6 +587,8 @@
     "client.perf.vulkan.MixinMinecraftPresentThread",
     //? if >= 1.21.11
     "client.perf.vulkan.MixinAutoVulkan",
+    //? if >= 26.3
+    "client.perf.MixinGlSdlContextApi",
     //? if >= 26.2
     "client.perf.vulkan.MixinKeepVulkanOptions",
     //? if >= 1.21.11
@@ -665,6 +675,8 @@
     "client.perf.vulkan.MixinVulkanLegacyEncoder",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLegacyFeatures",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanCheckpointsOff",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLegacyPipeline",
     //? if >= 26.2
@@ -791,6 +803,10 @@
     "client.perf.lambdynlights.MixinLightSourceSetRemove",
     "client.perf.lambdynlights.MixinLightEntryPosition",
     "client.perf.cullfewerleaves.MixinLeafCullScratchPos",
+    "client.perf.TextureManagerAccessor",
+    //? if < 1.21.4
+    //"client.perf.HttpTextureAccessor",
+    "client.perf.skinlayers.MixinSkinTextureNoPackProbe",
     "client.perf.scalablelux.MixinClientLightBudget",
     "client.perf.scalablelux.MixinClientLightBudgetTick",
     "client.perf.scalablelux.MixinChunkLoadDirtyOnce",

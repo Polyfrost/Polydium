@@ -194,7 +194,12 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency"}),
             //?}
             Map.entry("OpaqueItemCutout", new String[]{"SpriteContentsTransparency", "ItemTintLayerAccessor"}),
-            Map.entry("GlIndirectTerrainBatch", new String[]{"GlRenderPassIrisTessellation"})
+            Map.entry("GlIndirectTerrainBatch", new String[]{"GlRenderPassIrisTessellation"}),
+            //? if >= 1.21.4 {
+            Map.entry("SkinTextureNoPackProbe", new String[]{"TextureManagerAccessor"})
+            //?} else {
+            /*Map.entry("SkinTextureNoPackProbe", new String[]{"TextureManagerAccessor", "HttpTextureAccessor"})
+            *///?}
     );
 
     public static boolean isDisabled(String mixinClassName) {

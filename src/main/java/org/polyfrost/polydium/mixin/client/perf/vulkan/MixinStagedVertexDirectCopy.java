@@ -15,6 +15,7 @@ import com.mojang.renderpearl.backend.vulkan.VulkanGpuBuffer;
 import net.minecraft.client.renderer.StagedVertexBuffer;
 import org.lwjgl.system.MemoryUtil;
 import org.polyfrost.polydium.client.PolydiumToggles;
+import org.polyfrost.polydium.client.perf.GlSubData;
 import org.polyfrost.polydium.client.perf.VertexCopy;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -40,6 +41,9 @@ public abstract class MixinStagedVertexDirectCopy implements VertexCopy.Owner {
     @Unique
     private GpuBufferSlice.MappedView polydium$vertexView;
 
+    @Unique
+    private ByteBuffer polydium$subDataStaging;
+
     @Shadow
     private static CompactVectorArray decodeSortingPoints(StagedVertexBuffer.Draw draw) {
         throw new AssertionError();
@@ -56,31 +60,65 @@ public abstract class MixinStagedVertexDirectCopy implements VertexCopy.Owner {
             this.polydium$queueCopies(draws, vertexGpuBuffer, indexGpuBuffer, vertexBufferSize, indexBufferSize);
             return;
         }
+        if (GlSubData.applies(vertexGpuBuffer) && (indexGpuBuffer == null || GlSubData.applies(indexGpuBuffer))) {
+            this.polydium$uploadWithSubData(draws, vertexGpuBuffer, indexGpuBuffer, vertexBufferSize, indexBufferSize);
+            return;
+        }
         try (GpuBufferSlice.MappedView view = vertexGpuBuffer.slice(0L, vertexBufferSize).map(false, true)) {
-            ByteBuffer buffer = view.data();
-            for (StagedVertexBuffer.Draw draw : draws) {
-                if (!draw.isEmpty()) {
-                    MixinStagedDrawAccessor accessor = (MixinStagedDrawAccessor) draw;
-                    buffer.position(accessor.polydium$vertexOffset());
-                    for (ByteBufferBuilder.Result slice : accessor.polydium$vertexBufferSlices()) {
-                        buffer.put(slice.byteBuffer());
-                    }
+            polydium$writeVertices(draws, view.data());
+        }
+        try (GpuBufferSlice.MappedView view = indexGpuBuffer == null ? null : indexGpuBuffer.slice(0L, indexBufferSize).map(false, true)) {
+            polydium$writeIndices(draws, view == null ? null : view.data());
+        }
+    }
+
+    @Unique
+    private void polydium$uploadWithSubData(List<StagedVertexBuffer.Draw> draws, GpuBuffer vertexGpuBuffer, GpuBuffer indexGpuBuffer, int vertexBufferSize, int indexBufferSize) {
+        int size = indexGpuBuffer == null ? vertexBufferSize : Math.max(vertexBufferSize, indexBufferSize);
+        ByteBuffer staging = this.polydium$subDataStaging;
+        if (staging == null || staging.capacity() < size) {
+            if (staging != null) {
+                MemoryUtil.memFree(staging);
+            }
+            staging = this.polydium$subDataStaging = MemoryUtil.memAlloc(size);
+        }
+        staging.clear().limit(vertexBufferSize);
+        polydium$writeVertices(draws, staging);
+        GlSubData.write(vertexGpuBuffer, 0L, staging.position(0));
+        if (indexGpuBuffer == null) {
+            polydium$writeIndices(draws, null);
+            return;
+        }
+        staging.clear().limit(indexBufferSize);
+        polydium$writeIndices(draws, staging);
+        GlSubData.write(indexGpuBuffer, 0L, staging.position(0));
+    }
+
+    @Unique
+    private static void polydium$writeVertices(List<StagedVertexBuffer.Draw> draws, ByteBuffer buffer) {
+        for (StagedVertexBuffer.Draw draw : draws) {
+            if (!draw.isEmpty()) {
+                MixinStagedDrawAccessor accessor = (MixinStagedDrawAccessor) draw;
+                buffer.position(accessor.polydium$vertexOffset());
+                for (ByteBufferBuilder.Result slice : accessor.polydium$vertexBufferSlices()) {
+                    buffer.put(slice.byteBuffer());
                 }
             }
         }
-        try (GpuBufferSlice.MappedView view = indexGpuBuffer == null ? null : indexGpuBuffer.slice(0L, indexBufferSize).map(false, true)) {
-            for (StagedVertexBuffer.Draw draw : draws) {
-                if (!draw.isEmpty()) {
-                    MixinStagedDrawAccessor accessor = (MixinStagedDrawAccessor) draw;
-                    VertexSorting sorting = accessor.polydium$quadSorting();
-                    if (view != null && sorting != null) {
-                        MeshData.SortState sortState = new MeshData.SortState(decodeSortingPoints(draw), accessor.polydium$indexType());
-                        ByteBuffer buffer = view.data();
-                        buffer.position(accessor.polydium$indexOffset());
-                        sortState.writeSortedIndexBuffer(buffer, sorting);
-                    }
-                    accessor.polydium$freeVertexData();
+    }
+
+    @Unique
+    private static void polydium$writeIndices(List<StagedVertexBuffer.Draw> draws, ByteBuffer buffer) {
+        for (StagedVertexBuffer.Draw draw : draws) {
+            if (!draw.isEmpty()) {
+                MixinStagedDrawAccessor accessor = (MixinStagedDrawAccessor) draw;
+                VertexSorting sorting = accessor.polydium$quadSorting();
+                if (buffer != null && sorting != null) {
+                    MeshData.SortState sortState = new MeshData.SortState(decodeSortingPoints(draw), accessor.polydium$indexType());
+                    buffer.position(accessor.polydium$indexOffset());
+                    sortState.writeSortedIndexBuffer(buffer, sorting);
                 }
+                accessor.polydium$freeVertexData();
             }
         }
     }
@@ -164,6 +202,10 @@ public abstract class MixinStagedVertexDirectCopy implements VertexCopy.Owner {
     @Inject(method = "close", at = @At("HEAD"))
     private void polydium$finishBeforeClose(CallbackInfo ci) {
         this.polydium$finishVertexCopy();
+        if (this.polydium$subDataStaging != null) {
+            MemoryUtil.memFree(this.polydium$subDataStaging);
+            this.polydium$subDataStaging = null;
+        }
     }
 
     @Override
