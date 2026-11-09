@@ -193,7 +193,12 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             *///?} else {
             "OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency"},
             //?}
-            "OpaqueItemCutout", new String[]{"SpriteContentsTransparency", "ItemTintLayerAccessor"}
+            "OpaqueItemCutout", new String[]{"SpriteContentsTransparency", "ItemTintLayerAccessor"},
+            //? if >= 1.21.4 {
+            "SkinTextureNoPackProbe", new String[]{"TextureManagerAccessor"}
+            //?} else {
+            /*"SkinTextureNoPackProbe", new String[]{"TextureManagerAccessor", "HttpTextureAccessor"}
+            *///?}
     );
 
     public static boolean isDisabled(String mixinClassName) {

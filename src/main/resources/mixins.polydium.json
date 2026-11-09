@@ -785,6 +785,10 @@
     "client.perf.lambdynlights.MixinLightSourceSetRemove",
     "client.perf.lambdynlights.MixinLightEntryPosition",
     "client.perf.cullfewerleaves.MixinLeafCullScratchPos",
+    "client.perf.TextureManagerAccessor",
+    //? if < 1.21.4
+    //"client.perf.HttpTextureAccessor",
+    "client.perf.skinlayers.MixinSkinTextureNoPackProbe",
     "client.perf.scalablelux.MixinClientLightBudget",
     "client.perf.scalablelux.MixinClientLightBudgetTick",
     "client.perf.scalablelux.MixinChunkLoadDirtyOnce",
