@@ -27,6 +27,10 @@ public final class UniformRing {
                 return target;
             }
         }
+        if (GlSubData.applies(target)) {
+            GlSubData.write(target, 0L, src);
+            return target;
+        }
         try (GpuBufferSlice.MappedView view = target.map(false, true)) {
             view.data().put(0, src, src.position(), src.remaining());
         }

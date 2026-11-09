@@ -28,8 +28,13 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 
 import java.nio.ByteBuffer;
-//? if >= 26.2
+//? if >= 26.2 {
 import java.nio.ByteOrder;
+import org.lwjgl.system.MemoryUtil;
+import org.polyfrost.polydium.client.perf.GlSubData;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+//?}
 
 //? if >= 26.3 {
 @Mixin(DynamicGpuDataStorageMapped.class)
@@ -44,6 +49,18 @@ public abstract class MixinDynamicGpuDataPersistentWrite {
     /*private static final String POLYDIUM$WRITE_DATA = "writeUniform";
     *///?}
 
+    //? if >= 26.3 {
+    @Unique
+    private static final String POLYDIUM$WRITE_DATA_ARRAY = "writeData([Lnet/minecraft/client/renderer/DynamicGpuDataStorage$DynamicGpuData;)[Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;";
+    @Unique
+    private static final String POLYDIUM$WRITE_DATA_BATCHED = "writeDataBatched";
+    @Unique
+    private static final String POLYDIUM$WRITE_DATA_BATCHED_MULTIPLE = "writeDataBatchedMultiple";
+    //?} else if >= 26.2 {
+    /*@Unique
+    private static final String POLYDIUM$WRITE_DATA_ARRAY = "writeUniforms";
+    *///?}
+
     //? if >= 26.2 {
     @Unique
     private static final Runnable POLYDIUM$KEEP_MAPPED = () -> {
@@ -51,6 +68,18 @@ public abstract class MixinDynamicGpuDataPersistentWrite {
 
     @Shadow
     private MappableRingBuffer ringBuffer;
+
+    @Unique
+    private ByteBuffer polydium$staging;
+
+    @Unique
+    private GpuBufferSlice polydium$stagedSlice;
+
+    @Unique
+    private ByteBuffer polydium$stagedBlock;
+
+    @Unique
+    private final Runnable polydium$uploadStaged = () -> GlSubData.write(this.polydium$stagedSlice.buffer(), this.polydium$stagedSlice.offset(), this.polydium$stagedBlock.clear());
     //?} else {
     /*@Unique
     private final PersistentUniformView polydium$view = new PersistentUniformView();
@@ -81,7 +110,11 @@ public abstract class MixinDynamicGpuDataPersistentWrite {
 
     //? if >= 26.2 {
     @WrapOperation(
-        method = POLYDIUM$WRITE_DATA,
+        //? if >= 26.3 {
+        method = {POLYDIUM$WRITE_DATA, POLYDIUM$WRITE_DATA_ARRAY, POLYDIUM$WRITE_DATA_BATCHED, POLYDIUM$WRITE_DATA_BATCHED_MULTIPLE},
+        //?} else {
+        /*method = {POLYDIUM$WRITE_DATA, POLYDIUM$WRITE_DATA_ARRAY},
+        *///?}
         at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;map(ZZ)Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice$MappedView;")
     )
     private GpuBufferSlice.MappedView polydium$writeThroughPersistentView(GpuBufferSlice slice, boolean read, boolean write, Operation<GpuBufferSlice.MappedView> original) {
@@ -91,8 +124,35 @@ public abstract class MixinDynamicGpuDataPersistentWrite {
                 ByteBuffer block = data.slice((int) slice.offset(), (int) slice.length()).order(ByteOrder.nativeOrder());
                 return new GpuBufferSlice.MappedView(slice, block, POLYDIUM$KEEP_MAPPED);
             }
+            if (GlSubData.applies(slice.buffer())) {
+                return this.polydium$stagedView(slice);
+            }
         }
         return original.call(slice, read, write);
+    }
+
+    @Unique
+    private GpuBufferSlice.MappedView polydium$stagedView(GpuBufferSlice slice) {
+        int length = (int) slice.length();
+        ByteBuffer staging = this.polydium$staging;
+        if (staging == null || staging.capacity() < length) {
+            if (staging != null) {
+                MemoryUtil.memFree(staging);
+            }
+            staging = this.polydium$staging = MemoryUtil.memAlloc(Math.max(length, 256));
+        }
+        this.polydium$stagedSlice = slice;
+        ByteBuffer block = staging.slice(0, length).order(ByteOrder.nativeOrder());
+        this.polydium$stagedBlock = block;
+        return new GpuBufferSlice.MappedView(slice, block, this.polydium$uploadStaged);
+    }
+
+    @Inject(method = "close", at = @At("HEAD"))
+    private void polydium$freeStaging(CallbackInfo ci) {
+        if (this.polydium$staging != null) {
+            MemoryUtil.memFree(this.polydium$staging);
+            this.polydium$staging = null;
+        }
     }
     //?} else {
     /*@WrapOperation(
