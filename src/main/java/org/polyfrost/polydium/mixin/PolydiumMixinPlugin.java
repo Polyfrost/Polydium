@@ -180,20 +180,21 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             "org.polyfrost.polydium.mixin.client.perf.opengl.MixinGlBufferStorageCoherent"
     };
 
-    private static final Map<String, String[]> REQUIRES = Map.of(
-            "OcclusionBoundsBuffers", new String[]{"OcclusionBoundsVertex"},
-            "OcclusionBoundsSection", new String[]{"OcclusionRegion", "OcclusionBoundsInfo", "OcclusionBoundsBuffers", "OcclusionBoundsVertex"},
-            "OcclusionBoundsSprite", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"},
-            "OcclusionBoundsConsumer", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"},
-            "OcclusionCull", new String[]{"OcclusionRegion", "OcclusionListAccessor"},
-            "ImmediateDrawRing", new String[]{"ImmediateDrawRingSeparate", "ImmediateDrawRingEmulated", "ImmediateDrawRingFrame", "ImmediateDrawRingClose"},
-            "EntityCullingBlockEntityBox", new String[]{"MixinBlockEntityCullBox"},
+    private static final Map<String, String[]> REQUIRES = Map.ofEntries(
+            Map.entry("OcclusionBoundsBuffers", new String[]{"OcclusionBoundsVertex"}),
+            Map.entry("OcclusionBoundsSection", new String[]{"OcclusionRegion", "OcclusionBoundsInfo", "OcclusionBoundsBuffers", "OcclusionBoundsVertex"}),
+            Map.entry("OcclusionBoundsSprite", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"}),
+            Map.entry("OcclusionBoundsConsumer", new String[]{"OcclusionBoundsVertex", "OcclusionBoundsBuffers"}),
+            Map.entry("OcclusionCull", new String[]{"OcclusionRegion", "OcclusionListAccessor"}),
+            Map.entry("ImmediateDrawRing", new String[]{"ImmediateDrawRingSeparate", "ImmediateDrawRingEmulated", "ImmediateDrawRingFrame", "ImmediateDrawRingClose"}),
+            Map.entry("EntityCullingBlockEntityBox", new String[]{"MixinBlockEntityCullBox"}),
             //? if < 1.21.10 {
-            /*"OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency", "OpaqueParticleRenderOrder"},
+            /*Map.entry("OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency", "OpaqueParticleRenderOrder"}),
             *///?} else {
-            "OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency"},
+            Map.entry("OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency"}),
             //?}
-            "OpaqueItemCutout", new String[]{"SpriteContentsTransparency", "ItemTintLayerAccessor"}
+            Map.entry("OpaqueItemCutout", new String[]{"SpriteContentsTransparency", "ItemTintLayerAccessor"}),
+            Map.entry("GlIndirectTerrainBatch", new String[]{"GlRenderPassIrisTessellation"})
     );
 
     public static boolean isDisabled(String mixinClassName) {

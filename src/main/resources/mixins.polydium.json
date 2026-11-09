@@ -261,6 +261,10 @@
     "client.perf.sodium.MixinIndirectTerrainDraws",
     //? if >= 26.2
     "client.perf.sodium.MixinIndirectRingRotate",
+    //? if >= 26.2
+    "client.perf.sodium.MixinGlIndirectTerrainBatch",
+    //? if >= 26.2
+    "client.perf.sodium.MixinGlRenderPassIrisTessellation",
     "client.perf.sodium.MixinMatrixHelperSharedTrig",
     "client.perf.sodium.MixinModelPartIdentity",
     //? if >= 1.21.10
@@ -629,6 +633,8 @@
     //"client.perf.opengl.MixinGlDrawSetupDedup",
     //? if >= 1.21.8 && < 26.3
     //"client.perf.opengl.MixinGlRenderPassDirty",
+    //? if >= 1.21.8
+    "client.perf.opengl.MixinGlTexBufferCache",
     //? if >= 26.2 && < 26.3
     //"client.perf.opengl.MixinVertexArrayLookup",
     //? if >= 26.2
