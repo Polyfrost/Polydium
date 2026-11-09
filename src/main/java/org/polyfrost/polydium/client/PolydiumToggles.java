@@ -41,6 +41,10 @@ public class PolydiumToggles {
     //? if >= 26.3
     @Switch(title = "Sky In Main Pass", description = "On Vulkan, draws the deferred sky inside the main render pass instead of closing and reopening it.")
     public static boolean skyMainPass = true;
+    //? if >= 1.21.8
+    @Switch(title = "Occlusion Culling", description = "Skips chunk sections hidden behind nearer terrain when the GPU is the bottleneck.")
+    public static boolean occlusionCulling = true;
+    public static boolean skipItemQuadStack = true;
     @Switch(title = "Entity Outline Scissor", description = "Runs the glowing outline post passes only over the screen area the outlines can reach.")
     public static boolean outlineScissor = true;
     @Switch(title = "Idle Block Entity Ticks", description = "Skips client ticks of chests with resting lids and of spawners with no player nearby.")

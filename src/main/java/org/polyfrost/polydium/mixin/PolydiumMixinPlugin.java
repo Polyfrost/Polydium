@@ -89,6 +89,8 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final boolean SODIUM_08 = false;
     //?}
     public static final boolean SODIUM_V08 = SODIUM_VERSION.startsWith("0.8.");
+    private static final boolean SODIUM_PREFIXED_WRITER = !Mods.loadedBefore("sodium", "0.9.3-beta.2");
+    private static final String SODIUM_WRITER = "net/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter";
     private static final String SODIUM_VULKAN_PACKAGE = SODIUM_PERF_PACKAGE + "vulkan.";
     private static final String[] SODIUM_VULKAN_09_ONLY = {"MixinVulkanGlTexelBuffer", "MixinVulkanGpuBufferHandle", "MixinVulkanChunkRenderer"};
 
@@ -459,6 +461,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
+        if (SODIUM_PREFIXED_WRITER && mixinClassName.startsWith(SODIUM_PERF_PACKAGE))
+            prefixSodiumWriterCalls(targetClass);
+
         if (mixinClassName.endsWith(".skyboxify.MixinSkyFeatureRenderer")) {
             // MixinExtras only wires up @WrapOperation call sites after every postApply, so inspect the class once it's fully transformed
             skyboxifyRenderer = targetClass;
@@ -841,6 +846,14 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             guard.add(proceed);
             method.instructions.insert(guard);
         }
+    }
+
+    // We compile against the unprefixed names, which still have to link on older Sodium. Several mixins can share a target, so this runs more than once per class.
+    public static void prefixSodiumWriterCalls(ClassNode targetClass) {
+        for (MethodNode method : targetClass.methods)
+            for (AbstractInsnNode insn : method.instructions)
+                if (insn instanceof MethodInsnNode call && call.owner.equals(SODIUM_WRITER) && !call.name.startsWith("sodium$"))
+                    call.name = "sodium$" + call.name;
     }
 
     private static final String OWO_VULKAN = "org/polyfrost/polydium/vulkan/OwoVulkan";

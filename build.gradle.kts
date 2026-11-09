@@ -140,7 +140,8 @@ if (vulkanBackport) {
 val loomExt = extensions.getByName<LoomGradleExtensionAPI>("loom")
 
 dependencies {
-    minecraft("com.mojang:minecraft:$mcVersion")
+    // use the newest patch version so dependencies like Sodium work in dev runtime and mixin test
+    minecraft("com.mojang:minecraft:${compatibleVersions.last()}")
     dependencies.extensions.getByType<LoomCompatDependencyExtension>().applyMojangMappings()
 
     implementation("org.jetbrains.kotlin:kotlin-stdlib:${property("deps.kotlin")}")

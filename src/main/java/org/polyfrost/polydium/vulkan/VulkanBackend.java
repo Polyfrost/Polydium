@@ -60,6 +60,7 @@ public class VulkanBackend implements GpuBackend {
   );
   // Forces the render pass / descriptor set fallback on capable hardware, for testing
   private static final boolean FORCE_LEGACY = Boolean.getBoolean("polydium.vulkan.legacyRenderPasses");
+  private static final boolean CHECKPOINTS = Boolean.getBoolean("polydium.vulkan.checkpoints");
   public static final VulkanPNextStruct VK10_FEATURES_STRUCT = new VulkanPNextStruct(1000059000, VkPhysicalDeviceProperties2.SIZEOF);
   public static final VulkanPNextStruct VK11_FEATURES_STRUCT = new VulkanPNextStruct(49, VkPhysicalDeviceVulkan11Features.SIZEOF);
   public static final VulkanPNextStruct VK12_FEATURES_STRUCT = new VulkanPNextStruct(51, VkPhysicalDeviceVulkan12Features.SIZEOF);
@@ -197,10 +198,10 @@ public class VulkanBackend implements GpuBackend {
           deviceExtensions.add("VK_KHR_portability_subset");
         }
 
-        if (physicalDevice.hasDeviceExtension("VK_AMD_buffer_marker")) {
+        if (CHECKPOINTS && physicalDevice.hasDeviceExtension("VK_AMD_buffer_marker")) {
           deviceExtensions.add("VK_AMD_buffer_marker");
           checkpointExtension = new AmdCheckpointExtension();
-        } else if (physicalDevice.hasDeviceExtension("VK_NV_device_diagnostic_checkpoints")) {
+        } else if (CHECKPOINTS && physicalDevice.hasDeviceExtension("VK_NV_device_diagnostic_checkpoints")) {
           deviceExtensions.add("VK_NV_device_diagnostic_checkpoints");
           checkpointExtension = new NvidiaCheckpointExtension();
         }
