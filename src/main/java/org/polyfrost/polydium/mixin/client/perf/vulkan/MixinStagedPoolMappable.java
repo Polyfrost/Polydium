@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.renderpearl.api.buffers.GpuBuffer;
 import com.mojang.renderpearl.api.device.GpuDevice;
+import org.polyfrost.polydium.client.perf.VmaPolicy;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
@@ -21,7 +22,8 @@ public abstract class MixinStagedPoolMappable {
         if (frameGeometry) {
             usage |= GpuBuffer.USAGE_MAP_WRITE;
         }
-        return original.call(device, label, usage, size);
+        int finalUsage = usage;
+        return VmaPolicy.pooled(() -> original.call(device, label, finalUsage, size));
     }
 }
 //?}

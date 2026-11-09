@@ -13,7 +13,7 @@ import org.lwjgl.vulkan.VkPhysicalDeviceProperties;
 public final class VmaPolicy {
     public static final long BLOCK_BYTES = Long.getLong("polydium.vmaBlockMiB", 64L) << 20;
     private static final long DEDICATED_MIN_BYTES = Long.getLong("polydium.vmaDedicatedMiB", 4L) << 20;
-    private static final int HOST_ACCESS_BITS = Vma.VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | Vma.VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+    private static final long MAPPED_DEDICATED_MIN_BYTES = Long.getLong("polydium.vmaMappedDedicatedMiB", 8L) << 20;
 
     private static boolean transientScope;
 
@@ -30,9 +30,9 @@ public final class VmaPolicy {
     }
 
     public static int create(final long allocator, final long bytes, final int flags, final IntUnaryOperator create) {
-        if (bytes < DEDICATED_MIN_BYTES
+        if (bytes < ((flags & Vma.VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT) != 0 ? MAPPED_DEDICATED_MIN_BYTES : DEDICATED_MIN_BYTES)
             || transientScope
-            || (flags & (Vma.VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT | HOST_ACCESS_BITS)) != 0
+            || (flags & (Vma.VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT | Vma.VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT)) != 0
             || nearAllocationLimit(allocator)) {
             return create.applyAsInt(flags);
         }
