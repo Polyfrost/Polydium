@@ -1,5 +1,7 @@
 package org.polyfrost.polydium.client.perf;
 
+import net.caffeinemc.mods.sodium.client.render.chunk.terrain.TerrainRenderPass;
+
 public interface RegionOcclusion {
 
     long[] polydium$getHiddenSections();
@@ -17,4 +19,8 @@ public interface RegionOcclusion {
     long polydium$getHiddenAfter();
 
     void polydium$setHiddenAfter(long captures);
+
+    void polydium$clearBatches();
+
+    boolean polydium$takeRefill(TerrainRenderPass pass);
 }

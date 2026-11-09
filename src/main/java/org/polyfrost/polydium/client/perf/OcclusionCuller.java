@@ -16,6 +16,7 @@ import net.caffeinemc.mods.sodium.client.render.chunk.LocalSectionIndex;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.ChunkRenderList;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.ChunkRenderListIterable;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
+import net.caffeinemc.mods.sodium.client.render.chunk.terrain.TerrainRenderPass;
 import net.caffeinemc.mods.sodium.client.util.iterator.ByteIterator;
 import net.minecraft.core.SectionPos;
 import org.joml.Matrix4f;
@@ -82,6 +83,7 @@ public final class OcclusionCuller {
     private static long    testedVersion;
     private static long    excludedVersion;
     private static long    testNanos;
+    private static long    fillStart;
     private static double  testedX;
     private static double  testedY;
     private static double  testedZ;
@@ -96,6 +98,7 @@ public final class OcclusionCuller {
         if (sections == null || !CULLED_REGIONS.contains(list.getRegion()))
             return sections;
 
+        long   start  = System.nanoTime();
         long[] hidden = ((RegionOcclusion) list.getRegion()).polydium$getHiddenSections();
 
         FILTERED.reset();
@@ -107,7 +110,23 @@ public final class OcclusionCuller {
                 FILTERED.add(section);
         }
 
+        if (fillStart == 0L)
+            GpuWaitMeter.addCullCost(System.nanoTime() - start);
+
         return FILTERED.isEmpty() ? null : FILTERED;
+    }
+
+    public static void filling(RenderRegion region, TerrainRenderPass pass) {
+        if (((RegionOcclusion) region).polydium$takeRefill(pass))
+            fillStart = System.nanoTime();
+    }
+
+    public static void filled() {
+        if (fillStart == 0L)
+            return;
+
+        GpuWaitMeter.addCullCost(System.nanoTime() - fillStart);
+        fillStart = 0L;
     }
 
     public static void cull(ChunkRenderListIterable lists, ChunkRenderMatrices matrices, double cameraX, double cameraY, double cameraZ) {
@@ -116,33 +135,40 @@ public final class OcclusionCuller {
         if (!ENABLED)
             return;
 
+        GpuWaitMeter.frame();
+
+        if (!canCull()) {
+            long start = System.nanoTime();
+
+            stopCulling();
+            GpuWaitMeter.addCullCost(System.nanoTime() - start);
+
+            return;
+        }
+
+        long start = System.nanoTime();
+
         update(lists, matrices, cameraX, cameraY, cameraZ);
 
         if (OcclusionDepth.canCapture())
             collectAnimated(lists);
+
+        GpuWaitMeter.addCullFrame(System.nanoTime() - start, culling, !CULLED_REGIONS.isEmpty());
+    }
+
+    private static boolean canCull() {
+        if (IrisShaders.packInUse())
+            return false;
+
+        //? if >= 26.3 {
+        if (Minecraft.getInstance().gameRenderer.useImprovedTransparency())
+            return false;
+        //?}
+
+        return FORCE || GpuWaitMeter.cullingPays();
     }
 
     private static void update(ChunkRenderListIterable lists, ChunkRenderMatrices matrices, double cameraX, double cameraY, double cameraZ) {
-        if (IrisShaders.packInUse()) {
-            stopCulling();
-
-            return;
-        }
-
-        //? if >= 26.3 {
-        if (Minecraft.getInstance().gameRenderer.useImprovedTransparency()) {
-            stopCulling();
-
-            return;
-        }
-        //?}
-
-        if (!FORCE && !GpuWaitMeter.isGpuBound()) {
-            stopCulling();
-
-            return;
-        }
-
         //? if < 26.2 {
         /*for (int column = 0; column < 16; column += 4)
             MATRIX[column + 2] = (MATRIX[column + 3] - MATRIX[column + 2]) * 0.5F;
@@ -177,12 +203,21 @@ public final class OcclusionCuller {
         if (isUnchanged(cameraX, cameraY, cameraZ))
             return;
 
-        remember(cameraX, cameraY, cameraZ);
-        buildPyramid();
+        boolean rebuild = !isPyramidCurrent(cameraX, cameraY, cameraZ);
+
+        if (rebuild) {
+            remember(cameraX, cameraY, cameraZ);
+            buildPyramid();
+        }
+
+        testGeneration ++;
+        testedRegionCount = REGIONS.size();
         testSections(lists);
         culling       = true;
         retestPending = false;
-        testNanos     = System.nanoTime() - start;
+
+        if (rebuild)
+            testNanos = System.nanoTime() - start;
 
         if (freshDepth)
             trackYield();
@@ -459,7 +494,7 @@ public final class OcclusionCuller {
 
     private static void clearHidden(RenderRegion region) {
         Arrays.fill(((RegionOcclusion) region).polydium$getHiddenSections(), 0L);
-        region.clearAllCachedBatches();
+        ((RegionOcclusion) region).polydium$clearBatches();
     }
 
     private static boolean isUnchanged(double cameraX, double cameraY, double cameraZ) {
@@ -493,9 +528,11 @@ public final class OcclusionCuller {
 
         System.arraycopy(OcclusionDepth.latestMatrix(), 0, TESTED_MATRIX, 0, TESTED_MATRIX.length);
         System.arraycopy(OcclusionDepth.latestDepth(), 0, TESTED_DEPTH, 0, TESTED_DEPTH.length);
-        testGeneration ++;
-        testedRegionCount = REGIONS.size();
         Arrays.fill(CORNER_SIZES, 0);
+    }
+
+    private static boolean isPyramidCurrent(double cameraX, double cameraY, double cameraZ) {
+        return culling && !retestPending && OcclusionDepth.latestVersion() == testedVersion && !isBeyond(cameraX, cameraY, cameraZ, testedX, testedY, testedZ, EYE_TOLERANCE);
     }
 
     private static void testSections(ChunkRenderListIterable lists) {
@@ -533,7 +570,7 @@ public final class OcclusionCuller {
                 occlusion.polydium$setHiddenAfter(OcclusionDepth.captureCount());
 
             System.arraycopy(HIDDEN, 0, current, 0, MASK_WORDS);
-            region.clearAllCachedBatches();
+            occlusion.polydium$clearBatches();
 
             if ((HIDDEN[0] | HIDDEN[1] | HIDDEN[2] | HIDDEN[3]) == 0L)
                 CULLED_REGIONS.remove(region);
