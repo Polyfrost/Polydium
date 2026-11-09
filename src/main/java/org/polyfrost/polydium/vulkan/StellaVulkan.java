@@ -37,6 +37,7 @@ import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.lwjgl.opengl.GL33C;
 import org.lwjgl.system.MemoryUtil;
+import org.polyfrost.polydium.client.perf.VmaPolicy;
 
 public final class StellaVulkan {
   private static final RenderPipeline.Snippet SNIPPET = VulkanRenderPipeline.withDepth(RenderPipeline.builder()
@@ -174,7 +175,7 @@ public final class StellaVulkan {
         }
       }
       try (MeshData mesh = builder.buildOrThrow()) {
-        vertices = RenderSystem.getDevice().createBuffer(() -> "Stella Lumina vertices", GpuBuffer.USAGE_VERTEX, mesh.vertexBuffer());
+        vertices = VmaPolicy.pooled(() -> RenderSystem.getDevice().createBuffer(() -> "Stella Lumina vertices", GpuBuffer.USAGE_VERTEX, mesh.vertexBuffer()));
         FRAME_BUFFERS.add(vertices);
       }
     }

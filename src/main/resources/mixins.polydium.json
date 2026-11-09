@@ -363,6 +363,12 @@
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanBufferMapping",
     //? if >= 26.2
+    "client.perf.vulkan.MixinVmaAllocatorPolicy",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVmaBufferPolicy",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVmaImagePolicy",
+    //? if >= 26.2
     "client.perf.vulkan.MixinVulkanBufferMappingUnmap",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanDynamicState",
