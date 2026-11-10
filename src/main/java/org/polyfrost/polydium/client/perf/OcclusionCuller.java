@@ -82,6 +82,8 @@ public final class OcclusionCuller {
     private static int     captureBackoff = 1;
     private static float   yieldAverage   = -1.0F;
     private static long    testedVersion;
+    private static long    testedSequence;
+    private static long    untestedChangeAt = -1L;
     private static long    excludedVersion;
     private static long    testNanos;
     private static long    fillStart;
@@ -235,8 +237,15 @@ public final class OcclusionCuller {
         stopCulling();
     }
 
-    public static void requestRetest() {
-        retestPending = true;
+    public static void hiddenRebuilt(RenderRegion region, int section) {
+        long[] hidden = ((RegionOcclusion) region).polydium$getHiddenSections();
+
+        hidden[section >>> 6] &= ~(1L << section);
+        ((RegionOcclusion) region).polydium$clearBatches();
+        untestedChangeAt = OcclusionDepth.captureCount();
+
+        if ((hidden[0] | hidden[1] | hidden[2] | hidden[3]) == 0L)
+            CULLED_REGIONS.remove(region);
     }
 
     public static void occluderChanged(RenderRegion region, int section, int bounds, long drawnThrough) {
@@ -511,7 +520,14 @@ public final class OcclusionCuller {
         boolean identical = OcclusionDepth.latestX() == sourceX && OcclusionDepth.latestY() == sourceY && OcclusionDepth.latestZ() == sourceZ && Arrays.equals(OcclusionDepth.latestMatrix(), TESTED_MATRIX) && Arrays.equals(OcclusionDepth.latestDepth(), TESTED_DEPTH);
 
         if (identical) {
-            testedVersion = OcclusionDepth.latestVersion();
+            boolean rebuilt = untestedChangeAt >= testedSequence;
+
+            testedVersion  = OcclusionDepth.latestVersion();
+            testedSequence = OcclusionDepth.latestSequence();
+
+            if (rebuilt)
+                return false;
+
             trackYield();
         }
 
@@ -519,13 +535,14 @@ public final class OcclusionCuller {
     }
 
     private static void remember(double cameraX, double cameraY, double cameraZ) {
-        testedVersion = OcclusionDepth.latestVersion();
-        sourceX       = OcclusionDepth.latestX();
-        sourceY       = OcclusionDepth.latestY();
-        sourceZ       = OcclusionDepth.latestZ();
-        testedX       = cameraX;
-        testedY       = cameraY;
-        testedZ       = cameraZ;
+        testedVersion  = OcclusionDepth.latestVersion();
+        testedSequence = OcclusionDepth.latestSequence();
+        sourceX        = OcclusionDepth.latestX();
+        sourceY        = OcclusionDepth.latestY();
+        sourceZ        = OcclusionDepth.latestZ();
+        testedX        = cameraX;
+        testedY        = cameraY;
+        testedZ        = cameraZ;
 
         System.arraycopy(OcclusionDepth.latestMatrix(), 0, TESTED_MATRIX, 0, TESTED_MATRIX.length);
         System.arraycopy(OcclusionDepth.latestDepth(), 0, TESTED_DEPTH, 0, TESTED_DEPTH.length);
@@ -581,6 +598,13 @@ public final class OcclusionCuller {
     }
 
     private static boolean isOccluded(RenderRegion region, int section) {
+        long changedAt = ((RegionOcclusion) region).polydium$getChangedAt()[section];
+
+        if (changedAt >= testedSequence) {
+            untestedChangeAt = Math.max(untestedChangeAt, changedAt);
+            return false;
+        }
+
         double originX = SectionPos.sectionToBlockCoord(region.getChunkX() + LocalSectionIndex.unpackX(section)) - testedX;
         double originY = SectionPos.sectionToBlockCoord(region.getChunkY() + LocalSectionIndex.unpackY(section)) - testedY;
         double originZ = SectionPos.sectionToBlockCoord(region.getChunkZ() + LocalSectionIndex.unpackZ(section)) - testedZ;
