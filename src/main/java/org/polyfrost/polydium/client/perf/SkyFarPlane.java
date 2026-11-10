@@ -79,7 +79,7 @@ public final class SkyFarPlane {
     private static final boolean NUIT = FabricLoader.getInstance().isModLoaded("nuit");
     private static final boolean CIRRUS = FabricLoader.getInstance().isModLoaded("cirrus");
     private static final MethodHandle NUIT_ACTIVE_SKYBOXES = NUIT ? nuitActiveSkyboxes() : null;
-    private static final boolean SKY_MOD = Stream.of("optiboxes", "vitrail", "distanthorizons").anyMatch(FabricLoader.getInstance()::isModLoaded);
+    private static final boolean SKY_MOD = Stream.of("optiboxes", "vitrail").anyMatch(FabricLoader.getInstance()::isModLoaded);
     private static final boolean VOXY_CLAMP = CIRRUS && !SKY_MOD && FabricLoader.getInstance().isModLoaded("voxy");
     private static final String VOXY_BLIT_SHADER = "voxy:post/blit_texture_depth_cutout.frag";
     private static final String VOXY_CLAMP_SOURCE = "CLOSER_SIGN*(2.0f/((1<<24)-1))";
@@ -371,6 +371,9 @@ public final class SkyFarPlane {
         if (VOXY_CLAMP && !voxyClampPatched) {
             return false;
         }
+        if (!DhLodDepth.ready()) {
+            return false;
+        }
         return PATCHED.containsAll(SHADERS);
     }
 
@@ -446,6 +449,7 @@ public final class SkyFarPlane {
         deferredRenderer = renderer;
         deferredFog = fog;
         deferredState = state;
+        DhLodDepth.skyDeferred();
     }
 
     public static boolean hasDeferred() {
@@ -454,6 +458,7 @@ public final class SkyFarPlane {
     //?} else {
     /*public static void defer(Runnable sky) {
         deferredSky = sky;
+        DhLodDepth.skyDeferred();
     }
 
     public static boolean hasDeferred() {
@@ -478,6 +483,10 @@ public final class SkyFarPlane {
         /*Runnable sky = deferredSky;
         deferredSky = null;
         *///?}
+        //? if >= 26.3 {
+        DhLodDepth.fill(host);
+        //?} else
+        /*DhLodDepth.fill();*/
         GpuBufferSlice mainFog = RenderSystem.getShaderFog();
         drawing = true;
         //? if >= 26.3

@@ -502,6 +502,12 @@
     "client.perf.nuit.MixinNuitSkyDisc",
     //? if >= 1.21.10
     "client.perf.voxy.MixinVoxyShaderLoader",
+    //? if >= 1.21.10
+    "client.perf.dh.MixinDhBlazeMetaRenderer",
+    //? if >= 1.21.10
+    "client.perf.dh.MixinDhGlMetaRenderer",
+    //? if >= 1.21.10
+    "client.perf.dh.MixinDhGlShader",
     //? if >= 26.1
     "client.perf.sodium.MixinSectionCopyCacheCleanup",
     "client.perf.sodium.MixinSharedStateUnpack",
