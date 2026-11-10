@@ -50,12 +50,17 @@ public abstract class MixinOcclusionBoundsSection {
             return;
 
         bounds[section] = built;
-        occlusion.polydium$getChangedAt()[section] = OcclusionDepth.captureCount();
 
         boolean hidden = (occlusion.polydium$getHiddenSections()[section >>> 6] >>> section & 1L) != 0L;
 
-        if (hidden)
-            OcclusionCuller.hiddenRebuilt(this.region, section);
+        if ((int) previous != (int) built) {
+            occlusion.polydium$getChangedAt()[section] = OcclusionDepth.captureCount();
+
+            if (hidden)
+                OcclusionCuller.hiddenRebuilt(this.region, section);
+            else
+                OcclusionCuller.boundsChanged(this.region, section);
+        }
 
         if ((int) previous != 0 && previous >>> Integer.SIZE != built >>> Integer.SIZE)
             OcclusionCuller.occluderChanged(this.region, section, (int) previous, hidden ? occlusion.polydium$getHiddenAfter() : Long.MAX_VALUE);
