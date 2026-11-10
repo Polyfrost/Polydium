@@ -751,6 +751,14 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             return;
         }
 
+        if (mixinClassName.endsWith("MixinVulkanReflex")) {
+            for (MethodNode method : targetClass.methods)
+                for (AbstractInsnNode insn : method.instructions)
+                    if (insn instanceof MethodInsnNode call && call.owner.startsWith("org/lwjgl/opengl/GL3") && REFLEX_GL.contains(call.name + call.desc))
+                        call.owner = REFLEX_VULKAN;
+            return;
+        }
+
         if (mixinClassName.endsWith("MixinVulkanBackendListImGui")) {
             for (MethodNode method : targetClass.methods) {
                 if (!mergedFrom(method).startsWith("com.moulberry."))
@@ -907,6 +915,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final String STELLA_VULKAN = "org/polyfrost/polydium/vulkan/StellaVulkan";
     private static final String SHINE_VULKAN = "org/polyfrost/polydium/vulkan/ShineVulkan";
     private static final Set<String> SHINE_GL = Set.of("glGetUniformLocation(ILjava/lang/CharSequence;)I", "glUniform1i(II)V", "glUniform4fv(ILjava/nio/FloatBuffer;)V");
+    private static final String REFLEX_VULKAN = "org/polyfrost/polydium/vulkan/ReflexVulkan";
+    private static final Set<String> REFLEX_GL = Set.of("glGenQueries()I", "glDeleteQueries(I)V", "glQueryCounter(II)V", "glGetQueryObjecti64(II)J",
+        "glGetInteger64v(I[J)V", "glGetQueryiv(II[I)V", "glFinish()V");
     private static final String MOULBERRY_VULKAN = "org/polyfrost/polydium/vulkan/MoulberryVulkan";
     private static final Set<String> MOULBERRY_GL = Set.of("glGetInteger(I)I", "_glBindFramebuffer(II)V", "_viewport(IIII)V",
         "glGetIntegerv(I[I)V", "_bindTexture(I)V", "glTexParameteri(III)V", "_deleteTexture(I)V", "glCullFace(I)V", "glReadPixels(IIIIII[F)V",

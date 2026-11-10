@@ -341,6 +341,7 @@
     "client.perf.vulkan.backport.MixinVulkanPipelineCacheBackport",
     "client.perf.vulkan.backport.MixinVulkanPipelineCacheUseBackport",
     "client.perf.vulkan.backport.MixinVulkanQueuePresentDrainBackport",
+    "client.perf.vulkan.backport.MixinVulkanReflex",
     "client.perf.vulkan.backport.MixinVulkanRenderPassTexelViewBackport",
     "client.perf.vulkan.backport.MixinVulkanSemaphoreCounterReadBackport",
     "client.perf.vulkan.backport.MixinVulkanServerEntryGl",
