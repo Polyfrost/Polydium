@@ -10,6 +10,8 @@ public interface RegionOcclusion {
 
     long[] polydium$getSectionBounds();
 
+    long[] polydium$getChangedAt();
+
     int[] polydium$getAnimatedBounds();
 
     int polydium$getTestedGeneration();

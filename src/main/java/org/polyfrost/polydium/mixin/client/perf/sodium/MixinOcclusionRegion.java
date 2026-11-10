@@ -37,6 +37,8 @@ public abstract class MixinOcclusionRegion implements RegionOcclusion {
     @Unique
     private final long[] polydium$sectionBounds = new long[RenderRegion.REGION_SIZE];
     @Unique
+    private final long[] polydium$changedAt = new long[RenderRegion.REGION_SIZE];
+    @Unique
     private final int[] polydium$animatedBounds = new int[RenderRegion.REGION_SIZE];
     @Unique
     private int polydium$testedGeneration;
@@ -58,6 +60,11 @@ public abstract class MixinOcclusionRegion implements RegionOcclusion {
     @Override
     public long[] polydium$getSectionBounds() {
         return this.polydium$sectionBounds;
+    }
+
+    @Override
+    public long[] polydium$getChangedAt() {
+        return this.polydium$changedAt;
     }
 
     @Override

@@ -4,6 +4,7 @@ package org.polyfrost.polydium.mixin.client.perf.sodium;
 import net.caffeinemc.mods.sodium.client.render.chunk.data.BuiltSectionInfo;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
 import org.polyfrost.polydium.client.perf.OcclusionCuller;
+import org.polyfrost.polydium.client.perf.OcclusionDepth;
 import org.polyfrost.polydium.client.perf.RegionOcclusion;
 import org.polyfrost.polydium.client.perf.SectionBounds;
 import org.spongepowered.asm.mixin.Final;
@@ -52,8 +53,14 @@ public abstract class MixinOcclusionBoundsSection {
 
         boolean hidden = (occlusion.polydium$getHiddenSections()[section >>> 6] >>> section & 1L) != 0L;
 
-        if (hidden && (int) previous != (int) built)
-            OcclusionCuller.requestRetest();
+        if ((int) previous != (int) built) {
+            occlusion.polydium$getChangedAt()[section] = OcclusionDepth.captureCount();
+
+            if (hidden)
+                OcclusionCuller.hiddenRebuilt(this.region, section);
+            else
+                OcclusionCuller.boundsChanged(this.region, section);
+        }
 
         if ((int) previous != 0 && previous >>> Integer.SIZE != built >>> Integer.SIZE)
             OcclusionCuller.occluderChanged(this.region, section, (int) previous, hidden ? occlusion.polydium$getHiddenAfter() : Long.MAX_VALUE);
