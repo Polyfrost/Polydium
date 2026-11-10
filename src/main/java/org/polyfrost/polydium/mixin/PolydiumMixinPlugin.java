@@ -117,7 +117,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("SinglePassTextShadow", new String[]{"caxton"}),
             Map.entry("VulkanBackendList", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"}),
             Map.entry("GraphicsApiOption", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"}),
-            Map.entry("HideReloadOverlay", new String[]{"forcecloseworldloadingscreen"}),
+            Map.entry("HideReloadOverlay", new String[]{"forcecloseworldloadingscreen", "rrls"}),
             Map.entry("FpsLimit", new String[]{"sodiumfpscapfix", "not-enough-fps"}),
             Map.entry("WaitMeter", new String[]{"vulkanmod"}),
             // Vitrail wraps VulkanRenderPass.pushDescriptors to swap in its comparison samplers and storage bindings, which writing the descriptors directly would skip
