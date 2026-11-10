@@ -15,8 +15,7 @@ deps.errorprone = "2.51.0"
 
 loomx.loom_version = "1.17-SNAPSHOT"
 
-# TODO: re-enable Modrinth publishing
-# publish.modrinth = "hbSfT032"
+publish.modrinth = "hbSfT032"
 publish.curseforge = "1740837"
 
 ["1.21.1"]
