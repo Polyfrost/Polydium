@@ -588,8 +588,8 @@
     "client.perf.MixinZipPackIndex",
     //? if >= 1.21.1
     "client.perf.MixinHideReloadOverlay",
-    //? if >= 1.21.1
-    "client.perf.MixinHideLevelLoadingScreen",
+    //? if >= 1.21.10
+    "client.perf.MixinLevelLoadCloseDelay",
     //? if >= 1.21.1
     "client.perf.MixinHideTitleFade",
     //? if >= 1.21.11
