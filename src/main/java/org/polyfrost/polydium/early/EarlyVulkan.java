@@ -46,6 +46,10 @@ public final class EarlyVulkan implements LanguageAdapter {
         } catch (Throwable ignored) {
         }
         //?}
+        //? if >= 26.2 {
+        if (!Boolean.getBoolean("polydium.disableAll") && !mixinDisabled("org.polyfrost.polydium.mixin.client.MixinVulkanStartupProbe"))
+            VulkanProbe.start();
+        //?}
     }
 
     private static Path marker() {
@@ -214,7 +218,7 @@ public final class EarlyVulkan implements LanguageAdapter {
         return null;
     }
 
-    private static List<String> packOptions() throws IOException {
+    static List<String> packOptions() throws IOException {
         FabricLoader loader = FabricLoader.getInstance();
         Path copied = firstCopied(loader.getConfigDir(), modIds(), "options.txt");
         if (copied != null)

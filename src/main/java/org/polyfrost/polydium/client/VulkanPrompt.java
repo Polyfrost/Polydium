@@ -25,6 +25,7 @@ import java.util.Locale;
 //? if >= 26.2 {
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.PreferredGraphicsApi;
+import org.polyfrost.polydium.early.VulkanProbe;
 //?} else if >= 1.21.11 {
 /*import org.polyfrost.polydium.vulkan.GraphicsApi;
 import org.polyfrost.polydium.vulkan.VulkanActive;
@@ -107,6 +108,13 @@ public final class VulkanPrompt {
         List<Path> markers = markers();
         if (markers.stream().anyMatch(Files::exists) || EarlyVulkan.switched())
             return;
+        //? if >= 26.2 {
+        String failure = VulkanProbe.failure();
+        if (failure != null) {
+            VulkanAvailability.record(failure);
+            return;
+        }
+        //?}
         // Java can't catch a native crash in the probe; the marker left behind keeps it from repeating every launch
         Path guard = writeMarker(markers);
         VulkanAvailability.probe();
