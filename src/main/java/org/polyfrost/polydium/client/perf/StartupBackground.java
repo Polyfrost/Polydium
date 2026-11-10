@@ -4,9 +4,6 @@ import com.mojang.datafixers.DSL;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import net.minecraft.CrashReport;
-import net.minecraft.ReportType;
-import net.minecraft.util.MemoryReserve;
 
 public final class StartupBackground {
     private static volatile CompletableFuture<Void> crashReportPreload;
@@ -28,13 +25,13 @@ public final class StartupBackground {
         return started.thenCompose(optimized -> optimized.thenApply(result -> result));
     }
 
-    public static void preloadCrashReport() {
-        MemoryReserve.allocate();
+    public static void preloadCrashReport(Runnable preload) {
         CompletableFuture<Void> done = new CompletableFuture<>();
         crashReportPreload = done;
         Thread.ofPlatform().daemon().name("Polydium Crash Report Preload").start(() -> {
             try {
-                new CrashReport("Don't panic!", new Throwable()).getFriendlyReport(ReportType.CRASH);
+                // Vanilla's preload must create the dummy throwable so crash reporters recognize it by its top frame
+                preload.run();
                 done.complete(null);
             } catch (Throwable throwable) {
                 done.completeExceptionally(throwable);
