@@ -19,6 +19,8 @@ import net.minecraft.client.renderer.SkyRenderer;
 import org.polyfrost.polydium.client.perf.SkyFarPlane;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(SkyRenderer.class)
 public abstract class MixinSkyFarPlane {
@@ -39,7 +41,17 @@ public abstract class MixinSkyFarPlane {
 
     @ModifyExpressionValue(method = "*", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/RenderPipelines;CELESTIAL:Lcom/mojang/renderpearl/api/pipeline/RenderPipeline;"))
     private RenderPipeline polydium$farCelestial(RenderPipeline pipeline) {
-        return SkyFarPlane.isDrawing() ? SkyFarPlane.Pipelines.CELESTIAL : pipeline;
+        return SkyFarPlane.isDrawing() ? SkyFarPlane.celestial() : pipeline;
+    }
+
+    @Inject(method = "renderSun", at = @At("HEAD"))
+    private void polydium$sunStart(CallbackInfo ci) {
+        SkyFarPlane.drawingSun(true);
+    }
+
+    @Inject(method = "renderSun", at = @At("RETURN"))
+    private void polydium$sunEnd(CallbackInfo ci) {
+        SkyFarPlane.drawingSun(false);
     }
 
     //? if >= 26.3 {

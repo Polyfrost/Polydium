@@ -493,6 +493,15 @@
     "client.perf.MixinSkyFarPlane",
     //? if >= 1.21.10
     "client.perf.MixinShaderSourcePatch",
+    //? if >= 1.21.10
+    "client.perf.cirrus.MixinCirrusSkyRenderer",
+    //? if >= 1.21.10
+    "client.perf.cirrus.MixinCirrusVertexBuffer",
+    //? if >= 1.21.10
+    "client.perf.nuit.MixinNuitRenderBackend",
+    "client.perf.nuit.MixinNuitSkyDisc",
+    //? if >= 1.21.10
+    "client.perf.voxy.MixinVoxyShaderLoader",
     //? if >= 26.1
     "client.perf.sodium.MixinSectionCopyCacheCleanup",
     "client.perf.sodium.MixinSharedStateUnpack",

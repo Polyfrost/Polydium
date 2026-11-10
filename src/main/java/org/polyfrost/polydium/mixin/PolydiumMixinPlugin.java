@@ -43,6 +43,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     //? if >= 26.1 {
@@ -74,6 +76,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     private static volatile ClassNode skyboxifyRenderer;
     private static boolean skyboxifyFarSky;
+    private static final String[] FAR_SKY_MIXINS = {".cirrus.MixinCirrusVertexBuffer", ".cirrus.MixinCirrusSkyRenderer", ".nuit.MixinNuitRenderBackend", ".nuit.MixinNuitSkyDisc"};
+    private static final List<ClassNode> FAR_SKY_TARGETS = new CopyOnWriteArrayList<>();
+    private static final Map<String, Boolean> FAR_SKY_HOOKED = new ConcurrentHashMap<>();
 
     private static final String SODIUM_08_PACKAGE = SODIUM_PERF_PACKAGE + "v08.";
     private static final Set<String> SODIUM_09_ONLY = Set.of(
@@ -140,6 +145,37 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             skyboxifyFarSky = !handlers.isEmpty() && called.containsAll(handlers);
         }
         return skyboxifyFarSky;
+    }
+
+    public static boolean farSkyHooked(String... handlers) {
+        for (String handler : handlers) {
+            Boolean hooked = FAR_SKY_HOOKED.get(handler);
+            if (hooked == null) {
+                hooked = farSkyHandlerCalled(handler);
+                if (hooked == null)
+                    return false;
+                FAR_SKY_HOOKED.put(handler, hooked);
+            }
+            if (!hooked)
+                return false;
+        }
+        return true;
+    }
+
+    private static Boolean farSkyHandlerCalled(String handler) {
+        for (ClassNode target : FAR_SKY_TARGETS) {
+            Set<String> handlers = new HashSet<>(), called = new HashSet<>();
+            for (MethodNode method : target.methods) {
+                if (method.name.contains(handler))
+                    handlers.add(method.name);
+                for (AbstractInsnNode insn : method.instructions)
+                    if (insn instanceof MethodInsnNode call && call.owner.equals(target.name))
+                        called.add(call.name);
+            }
+            if (!handlers.isEmpty())
+                return called.containsAll(handlers);
+        }
+        return null;
     }
 
     private static boolean contains(String[] fragments, String name) {
@@ -474,6 +510,13 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             // MixinExtras only wires up @WrapOperation call sites after every postApply, so inspect the class once it's fully transformed
             skyboxifyRenderer = targetClass;
             return;
+        }
+
+        for (String farSky : FAR_SKY_MIXINS) {
+            if (mixinClassName.endsWith(farSky)) {
+                FAR_SKY_TARGETS.add(targetClass);
+                return;
+            }
         }
 
         if (mixinClassName.endsWith(".MixinModelPartCallbackPool")) {

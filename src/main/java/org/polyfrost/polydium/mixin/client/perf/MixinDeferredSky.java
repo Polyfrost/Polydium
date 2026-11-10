@@ -66,7 +66,7 @@ public abstract class MixinDeferredSky {
     )
     private void polydium$deferSky(SkyRenderer renderer, GpuBufferSlice fog, SkyRenderState state, Operation<Void> original) {
         if (PolydiumToggles.deferredSky && SkyFarPlane.canDefer(state, this.gameRenderer.useImprovedTransparency())) {
-            SkyFarPlane.defer(renderer, fog, state);
+            SkyFarPlane.defer(renderer, fog, state, original);
         } else {
             original.call(renderer, fog, state);
         }
