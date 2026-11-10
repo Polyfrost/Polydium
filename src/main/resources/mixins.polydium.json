@@ -436,6 +436,10 @@
     //? if >= 26.1
     "client.perf.ItemFrameRenderStateAccessor",
     //? if >= 26.1
+    "client.perf.MixinBlockDisplaySharedModel",
+    //? if >= 26.1
+    "client.perf.BlockDisplayRenderStateAccessor",
+    //? if >= 26.1
     "client.perf.BlockStateModelWrapperAccessor",
     //? if >= 26.1
     "client.perf.MixinItemVertexBuilderReuse",
