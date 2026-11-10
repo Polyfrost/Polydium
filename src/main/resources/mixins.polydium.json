@@ -264,6 +264,8 @@
     //? if >= 26.2
     "client.perf.sodium.MixinGlIndirectTerrainBatch",
     //? if >= 26.2
+    "client.perf.sodium.MixinSodiumIntelGlStaging",
+    //? if >= 26.2
     "client.perf.sodium.MixinGlRenderPassIrisTessellation",
     "client.perf.sodium.MixinMatrixHelperSharedTrig",
     "client.perf.sodium.MixinModelPartIdentity",
@@ -657,6 +659,8 @@
     //"client.perf.opengl.MixinGlRenderPassDirty",
     //? if >= 1.21.8
     "client.perf.opengl.MixinGlTexBufferCache",
+    //? if >= 26.2
+    "client.perf.opengl.MixinGlFallbackCloseFree",
     //? if >= 26.2 && < 26.3
     //"client.perf.opengl.MixinVertexArrayLookup",
     //? if >= 26.2
