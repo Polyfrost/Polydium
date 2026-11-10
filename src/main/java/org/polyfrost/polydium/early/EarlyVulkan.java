@@ -257,7 +257,7 @@ public final class EarlyVulkan implements LanguageAdapter {
     }
 
     private static void preferVulkan() throws IOException {
-        if (Boolean.getBoolean("polydium.disableAll") || mixinDisabled(MIXIN))
+        if (mixinDisabled(MIXIN))
             return;
         carryPackGraphicsApi();
 

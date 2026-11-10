@@ -124,19 +124,6 @@ class EarlyVulkanTest {
     }
 
     @Test
-    fun disableAllSkipsGpuDetection() {
-        useRealGpuCheck()
-        System.setProperty("polydium.disableAll", "true")
-        try {
-            EarlyVulkanPreLaunch().onPreLaunch()
-        } finally {
-            System.clearProperty("polydium.disableAll")
-        }
-
-        assertFalse(EarlyVulkan.discreteGpuKnown())
-    }
-
-    @Test
     fun earlyGpuDetectionDecidesInTheSameLaunch() {
         useRealGpuCheck()
 

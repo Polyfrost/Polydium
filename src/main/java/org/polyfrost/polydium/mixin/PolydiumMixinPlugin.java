@@ -99,8 +99,6 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final String SODIUM_VULKAN_PACKAGE = SODIUM_PERF_PACKAGE + "vulkan.";
     private static final String[] SODIUM_VULKAN_09_ONLY = {"MixinVulkanGlTexelBuffer", "MixinVulkanGpuBufferHandle", "MixinVulkanChunkRenderer"};
 
-    private static final boolean ALL_DISABLED = Boolean.getBoolean("polydium.disableAll");
-
     private static final String[] DISABLED = System.getProperty("polydium.disable", "").split(",");
 
     private static final String[] ENABLED = System.getProperty("polydium.enable", "").split(",");
@@ -239,9 +237,6 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     );
 
     public static boolean isDisabled(String mixinClassName) {
-        if (ALL_DISABLED)
-            return true;
-
         if (contains(DISABLED, mixinClassName))
             return true;
 
