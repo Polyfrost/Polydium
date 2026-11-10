@@ -9,9 +9,9 @@ import com.mojang.renderpearl.api.device.SurfaceException;
 import com.mojang.renderpearl.backend.vulkan.VulkanDevice;
 import com.mojang.renderpearl.backend.vulkan.VulkanGpuSurface;
 import com.mojang.renderpearl.backend.vulkan.VulkanUtils;
-import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.KHRSwapchain;
-import org.lwjgl.vulkan.VkPresentInfoKHR;
+import org.lwjgl.vulkan.VK13;
+import com.mojang.renderpearl.backend.vulkan.VulkanQueue;
 import org.lwjgl.vulkan.VkQueue;
 import org.lwjgl.vulkan.VkSurfaceCapabilitiesKHR;
 import org.polyfrost.polydium.client.perf.PresentThread;
@@ -26,7 +26,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(VulkanGpuSurface.class)
-public abstract class MixinVulkanGpuSurfacePresentThread {
+public abstract class MixinVulkanGpuSurfacePresentThread implements PresentThread.Discard {
 
     @Shadow
     @Final
@@ -38,6 +38,13 @@ public abstract class MixinVulkanGpuSurfacePresentThread {
 
     @Shadow
     private long swapchain;
+
+    @Shadow
+    @Final
+    private long[] acquireSemaphores;
+
+    @Shadow
+    private int currentAcquireSemaphore;
 
     @Shadow
     private long[] presentSemaphores;
@@ -109,27 +116,29 @@ public abstract class MixinVulkanGpuSurfacePresentThread {
         PresentThread.capture(() -> this.polydium$queuePresent(semaphore, frameChain, imageIndex));
     }
 
+    @Override
+    public void polydium$discardAcquired() {
+        if (this.currentImageIndex == -1)
+            throw new IllegalStateException("No swapchain image is acquired");
+
+        try (VulkanQueue.Submission submission = this.device.graphicsQueue().beginSubmit()) {
+            submission.waitSemaphore(this.acquireSemaphores[this.currentAcquireSemaphore], 0L, VK13.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT);
+        }
+
+        this.currentImageIndex = -1;
+    }
+
     @Unique
     private void polydium$queuePresent(long semaphore, long frameChain, int imageIndex) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            VkPresentInfoKHR presentInfo = VkPresentInfoKHR.calloc(stack).sType$Default();
-
-            presentInfo.pWaitSemaphores(stack.longs(semaphore));
-            presentInfo.swapchainCount(1);
-            presentInfo.pSwapchains(stack.longs(frameChain));
-            presentInfo.pImageIndices(stack.ints(imageIndex));
-
-            int result = KHRSwapchain.vkQueuePresentKHR(this.presentQueue, presentInfo);
-
-            if (result == KHRSwapchain.VK_ERROR_OUT_OF_DATE_KHR) {
-                this.swapchainSuboptimal = true;
-                this.swapchainOutOfDate  = true;
-                this.eatenException      = new SurfaceException("Failed to present image, swapchain out of date");
-            } else if (result == KHRSwapchain.VK_SUBOPTIMAL_KHR) {
-                this.swapchainSuboptimal = true;
-            } else {
-                VulkanUtils.crashIfFailure(this.device, result, "Failed to present image");
-            }
+        int result = PresentThread.queuePresent(this.presentQueue, semaphore, frameChain, imageIndex);
+        if (result == KHRSwapchain.VK_ERROR_OUT_OF_DATE_KHR) {
+            this.swapchainSuboptimal = true;
+            this.swapchainOutOfDate  = true;
+            this.eatenException      = new SurfaceException("Failed to present image, swapchain out of date");
+        } else if (result == KHRSwapchain.VK_SUBOPTIMAL_KHR) {
+            this.swapchainSuboptimal = true;
+        } else {
+            VulkanUtils.crashIfFailure(this.device, result, "Failed to present image");
         }
     }
 }

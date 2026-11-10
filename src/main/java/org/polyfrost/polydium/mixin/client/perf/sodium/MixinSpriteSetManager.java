@@ -37,12 +37,12 @@ public abstract class MixinSpriteSetManager {
 
     @ModifyExpressionValue(method = "tickVisibleRenders", at = @At(value = "INVOKE", target = "Lnet/caffeinemc/mods/sodium/client/render/chunk/lists/SortedRenderLists;iterator()Ljava/util/Iterator;"), require = 0)
     private Iterator<ChunkRenderList> polydium$markSpriteSet(Iterator<ChunkRenderList> lists) {
-        if (this.polydium$setUnsupported || IrisShaders.packInUse()) {
-            this.polydium$setLists = null;
+        if (this.polydium$setUnsupported) {
             return lists;
         }
         SortedRenderLists current = this.renderLists;
         int generation = SpriteSet.generation();
+        TextureAtlasSprite[] sprites = this.polydium$sprites;
         if (current != this.polydium$setLists || generation != this.polydium$setGeneration) {
             ReferenceOpenHashSet<TextureAtlasSprite> set = this.polydium$spriteSet;
             set.clear();
@@ -58,11 +58,14 @@ public abstract class MixinSpriteSetManager {
                 }
                 SpriteSet.add(set, region.polydium$uniqueSprites());
             }
-            this.polydium$sprites = set.toArray(new TextureAtlasSprite[0]);
-            this.polydium$setLists = current;
-            this.polydium$setGeneration = generation;
+            sprites = set.toArray(new TextureAtlasSprite[0]);
+            if (!IrisShaders.shadowPass()) {
+                this.polydium$sprites = sprites;
+                this.polydium$setLists = current;
+                this.polydium$setGeneration = generation;
+            }
         }
-        for (TextureAtlasSprite sprite : this.polydium$sprites) {
+        for (TextureAtlasSprite sprite : sprites) {
             SpriteUtil.INSTANCE.markSpriteActive(sprite);
         }
         return Collections.emptyIterator();

@@ -7,6 +7,7 @@ public final class AudioDeviceReuse {
     public static final boolean AVAILABLE = !FabricLoader.getInstance().isModLoaded("sound_physics_remastered");
 
     public static boolean reloading;
+    public static boolean deviceChanging;
 
     private AudioDeviceReuse() {
     }

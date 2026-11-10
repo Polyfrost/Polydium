@@ -11,9 +11,8 @@ import org.spongepowered.asm.mixin.Mixin;
 public class MixinRenderThreadStack {
     @WrapMethod(method = "stackGet")
     private static MemoryStack polydium$renderThreadStack(Operation<MemoryStack> original) {
-        RenderThreadStack.Owner owner = RenderThreadStack.owner();
-        if (owner != null && owner.thread() == Thread.currentThread()) {
-            return owner.stack();
+        if (RenderThreadStack.isOwner()) {
+            return RenderThreadStack.stack();
         }
         return original.call();
     }

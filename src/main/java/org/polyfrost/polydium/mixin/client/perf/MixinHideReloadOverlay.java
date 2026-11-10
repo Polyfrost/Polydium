@@ -46,23 +46,15 @@ public abstract class MixinHideReloadOverlay {
 
     @WrapMethod(method = /*? if >= 26.1 {*/"extractRenderState"/*?} else {*//*"render"*//*?}*/)
     private void polydium$skipReloadRender(/*? if >= 26.1 {*/GuiGraphicsExtractor/*?} else {*//*GuiGraphics*//*?}*/ graphics, int mouseX, int mouseY, float partialTick, Operation<Void> original) {
-        if (!PolydiumToggles.hideReloadOverlay) {
+        if (!PolydiumToggles.hideReloadOverlay || !this.fadeIn) {
             original.call(graphics, mouseX, mouseY, partialTick);
-            return;
-        }
-        if (!this.fadeIn) {
-            if (this.fadeOutStart != -1L) {
-                this.polydium$closeOverlay();
-            } else {
-                original.call(graphics, mouseX, mouseY, partialTick);
-            }
             return;
         }
         if (this.minecraft.level == null && this.polydium$screen() == null) {
             original.call(graphics, mouseX, mouseY, partialTick);
             return;
         }
-        if (this.minecraft.level == null) {
+        if (this.polydium$screen() != null) {
             this.polydium$screen()./*? if >= 26.1 {*/extractRenderStateWithTooltipAndSubtitles/*?} else if >= 1.21.10 {*//*renderWithTooltipAndSubtitles*//*?} else {*//*renderWithTooltip*//*?}*/(graphics, mouseX, mouseY, partialTick);
         }
         if (this.fadeOutStart == -1L && this.reload.isDone()) {

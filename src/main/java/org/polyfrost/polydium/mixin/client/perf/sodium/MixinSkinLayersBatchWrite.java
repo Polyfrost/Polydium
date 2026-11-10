@@ -15,6 +15,7 @@ import org.polyfrost.polydium.client.perf.DirectVertexBuffers;
 import org.polyfrost.polydium.client.perf.SkinLayerMeshes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
+import org.spongepowered.asm.mixin.Unique;
 
 @Pseudo
 @Mixin(targets = "dev.tr7zw.skinlayers.render.CustomizableModelPart", remap = false)
@@ -33,6 +34,14 @@ public abstract class MixinSkinLayersBatchWrite {
             original.call(vanillaModel, pose, consumer, light, overlay, color);
             return;
         }
+        polydium$writePolygons(data, pointer, pose, light, overlay, color);
+        for (Object cube : SkinLayerMeshes.cubes(this)) {
+            ((ModelPart.Cube) cube).compile(pose, consumer, light, overlay, color);
+        }
+    }
+
+    @Unique
+    private static void polydium$writePolygons(float[] data, long pointer, PoseStack.Pose pose, int light, int overlay, int color) {
 
         Matrix4f matrix = pose.pose();
         float m00 = matrix.m00(), m01 = matrix.m01(), m02 = matrix.m02();

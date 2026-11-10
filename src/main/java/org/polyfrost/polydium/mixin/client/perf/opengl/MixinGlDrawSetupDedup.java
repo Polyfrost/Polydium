@@ -7,7 +7,7 @@ import com.mojang.blaze3d.opengl.VertexArrayCache;
 import com.mojang.renderpearl.backend.opengl.GlProgram;
 import com.mojang.blaze3d.opengl.Uniform;
 import org.polyfrost.polydium.client.perf.GlPassDirty;
-import org.polyfrost.polydium.client.perf.IrisShaders;
+import org.polyfrost.polydium.client.perf.SodiumGlIndirect;
 import org.polyfrost.polydium.compat.Mods;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -55,23 +55,40 @@ public abstract class MixinGlDrawSetupDedup {
     private Object polydium$indexArray;
     @Unique
     private int polydium$indexHandle;
+    @Unique
+    private boolean polydium$sodiumBatch;
+    @Unique
+    private boolean polydium$lastSodiumBatch;
+    @Unique
+    private Set<?> polydium$sodiumIndexPass;
+    @Unique
+    private Object polydium$sodiumIndexArray;
+    @Unique
+    private int polydium$sodiumIndexHandle;
 
     @Inject(method = "createRenderPass", at = @At("HEAD"))
     private void polydium$resetPassState(CallbackInfoReturnable<?> cir) {
         polydium$passDirty = null;
         polydium$drawBuffersDone = false;
         polydium$scissorSet = false;
+        polydium$sodiumIndexPass = null;
     }
 
     @Inject(method = "trySetup", at = @At("HEAD"))
     private void polydium$captureProgram(CallbackInfoReturnable<Boolean> cir) {
         polydium$programBefore = lastProgram;
+        polydium$sodiumBatch = SodiumGlIndirect.batchDrawing;
+        SodiumGlIndirect.batchDrawing = false;
     }
 
     @WrapOperation(method = "trySetup", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/opengl/GlProgram;getUniforms()Ljava/util/Map;", ordinal = 1))
     private Map<?, ?> polydium$skipCleanUniforms(GlProgram program, Operation<Map<?, ?>> original) {
         Set<?> dirty = polydium$passDirty;
-        if (dirty != null && dirty == GlPassDirty.drawing && dirty.isEmpty() && program == polydium$programBefore && !IrisShaders.packInUse()) {
+        if (dirty != null && dirty == GlPassDirty.drawing && dirty.isEmpty() && program == polydium$programBefore) {
+            if (polydium$sodiumBatch && polydium$lastSodiumBatch) {
+                return Map.of();
+            }
+
             return polydium$texturesOf(program, original);
         }
 
@@ -98,6 +115,7 @@ public abstract class MixinGlDrawSetupDedup {
     @WrapOperation(method = "trySetup", at = @At(value = "INVOKE", target = "Ljava/util/Set;clear()V"))
     private void polydium$trackDirtySet(Set<?> dirty, Operation<Void> original) {
         polydium$passDirty = dirty;
+        polydium$lastSodiumBatch = polydium$sodiumBatch;
         original.call(dirty);
     }
 
@@ -111,7 +129,7 @@ public abstract class MixinGlDrawSetupDedup {
 
     @WrapOperation(method = "trySetup", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/opengl/GlStateManager;_scissorBox(IIII)V"))
     private void polydium$scissorIfChanged(int x, int y, int width, int height, Operation<Void> original) {
-        if (polydium$scissorSet && x == polydium$scissorX && y == polydium$scissorY && width == polydium$scissorWidth && height == polydium$scissorHeight && !IrisShaders.packInUse()) {
+        if (polydium$scissorSet && x == polydium$scissorX && y == polydium$scissorY && width == polydium$scissorWidth && height == polydium$scissorHeight) {
             return;
         }
 
@@ -123,6 +141,23 @@ public abstract class MixinGlDrawSetupDedup {
         original.call(x, y, width, height);
     }
 
+    @WrapOperation(method = {"executeDraws", "executeDrawIndirect"}, at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/opengl/GlStateManager;_glBindBuffer(II)V"))
+    private void polydium$bindSodiumIndexIfChanged(int target, int handle, Operation<Void> original) {
+        if (target == 34963) {
+            if (!polydium$sodiumBatch) {
+                polydium$sodiumIndexPass = null;
+            } else if (polydium$sodiumIndexPass != null && polydium$sodiumIndexPass == GlPassDirty.drawing && polydium$sodiumIndexArray == lastVertexArray && polydium$sodiumIndexHandle == handle) {
+                return;
+            } else {
+                polydium$sodiumIndexPass = GlPassDirty.drawing;
+                polydium$sodiumIndexArray = lastVertexArray;
+                polydium$sodiumIndexHandle = handle;
+            }
+        }
+
+        original.call(target, handle);
+    }
+
     @Inject(method = {"executeDraw", "executeDrawMultiple"}, at = @At("HEAD"))
     private void polydium$resetIndexBinding(CallbackInfo ci) {
         polydium$indexHandle = -1;
@@ -130,6 +165,7 @@ public abstract class MixinGlDrawSetupDedup {
 
     @WrapOperation(method = "drawFromBuffers", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/opengl/GlStateManager;_glBindBuffer(II)V"))
     private void polydium$bindIndexIfChanged(int target, int handle, Operation<Void> original) {
+        polydium$sodiumIndexPass = null;
         if (handle == polydium$indexHandle && lastVertexArray == polydium$indexArray) {
             return;
         }
@@ -148,7 +184,6 @@ import com.mojang.renderpearl.backend.opengl.GlBuffer;
 import com.mojang.renderpearl.backend.opengl.GlProgram;
 import com.mojang.blaze3d.opengl.Uniform;
 import org.polyfrost.polydium.client.perf.GlPassDirty;
-import org.polyfrost.polydium.client.perf.IrisShaders;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -205,7 +240,7 @@ public abstract class MixinGlDrawSetupDedup {
     @WrapOperation(method = "trySetup", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/opengl/GlProgram;getUniforms()Ljava/util/Map;", ordinal = 1))
     private Map<?, ?> polydium$skipCleanUniforms(GlProgram program, Operation<Map<?, ?>> original) {
         Set<?> dirty = polydium$passDirty;
-        if (dirty != null && dirty == GlPassDirty.drawing && dirty.isEmpty() && program == polydium$programBefore && !IrisShaders.packInUse()) {
+        if (dirty != null && dirty == GlPassDirty.drawing && dirty.isEmpty() && program == polydium$programBefore) {
             return polydium$texturesOf(program, original);
         }
 
@@ -237,7 +272,7 @@ public abstract class MixinGlDrawSetupDedup {
 
     @WrapOperation(method = "trySetup", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/opengl/GlStateManager;_scissorBox(IIII)V"))
     private void polydium$scissorIfChanged(int x, int y, int width, int height, Operation<Void> original) {
-        if (polydium$scissorSet && x == polydium$scissorX && y == polydium$scissorY && width == polydium$scissorWidth && height == polydium$scissorHeight && !IrisShaders.packInUse()) {
+        if (polydium$scissorSet && x == polydium$scissorX && y == polydium$scissorY && width == polydium$scissorWidth && height == polydium$scissorHeight) {
             return;
         }
 
@@ -282,7 +317,6 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.opengl.VertexArrayCache;
 import com.mojang.renderpearl.api.vertex.VertexFormat;
 import com.mojang.renderpearl.backend.opengl.GlBuffer;
-import org.polyfrost.polydium.client.perf.IrisShaders;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -316,7 +350,7 @@ public abstract class MixinGlDrawSetupDedup {
 
     @WrapOperation(method = "trySetup", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/opengl/GlStateManager;_scissorBox(IIII)V"))
     private void polydium$scissorIfChanged(int x, int y, int width, int height, Operation<Void> original) {
-        if (polydium$scissorSet && x == polydium$scissorX && y == polydium$scissorY && width == polydium$scissorWidth && height == polydium$scissorHeight && !IrisShaders.packInUse()) {
+        if (polydium$scissorSet && x == polydium$scissorX && y == polydium$scissorY && width == polydium$scissorWidth && height == polydium$scissorHeight) {
             return;
         }
 

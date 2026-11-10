@@ -2,7 +2,7 @@ package org.polyfrost.polydium.mixin.client.perf;
 
 import org.polyfrost.polydium.client.PolydiumToggles;
 
-//? if > 1.8.9 && < 26.1 {
+//? if < 26.1 {
 /*import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.systems.RenderSystem;

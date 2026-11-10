@@ -10,11 +10,15 @@ import org.spongepowered.asm.mixin.injection.At;
 
 //? if skyboxify {
 import btw.lowercase.skyboxify.skybox.impl.Skybox;
+import btw.lowercase.skyboxify.skybox.renderer.SkyFeatureRenderer;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 //?}
@@ -39,7 +43,14 @@ public class MixinSkyboxManager {
     @Final
     private List<Skybox> activeSkies;
 
-    // Same result as the original without streaming into a throwaway list
+    // submits are only drained by the sky pass, which vanilla/Sodium skip in fluids or under blindness,
+    // so leftovers would pile up and get drawn all at once when the pass resumes
+    @Inject(method = "extractSkyboxes", at = @At("HEAD"), require = 0)
+    private void polydium$dropStaleSubmits(CallbackInfo ci, @Local(argsOnly = true) SkyFeatureRenderer renderer) {
+        renderer.clear();
+    }
+
+    // same result as the original without streaming into a throwaway list
     @WrapMethod(method = "containsEnabled", require = 0)
     private boolean polydium$containsEnabled(ResourceKey<Level> resourceKey, Operation<Boolean> original) {
         for (Skybox skybox : this.activeSkies) {

@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.client.perf;
 
-//? if > 1.8.9 && < 26.1 {
+//? if < 26.1 {
 /*import org.lwjgl.glfw.GLFW;
 
 import java.util.concurrent.locks.LockSupport;

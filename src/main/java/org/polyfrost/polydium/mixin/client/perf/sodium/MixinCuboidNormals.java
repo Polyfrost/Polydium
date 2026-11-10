@@ -1,35 +1,37 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.llamalad7.mixinextras.sugar.Share;
-import com.llamalad7.mixinextras.sugar.ref.LocalIntRef;
-import com.llamalad7.mixinextras.sugar.ref.LocalRef;
+import net.caffeinemc.mods.sodium.api.math.MatrixHelper;
 import net.caffeinemc.mods.sodium.api.util.NormI8;
 import net.minecraft.core.Direction;
 import org.joml.Matrix3f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Pseudo
 @Mixin(targets = "net.caffeinemc.mods.sodium.client.render.immediate.model.EntityRenderer", remap = false)
 public abstract class MixinCuboidNormals {
-    @WrapOperation(
+    @Unique
+    private static Direction polydium$lastDirection;
+    @Unique
+    private static int polydium$lastNormal;
+
+    @Redirect(
             method = "prepareNormalsIfChanged",
             at = @At(value = "INVOKE", target = "Lnet/caffeinemc/mods/sodium/api/math/MatrixHelper;transformNormal(Lorg/joml/Matrix3f;ZLnet/minecraft/core/Direction;)I"),
             require = 0,
             expect = 0
     )
-    private static int polydium$flipOppositeNormal(Matrix3f matrix, boolean skipNormalization, Direction direction, Operation<Integer> original,
-                                                   @Share("polydium$lastDirection") LocalRef<Direction> lastDirection,
-                                                   @Share("polydium$lastNormal") LocalIntRef lastNormal) {
-        if (lastDirection.get() == direction.getOpposite()) {
-            return NormI8.flipPacked(lastNormal.get());
+    private static int polydium$flipOppositeNormal(Matrix3f matrix, boolean skipNormalization, Direction direction) {
+        if (polydium$lastDirection == direction.getOpposite()) {
+            polydium$lastDirection = null;
+            return NormI8.flipPacked(polydium$lastNormal);
         }
-        int normal = original.call(matrix, skipNormalization, direction);
-        lastDirection.set(direction);
-        lastNormal.set(normal);
+        int normal = MatrixHelper.transformNormal(matrix, skipNormalization, direction);
+        polydium$lastDirection = direction;
+        polydium$lastNormal = normal;
         return normal;
     }
 }

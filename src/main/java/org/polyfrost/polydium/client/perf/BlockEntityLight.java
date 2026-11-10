@@ -6,8 +6,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import org.polyfrost.polydium.compat.Mods;
-import org.slf4j.LoggerFactory;
 
 // Ported from Argentum with permission from rdh
 public final class BlockEntityLight {
@@ -22,7 +20,6 @@ public final class BlockEntityLight {
     private static final Long2IntOpenHashMap GENERATIONS = new Long2IntOpenHashMap();
     private static int counter;
     private static int floor;
-    private static int standDown;
 
     private BlockEntityLight() {
     }
@@ -88,12 +85,6 @@ public final class BlockEntityLight {
     }
 
     private static boolean usable(BlockEntity blockEntity) {
-        if (standDown == 0) {
-            standDown = Mods.DYNAMIC_LIGHTS ? 1 : -1;
-            if (standDown > 0) {
-                LoggerFactory.getLogger("polydium/perf").debug("Block entity light cache stands down: a dynamic lights mod is loaded");
-            }
-        }
-        return standDown < 0 && blockEntity instanceof Access && blockEntity.getLevel() == Minecraft.getInstance().level && RenderSystem.isOnRenderThread();
+        return blockEntity instanceof Access && blockEntity.getLevel() == Minecraft.getInstance().level && RenderSystem.isOnRenderThread();
     }
 }

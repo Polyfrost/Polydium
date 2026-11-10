@@ -3,6 +3,11 @@ package org.polyfrost.polydium.compat;
 import com.bawnorton.mixinsquared.adjuster.tools.AdjustableAnnotationNode;
 import com.bawnorton.mixinsquared.api.MixinAnnotationAdjuster;
 import com.bawnorton.mixinsquared.api.MixinCanceller;
+//? if >= 26.2 {
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+//?} else if >= 1.21.8 {
+/*import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+*///?}
 import net.fabricmc.loader.api.FabricLoader;
 import org.objectweb.asm.tree.MethodNode;
 
@@ -22,7 +27,7 @@ public final class IrisMixinTweaks implements MixinCanceller, MixinAnnotationAdj
         //? if >= 1.21.8 {
         if (mixinClassName.equals("net.irisshaders.iris.mixin.vertices.immediate.MixinBufferSource")
                 && handlerNode.name.equals("iris$redirectBegin")
-                && annotationNode.is(com.llamalad7.mixinextras.injector./*? if >= 26.2 {*/wrapmethod.WrapMethod/*?} else {*//*wrapoperation.WrapOperation*//*?}*/.class)) {
+                && annotationNode.is(/*? if >= 26.2 {*/WrapMethod/*?} else {*//*WrapOperation*//*?}*/.class)) {
             return null;
         }
         //?}

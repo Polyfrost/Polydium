@@ -24,6 +24,7 @@ import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -187,7 +188,7 @@ public final class SpirvCache {
         bytes[bytes.length - 1] ^= 1;
         Files.write(file, bytes);
         check(read(file) == null, "corrupt payload");
-        Files.write(file, java.util.Arrays.copyOf(bytes, 12));
+        Files.write(file, Arrays.copyOf(bytes, 12));
         check(read(file) == null, "truncated");
         Files.delete(file);
         check(read(file) == null, "missing");

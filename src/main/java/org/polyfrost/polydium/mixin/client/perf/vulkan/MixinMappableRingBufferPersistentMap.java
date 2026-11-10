@@ -11,6 +11,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.renderpearl.backend.opengl.GlBuffer;
 import net.minecraft.client.renderer.MappableRingBuffer;
 import org.polyfrost.polydium.client.perf.PersistentRingBuffer;
+import org.polyfrost.polydium.mixin.PolydiumMixinPlugin;
 import org.polyfrost.polydium.mixin.client.perf.GlBufferAccessor;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -24,6 +25,9 @@ import java.nio.ByteBuffer;
 
 @Mixin(MappableRingBuffer.class)
 public abstract class MixinMappableRingBufferPersistentMap implements PersistentRingBuffer {
+    @Unique
+    private static final boolean POLYDIUM$GL_NEEDS_FLUSH = PolydiumMixinPlugin.isDisabled("org.polyfrost.polydium.mixin.client.perf.opengl.MixinGlBufferMapFlags");
+
     @Shadow
     @Final
     private GpuBuffer[] buffers;
@@ -48,13 +52,13 @@ public abstract class MixinMappableRingBufferPersistentMap implements Persistent
         if (view == null) {
             //? if >= 26.2 {
             if ((buffer.usage() & GpuBuffer.USAGE_MAP_WRITE) == 0 || buffer.size() > Integer.MAX_VALUE
-                || buffer instanceof GlBuffer && !((GlBufferAccessor) buffer).polydium$canPersistentMap()) {
+                || buffer instanceof GlBuffer && (POLYDIUM$GL_NEEDS_FLUSH || !((GlBufferAccessor) buffer).polydium$canPersistentMap())) {
                 return null;
             }
             view = views[index] = buffer.map(false, true);
             //?} else {
             /*if ((buffer.usage() & GpuBuffer.USAGE_MAP_WRITE) == 0 || buffer.size() > Integer.MAX_VALUE
-                || buffer instanceof GlBuffer && ((GlBufferAccessor) buffer).polydium$persistentBuffer() == null) {
+                || buffer instanceof GlBuffer && (POLYDIUM$GL_NEEDS_FLUSH || ((GlBufferAccessor) buffer).polydium$persistentBuffer() == null)) {
                 return null;
             }
             view = views[index] = RenderSystem.getDevice().createCommandEncoder().mapBuffer(buffer, false, true);

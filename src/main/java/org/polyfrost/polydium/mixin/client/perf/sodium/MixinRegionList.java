@@ -1,24 +1,12 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import it.unimi.dsi.fastutil.longs.Long2ReferenceOpenHashMap;
-//? if >= 26.2 {
-import net.caffeinemc.mods.sodium.client.gpu.arena.ArenaAggregator;
-import net.caffeinemc.mods.sodium.client.gpu.arena.staging.StagingBuffer;
-//?} else {
-/*import net.caffeinemc.mods.sodium.client.gl.arena.staging.StagingBuffer;
-import net.caffeinemc.mods.sodium.client.gl.device.CommandList;
-import net.caffeinemc.mods.sodium.client.gl.device.RenderDevice;
-*///?}
-//? if >= 26.1 && < 26.2 {
-/*import net.caffeinemc.mods.sodium.client.gl.arena.ArenaAggregator;
-*///?}
-//? if >= 26.1 {
-import net.caffeinemc.mods.sodium.client.render.chunk.IntPool;
-import net.caffeinemc.mods.sodium.client.render.chunk.UniformBufferManager;
-//?}
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import it.unimi.dsi.fastutil.objects.ReferenceCollection;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
+import org.polyfrost.polydium.client.perf.SwapRemoveIterator;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -28,77 +16,28 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.ArrayList;
-
 @Pseudo
 @Mixin(targets = "net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegionManager", remap = false)
 public abstract class MixinRegionList {
     @Shadow @Final private Long2ReferenceOpenHashMap<RenderRegion> regions;
-    @Shadow @Final private StagingBuffer stagingBuffer;
-    //? if >= 26.1 {
-    @Shadow @Final private IntPool freeIds;
-    @Shadow @Final private ArenaAggregator arenaAggregator;
-    //?}
 
     @Unique
-    private final ArrayList<RenderRegion> polydium$regionList = new ArrayList<>();
-    @Unique
-    private boolean polydium$listStale;
+    private final SwapRemoveIterator<RenderRegion> polydium$regionList =
+        new SwapRemoveIterator<>(region -> this.regions.remove(RenderRegion.key(region.getX(), region.getY(), region.getZ())));
 
-    @WrapMethod(method = "update")
-    //? if >= 26.1 {
-    private void polydium$updateFromList(UniformBufferManager uniforms, Operation<Void> original) {
-    //?} else {
-    /*private void polydium$updateFromList(Operation<Void> original) {
-    *///?}
-        ArrayList<RenderRegion> list = this.polydium$regionList;
-        if (this.polydium$listStale || list.size() != this.regions.size()) {
-            this.polydium$listStale = false;
-            list.clear();
-            list.addAll(this.regions.values());
+    @WrapOperation(method = "update", at = @At(value = "INVOKE", target = "Lit/unimi/dsi/fastutil/objects/ReferenceCollection;iterator()Lit/unimi/dsi/fastutil/objects/ObjectIterator;"))
+    private ObjectIterator<RenderRegion> polydium$iterateList(ReferenceCollection<RenderRegion> values, Operation<ObjectIterator<RenderRegion>> original) {
+        SwapRemoveIterator<RenderRegion> iterator = this.polydium$regionList;
+        // regions are only ever removed through this iterator or delete(), so a size mismatch means new regions were added
+        if (iterator.list.size() != this.regions.size()) {
+            iterator.list.clear();
+            original.call(values).forEachRemaining(iterator.list::add);
         }
-        this.stagingBuffer.flip();
-        //? if >= 26.2 {
-        this.arenaAggregator.update();
-        //?} else {
-        /*CommandList commandList = RenderDevice.INSTANCE.createCommandList();
-        *///?}
-        //? if >= 26.1 && < 26.2 {
-        /*this.arenaAggregator.update(commandList);
-        *///?}
-        int index = 0;
-        while (index < list.size()) {
-            RenderRegion region = list.get(index);
-            //? if >= 26.2 {
-            region.update();
-            //?} else {
-            /*region.update(commandList);
-            *///?}
-            if (!region.isEmpty()) {
-                index++;
-                continue;
-            }
-            //? if >= 26.2 {
-            region.delete();
-            //?} else {
-            /*region.delete(commandList);
-            *///?}
-            //? if >= 26.1 {
-            if (region.getId() != -1) {
-                this.freeIds.release(region.getId());
-                uniforms.clearRegionTimes(region.getId());
-            }
-            //?}
-            this.regions.remove(RenderRegion.key(region.getX(), region.getY(), region.getZ()));
-            RenderRegion last = list.remove(list.size() - 1);
-            if (index < list.size()) {
-                list.set(index, last);
-            }
-        }
+        return iterator.restart();
     }
 
     @Inject(method = "delete", at = @At("TAIL"))
     private void polydium$forgetRegions(CallbackInfo ci) {
-        this.polydium$regionList.clear();
+        this.polydium$regionList.list.clear();
     }
 }

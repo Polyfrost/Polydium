@@ -1,18 +1,23 @@
 @file:Suppress("UnstableApiUsage")
 
+import dev.detekt.gradle.Detekt
 import dev.kikugie.loomx.LoomCompatDependencyExtension
 import dev.kikugie.loomx.LoomCompatProjectExtension
 import dev.kikugie.stonecutter.build.StonecutterBuildExtension
 import net.fabricmc.loom.api.LoomGradleExtensionAPI
 import net.fabricmc.loom.task.prod.ClientProductionRunTask
+import net.ltgt.gradle.errorprone.errorprone
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmExtension
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     java
     kotlin("jvm")
     id("dev.kikugie.loom-back-compat")
     id("me.modmuss50.mod-publish-plugin") version "2.2.0"
+    id("dev.detekt") version "2.0.0-alpha.6"
+    id("net.ltgt.errorprone") version "5.1.1"
     `maven-publish`
 }
 
@@ -28,6 +33,8 @@ fun optionalProperty(name: String): String? = findProperty(name)?.toString()?.ta
 
 stonecutter constants {
     put("skyboxify", optionalProperty("deps.skyboxify") != null)
+    put("xaerominimap", optionalProperty("deps.xaerominimap") != null)
+    put("xaeroworldmap", optionalProperty("deps.xaeroworldmap") != null)
 }
 
 val minecraftPredicate = property("mod.mc_compat") as String
@@ -48,7 +55,6 @@ repositories {
         filter { groups.forEach(::includeGroup) }
     }
 
-    mavenLocal()
     mavenCentral()
     google()
     maven("https://repo.polyfrost.org/releases")
@@ -66,6 +72,7 @@ repositories {
     strictMaven("https://maven.terraformersmc.com/releases/", "TerraformersMC", "com.terraformersmc")
     strictMaven("https://api.modrinth.com/maven", "Modrinth", "maven.modrinth")
     strictMaven("https://maven.bawnorton.com/releases", "Bawnorton", "com.github.bawnorton.mixinsquared")
+    mavenLocal()
 }
 
 configurations.all {
@@ -94,13 +101,47 @@ java {
 }
 
 if (stonecutter.current.parsed < "26.3") {
-    sourceSets.test { kotlin.exclude("**/TxTextFastPathTest.kt") }
+    sourceSets.test { kotlin.exclude("**/TxTextFastPathTest.kt", "**/TransformWritesTest.kt") }
+}
+
+val vulkanBackport = stonecutter.current.parsed >= "1.21.11" && stonecutter.current.parsed < "26.2"
+if (!vulkanBackport) sourceSets.main {
+    java.exclude(
+        "org/polyfrost/polydium/vulkan/**",
+        "org/polyfrost/polydium/mixin/client/perf/vulkan/backport/**",
+        "org/polyfrost/polydium/mixin/client/perf/sodium/vulkan/**",
+        "org/polyfrost/polydium/mixin/late/**",
+    )
+    resources.exclude(
+        "mixins.polydium.late.json",
+        "assets/polydium/shaders/core/imgui.*",
+        "assets/polydium/shaders/core/odin_*",
+        "assets/polydium/shaders/include/odin_*",
+        "assets/polydium/shaders/include/sodium/**",
+        "assets/polydium/shaders/sodium/**",
+    )
+}
+
+if (vulkanBackport && stonecutter.current.parsed < "26.1") sourceSets.main {
+    resources.exclude("assets/polydium/shaders/core/odin_*", "assets/polydium/shaders/include/odin_*")
+}
+
+if (vulkanBackport) {
+    val moltenVk = configurations.detachedConfiguration(*listOf("macos", "macos-arm64").map {
+        dependencies.create("org.lwjgl:lwjgl-vulkan:${findProperty("deps.moltenvk") ?: property("deps.lwjgl")}:natives-$it")
+    }.toTypedArray())
+    val moltenVkResources = tasks.register<Sync>("moltenVkResources") {
+        from({ moltenVk.map { zipTree(it) } }) { include("macos/**", "META-INF/macos/**") }
+        into(layout.buildDirectory.dir("generated/moltenvk"))
+    }
+    sourceSets.main { resources.srcDir(moltenVkResources) }
 }
 
 val loomExt = extensions.getByName<LoomGradleExtensionAPI>("loom")
 
 dependencies {
-    minecraft("com.mojang:minecraft:$mcVersion")
+    // use the newest patch version so dependencies like Sodium work in dev runtime and mixin test
+    minecraft("com.mojang:minecraft:${compatibleVersions.last()}")
     dependencies.extensions.getByType<LoomCompatDependencyExtension>().applyMojangMappings()
 
     implementation("org.jetbrains.kotlin:kotlin-stdlib:${property("deps.kotlin")}")
@@ -134,9 +175,40 @@ dependencies {
     optionalProperty("deps.skyboxify")?.let {
         modCompileOnly("maven.modrinth:skyboxify:$it") { isTransitive = false }
     }
+    optionalProperty("deps.xaerominimap")?.let {
+        modCompileOnly("maven.modrinth:xaeros-minimap:$it") { isTransitive = false }
+    }
+    optionalProperty("deps.xaeroworldmap")?.let {
+        modCompileOnly("maven.modrinth:xaeros-world-map:$it") { isTransitive = false }
+    }
+
+    if (vulkanBackport) {
+        val lwjgl = property("deps.lwjgl") as String
+        val platforms = listOf("windows", "windows-arm64", "linux", "macos", "macos-arm64")
+        include(implementation("org.lwjgl:lwjgl-vulkan:$lwjgl")!!)
+        for (module in listOf("vma", "shaderc", "spvc")) {
+            include(implementation("org.lwjgl:lwjgl-$module:$lwjgl")!!)
+            for (os in platforms) include(runtimeOnly("org.lwjgl:lwjgl-$module:$lwjgl:natives-$os")!!)
+        }
+    }
 
     testImplementation("org.junit.jupiter:junit-jupiter:${property("deps.junit")}")
     testImplementation("net.fabricmc:fabric-loader-junit:$fabricLoaderVersion")
+
+    errorprone("com.google.errorprone:error_prone_core:${property("deps.errorprone")}")
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.errorprone {
+        disableAllChecks = true
+        error("UnnecessarilyFullyQualified")
+    }
+}
+
+// the enabled Detekt rules need type resolution, which only the per-compilation tasks have
+tasks.named<Detekt>("detekt") {
+    enabled = false
+    dependsOn(tasks.withType<Detekt>().matching { it.name != "detekt" && !it.name.endsWith("SourceSet") })
 }
 
 loomExt.mixin {
@@ -151,9 +223,22 @@ loomExt.runs.configureEach {
     ideConfigGenerated(true)
     runDir("../../run")
     vmArg("-Dfabric.classPathGroups=$modOutputGroup")
+    optionalProperty("polydium.quickPlay")?.let { programArgs("--quickPlaySingleplayer", it) }
+}
+
+val sodiumTestClasses = tasks.register<Sync>("sodiumTestClasses") {
+    val sodium = sourceSets.main.get().compileClasspath.filter { it.name.startsWith("sodium-") }
+
+    from({ sodium.map { zipTree(it) } }) {
+        include("net/caffeinemc/mods/sodium/**")
+    }
+    into(layout.buildDirectory.dir("sodium-test-classes"))
 }
 
 tasks.test {
+    workingDir = layout.buildDirectory.dir("test-run").get().asFile
+    doFirst { workingDir.mkdirs() }
+    classpath += files(sodiumTestClasses)
     useJUnitPlatform()
     systemProperty("fabric.classPathGroups", modOutputGroup)
     testLogging {

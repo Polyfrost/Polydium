@@ -6,7 +6,10 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.renderpearl.backend.vulkan.VulkanCommandEncoder;
 import com.mojang.renderpearl.backend.vulkan.VulkanDevice;
 import com.mojang.renderpearl.backend.vulkan.VulkanUtils;
+import java.nio.LongBuffer;
+import org.lwjgl.BufferUtils;
 import org.lwjgl.vulkan.VK12;
+import org.polyfrost.polydium.client.perf.GpuWaitMeter;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -26,16 +29,22 @@ public class MixinVulkanSemaphoreCounterRead {
     private long completedSubmitIndex;
 
     @Unique
-    private final long[] polydium$counterValue = new long[1];
+    private final LongBuffer polydium$counterValue = BufferUtils.createLongBuffer(1);
 
     @WrapMethod(method = "awaitSubmitCompletion(JJ)Z")
     private boolean polydium$readSubmitCounter(long submitIndex, long timeout, Operation<Boolean> original) {
-        if (timeout != 0L || submitIndex <= completedSubmitIndex || submitIndex >= currentSubmitIndex) {
+        if (timeout != 0L) {
+            GpuWaitMeter.beginWait();
+            boolean done = original.call(submitIndex, timeout);
+            GpuWaitMeter.endWait();
+            return done;
+        }
+        if (submitIndex <= completedSubmitIndex || submitIndex >= currentSubmitIndex) {
             return original.call(submitIndex, timeout);
         }
         int result = VK12.vkGetSemaphoreCounterValue(device.vkDevice(), submitSemaphore, polydium$counterValue);
         VulkanUtils.crashIfFailure(device, result, "Failed to wait for semaphore");
-        boolean done = polydium$counterValue[0] >= submitIndex;
+        boolean done = polydium$counterValue.get(0) >= submitIndex;
         if (done) {
             completedSubmitIndex = submitIndex;
         }

@@ -53,13 +53,21 @@ public final class SkinLayerMeshes {
             return null;
         }
         try {
-            if ((Object) PROVIDER.invokeExact() != EMPTY_PROVIDER || !((List<?>) CUBES.invokeExact(mesh)).isEmpty()) {
+            if ((Object) PROVIDER.invokeExact() != EMPTY_PROVIDER) {
                 return null;
             }
             float[] data = (float[]) POLYGONS.invokeExact(mesh);
             return data != null && data.length % QUAD_FLOATS == 0 ? data : null;
         } catch (Throwable t) {
             return null;
+        }
+    }
+
+    public static List<?> cubes(Object mesh) {
+        try {
+            return (List<?>) CUBES.invokeExact(mesh);
+        } catch (Throwable t) {
+            return List.of();
         }
     }
 }

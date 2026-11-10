@@ -1,3 +1,15 @@
-## 1.0.6
-- Stop spark from running background profiles in singleplayer
-- Add uppercase paths fix from Iris
+## 1.4.0
+- Added a toggle for occlusion culling
+- Fixed stutters with occlusion culling
+- Reduced overhead when rendering items with Sodium
+- Reduced CPU overhead on the Vulkan backend by disabling diagnostic checkpoints by default
+- Fixed audio not switching over when the output device changes
+- Fixed JourneyMap compatibility with the Vulkan backend on 1.21.11
+- Fixed OpenGL library loading on Linux under X11 on 26.3
+- Reduced VRAM usage after resource reloads on the Vulkan backend
+- Stopped offering the Vulkan backend on integrated GPUs
+- Reduced overhead of OpenGL buffer uploads
+- Improved window resize and minimize handling on the Vulkan backend on 26.1.2 and 1.21.11
+- Reduced overhead of 3D Skin Layers checking resource packs for player skins
+- Improved terrain rendering performance with Sodium on OpenGL on 26.2 and above
+- Fixed a crash on the Vulkan backend during resource reloads, including at startup, on 26.2 and below

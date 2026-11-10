@@ -41,7 +41,11 @@ public abstract class MixinDirectVertexCuboid {
 
     @WrapOperation(
             method = "renderCuboid",
-            at = @At(value = "INVOKE", target = "Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;push(Lorg/lwjgl/system/MemoryStack;JILcom/mojang/renderpearl/api/vertex/VertexFormat;)V")
+            at = {
+                    @At(value = "INVOKE", target = "Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;push(Lorg/lwjgl/system/MemoryStack;JILcom/mojang/renderpearl/api/vertex/VertexFormat;)V"),
+                    // Sodium 0.9.3-beta.2 and above
+                    @At(value = "INVOKE", target = "Lnet/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter;sodium$push(Lorg/lwjgl/system/MemoryStack;JILcom/mojang/renderpearl/api/vertex/VertexFormat;)V")
+            }
     )
     private static void polydium$skipCopy(VertexBufferWriter writer, MemoryStack stack, long source, int count, VertexFormat format, Operation<Void> original,
                                           @Share("polydium$direct") LocalBooleanRef direct) {

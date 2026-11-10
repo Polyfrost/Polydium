@@ -1,8 +1,18 @@
 package org.polyfrost.polydium.client.perf;
 
+//? if >= 1.21.11 {
 //? if >= 26.2 {
 import com.mojang.renderpearl.api.device.GpuSurface;
 import com.mojang.renderpearl.backend.vulkan.VulkanQueue;
+//?} else {
+/*import org.polyfrost.polydium.vulkan.VulkanQueue;
+import org.polyfrost.polydium.vulkan.compat.GpuSurface;
+*///?}
+import org.lwjgl.system.MemoryStack;
+import org.lwjgl.vulkan.KHRSwapchain;
+import org.lwjgl.vulkan.VkPresentInfoKHR;
+import org.lwjgl.vulkan.VkQueue;
+
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.util.Optional;
@@ -12,17 +22,21 @@ public final class PresentThread {
 
     private static final int SPINS = 1024;
     private static final ThreadMXBean THREADS = ManagementFactory.getThreadMXBean();
+    private static final Runnable PRESENT_JOB = PresentThread::presentHandedOff;
 
     private static volatile Thread    worker;
     private static volatile boolean   running;
     private static volatile Runnable  job;
     private static volatile Thread    waiting;
+    private static volatile boolean   workerParked;
     private static volatile Throwable failure;
     private static GpuSurface         armed;
     private static Runnable           captured;
     private static boolean            capturing;
     private static boolean            handedOff;
     public static boolean             vulkanSurface;
+    private static VulkanQueue.Submission handedSubmission;
+    private static Runnable               handedPresent;
 
     private PresentThread() {
     }
@@ -53,6 +67,10 @@ public final class PresentThread {
 
     public static boolean isArmed() {
         return armed != null;
+    }
+
+    public interface Discard {
+        void polydium$discardAcquired();
     }
 
     public static boolean canDeferAcquire(GpuSurface surface) {
@@ -100,11 +118,12 @@ public final class PresentThread {
             worker  = thread = Thread.ofPlatform().name("Polydium Present").daemon().priority(Thread.MAX_PRIORITY).start(PresentThread::work);
         }
 
-        job = () -> {
-            submission.close();
-            present.run();
-        };
-        LockSupport.unpark(thread);
+        handedSubmission = submission;
+        handedPresent    = present;
+        job              = PRESENT_JOB;
+
+        if (workerParked)
+            LockSupport.unpark(thread);
     }
 
     public static boolean isCapturing() {
@@ -116,6 +135,17 @@ public final class PresentThread {
             throw new IllegalStateException("A present was already captured for this frame");
 
         captured = present;
+    }
+
+    public static int queuePresent(VkQueue queue, long semaphore, long swapchain, int imageIndex) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            VkPresentInfoKHR presentInfo = VkPresentInfoKHR.calloc(stack).sType$Default();
+            presentInfo.pWaitSemaphores(stack.longs(semaphore));
+            presentInfo.swapchainCount(1);
+            presentInfo.pSwapchains(stack.longs(swapchain));
+            presentInfo.pImageIndices(stack.ints(imageIndex));
+            return KHRSwapchain.vkQueuePresentKHR(queue, presentInfo);
+        }
     }
 
     public static void drain() {
@@ -144,19 +174,19 @@ public final class PresentThread {
         if (Thread.currentThread() == worker)
             return;
 
-        if (job != null) {
+        int spins = 0;
+
+        while (job != null) {
+            if (spins < SPINS) {
+                spins ++;
+                Thread.onSpinWait();
+                continue;
+            }
+
             waiting = Thread.currentThread();
 
-            int spins = 0;
-
-            while (job != null) {
-                if (spins < SPINS) {
-                    spins ++;
-                    Thread.onSpinWait();
-                } else {
-                    LockSupport.parkNanos(PresentThread.class, 1_000_000L);
-                }
-            }
+            if (job != null)
+                LockSupport.parkNanos(PresentThread.class, 1_000_000L);
 
             waiting = null;
         }
@@ -199,7 +229,12 @@ public final class PresentThread {
             Runnable next = job;
 
             if (next == null) {
-                LockSupport.park(PresentThread.class);
+                workerParked = true;
+
+                if (job == null && running)
+                    LockSupport.park(PresentThread.class);
+
+                workerParked = false;
                 continue;
             }
 
@@ -210,8 +245,23 @@ public final class PresentThread {
             }
 
             job = null;
-            LockSupport.unpark(waiting);
+
+            Thread parked = waiting;
+
+            if (parked != null)
+                LockSupport.unpark(parked);
         }
+    }
+
+    private static void presentHandedOff() {
+        VulkanQueue.Submission submission = handedSubmission;
+        Runnable               present    = handedPresent;
+
+        handedSubmission = null;
+        handedPresent    = null;
+
+        submission.close();
+        present.run();
     }
 }
 //?}

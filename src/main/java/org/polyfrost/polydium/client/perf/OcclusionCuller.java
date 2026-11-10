@@ -2,8 +2,14 @@ package org.polyfrost.polydium.client.perf;
 
 //? if >= 1.21.8 {
 
+//? if >= 26.3
+import net.minecraft.client.Minecraft;
+import org.polyfrost.polydium.client.PolydiumToggles;
 import org.polyfrost.polydium.mixin.PolydiumMixinPlugin;
 import org.polyfrost.polydium.mixin.client.perf.sodium.MixinOcclusionListAccessor;
+import it.unimi.dsi.fastutil.HashCommon;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -12,19 +18,20 @@ import net.caffeinemc.mods.sodium.client.render.chunk.LocalSectionIndex;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.ChunkRenderList;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.ChunkRenderListIterable;
 import net.caffeinemc.mods.sodium.client.render.chunk.region.RenderRegion;
+import net.caffeinemc.mods.sodium.client.render.chunk.terrain.TerrainRenderPass;
 import net.caffeinemc.mods.sodium.client.util.iterator.ByteIterator;
 import net.minecraft.core.SectionPos;
 import org.joml.Matrix4f;
 
 public final class OcclusionCuller {
 
-    private static final boolean                            ENABLED         = PolydiumMixinPlugin.isEnabled("OcclusionCull");
+    private static final boolean                            ENABLED         = !PolydiumMixinPlugin.isDisabled("OcclusionCull");
     private static final boolean                            FORCE           = Boolean.getBoolean("polydium.forceOcclusionCull");
     private static final int                                WIDTH           = OcclusionDepth.WIDTH;
     private static final int                                HEIGHT          = OcclusionDepth.HEIGHT;
     private static final int                                MASK_WORDS      = 4;
-    private static final float                              SECTION_SIZE    = 16.0F;
     private static final float                              NEAR            = 0.1F;
+    private static final float                              CLIP_NEAR       = 0.01F;
     private static final float                              SCREEN_MARGIN   = 0.01F;
     private static final float                              DEPTH_RELATIVE  = 1.0e-3F;
     //? if >= 26.2 {
@@ -33,29 +40,55 @@ public final class OcclusionCuller {
     /*private static final float                              DEPTH_ABSOLUTE  = 1.0e-6F;
     *///?}
     private static final int                                LEVEL_SPAN      = 4;
-    private static final long                               MIN_INTERVAL    = Integer.getInteger("polydium.occlusionCaptureMs", 4) * 1_000_000L;
+    private static final int                                CORNER_SLOTS    = 256;
+    private static final int                                CORNER_FLOATS   = 32;
+    private static final int                                SIZE_BITS       = 6;
+    private static final int                                MAX_CARVED      = 4096;
+    private static final int                                CARVE_TILE      = 8;
+    private static final int                                CARVE_COLUMNS   = (WIDTH + CARVE_TILE - 1) / CARVE_TILE;
+    static final long                                       MIN_INTERVAL    = Integer.getInteger("polydium.occlusionCaptureMs", 100) * 1_000_000L;
     private static final double                             TEST_BUDGET     = 0.5;
     private static final double                             EYE_TOLERANCE   = 0.5;
     private static final double                             REPROJECT_LIMIT = 8.0;
+    private static final float                              HIGH_YIELD      = 0.15F;
+    private static final float                              LOW_YIELD       = 0.05F;
+    private static final float                              YIELD_WEIGHT    = 0.25F;
+    private static final int                                YIELD_SAMPLES   = 16;
+    private static final int                                MAX_BACKOFF     = 16;
+    private static final long                               BACKOFF_CEILING = 500_000_000L;
+    private static final boolean                            CAN_BACK_OFF    = !PolydiumMixinPlugin.isDisabled("OcclusionBoundsSection") && !PolydiumMixinPlugin.isDisabled("OcclusionBoundsSprite") && !PolydiumMixinPlugin.isDisabled("OcclusionBoundsConsumer");
     private static final float[][]                          PYRAMID         = createPyramid();
     private static final int[]                              LEVEL_WIDTHS    = levelWidths();
     private static final float[]                            MATRIX          = new float[16];
     private static final float[]                            TESTED_DEPTH    = new float[WIDTH * HEIGHT];
     private static final float[]                            TESTED_MATRIX   = new float[16];
-    private static final float[]                            CORNER_OFFSETS  = new float[32];
+    private static final float[]                            CORNER_OFFSETS  = new float[CORNER_SLOTS * CORNER_FLOATS];
+    private static final int[]                              CORNER_SIZES    = new int[CORNER_SLOTS];
+    private static final float[]                            CLIP_CORNERS    = new float[8 * 3];
+    private static final float[]                            CARVE_HIGHEST   = new float[CARVE_COLUMNS * ((HEIGHT + CARVE_TILE - 1) / CARVE_TILE)];
     private static final long[]                             HIDDEN          = new long[MASK_WORDS];
     private static final Matrix4f                           VIEW_PROJECTION = new Matrix4f();
     private static final Matrix4f                           INVERSE         = new Matrix4f();
     private static final ReferenceOpenHashSet<RenderRegion> REGIONS         = new ReferenceOpenHashSet<>();
     private static final ReferenceOpenHashSet<RenderRegion> CULLED_REGIONS  = new ReferenceOpenHashSet<>();
+    private static final ReferenceArrayList<RenderRegion>   UNTESTED_REGIONS  = new ReferenceArrayList<>();
+    private static final IntArrayList                       UNTESTED_SECTIONS = new IntArrayList();
     private static final OcclusionSectionIterator            FILTERED        = new OcclusionSectionIterator();
 
     private static boolean culling;
     private static boolean sectionsChanged;
+    private static boolean retestPending;
     private static int     testGeneration;
     private static int     testedRegionCount;
+    private static int     testedCount;
+    private static int     hiddenCount;
+    private static int     captureBackoff = 1;
+    private static float   yieldAverage   = -1.0F;
     private static long    testedVersion;
+    private static long    testedSequence;
+    private static long    excludedVersion;
     private static long    testNanos;
+    private static long    fillStart;
     private static double  testedX;
     private static double  testedY;
     private static double  testedZ;
@@ -70,6 +103,7 @@ public final class OcclusionCuller {
         if (sections == null || !CULLED_REGIONS.contains(list.getRegion()))
             return sections;
 
+        long   start  = System.nanoTime();
         long[] hidden = ((RegionOcclusion) list.getRegion()).polydium$getHiddenSections();
 
         FILTERED.reset();
@@ -81,7 +115,23 @@ public final class OcclusionCuller {
                 FILTERED.add(section);
         }
 
+        if (fillStart == 0L)
+            GpuWaitMeter.addCullCost(System.nanoTime() - start);
+
         return FILTERED.isEmpty() ? null : FILTERED;
+    }
+
+    public static void filling(RenderRegion region, TerrainRenderPass pass) {
+        if (((RegionOcclusion) region).polydium$takeRefill(pass))
+            fillStart = System.nanoTime();
+    }
+
+    public static void filled() {
+        if (fillStart == 0L)
+            return;
+
+        GpuWaitMeter.addCullCost(System.nanoTime() - fillStart);
+        fillStart = 0L;
     }
 
     public static void cull(ChunkRenderListIterable lists, ChunkRenderMatrices matrices, double cameraX, double cameraY, double cameraZ) {
@@ -90,18 +140,51 @@ public final class OcclusionCuller {
         if (!ENABLED)
             return;
 
-        //? if < 26.2 {
-        /*for (int column = 0; column < 16; column += 4)
-            MATRIX[column + 2] = (MATRIX[column + 3] - MATRIX[column + 2]) * 0.5F;
-        *///?}
-        collectSections(lists);
-        releaseAbsentRegions();
+        GpuWaitMeter.frame();
 
-        if (IrisShaders.packInUse() || !FORCE && !GpuWaitMeter.isGpuBound()) {
+        if (!canCull()) {
+            long start = System.nanoTime();
+
             stopCulling();
+            GpuWaitMeter.addCullCost(System.nanoTime() - start);
 
             return;
         }
+
+        long start = System.nanoTime();
+
+        update(lists, matrices, cameraX, cameraY, cameraZ);
+
+        if (OcclusionDepth.canCapture())
+            collectAnimated(lists);
+
+        GpuWaitMeter.addCullFrame(System.nanoTime() - start, culling, !CULLED_REGIONS.isEmpty());
+    }
+
+    private static boolean canCull() {
+        if (!PolydiumToggles.occlusionCulling || IrisShaders.packInUse())
+            return false;
+
+        //? if >= 26.3 {
+        if (Minecraft.getInstance().gameRenderer.useImprovedTransparency())
+            return false;
+        //?}
+
+        return FORCE || GpuWaitMeter.cullingPays();
+    }
+
+    private static void update(ChunkRenderListIterable lists, ChunkRenderMatrices matrices, double cameraX, double cameraY, double cameraZ) {
+        //? if < 26.2 {
+        /*for (int column = 0; column < 16; column += 4)
+            MATRIX[column + 2] = (MATRIX[column + 3] - MATRIX[column + 2]) * 0.5F;
+        *///?} else {
+        if (matrices.projection().m22() > 0.5F) {
+            for (int column = 0; column < 16; column += 4)
+                MATRIX[column + 2] = (MATRIX[column + 3] + MATRIX[column + 2]) * 0.5F;
+        }
+        //?}
+        collectSections(lists);
+        releaseAbsentRegions();
 
         OcclusionDepth.describeFrame(MATRIX, cameraX, cameraY, cameraZ);
 
@@ -114,32 +197,276 @@ public final class OcclusionCuller {
             return;
         }
 
+        long    start      = System.nanoTime();
+        boolean freshDepth = OcclusionDepth.latestVersion() != testedVersion;
+
+        if (OcclusionDepth.latestVersion() != excludedVersion) {
+            excludedVersion = OcclusionDepth.latestVersion();
+            excludeOccluders();
+        }
+
         if (isUnchanged(cameraX, cameraY, cameraZ))
             return;
 
-        long start = System.nanoTime();
+        boolean rebuild = !isPyramidCurrent(cameraX, cameraY, cameraZ);
 
-        remember(cameraX, cameraY, cameraZ);
-        buildPyramid();
+        if (rebuild) {
+            remember(cameraX, cameraY, cameraZ);
+            buildPyramid();
+        }
+
+        testGeneration ++;
+        testedRegionCount = REGIONS.size();
         testSections(lists);
-        culling   = true;
-        testNanos = System.nanoTime() - start;
+        culling       = true;
+        retestPending = false;
+
+        if (rebuild)
+            testNanos = System.nanoTime() - start;
+
+        if (freshDepth)
+            trackYield();
     }
 
     static long captureInterval() {
-        if (FORCE)
-            return MIN_INTERVAL;
+        long interval = FORCE ? MIN_INTERVAL : Math.max(MIN_INTERVAL, (long) (testNanos / (GpuWaitMeter.waitShare() * TEST_BUDGET)));
+        long ceiling  = Math.max(BACKOFF_CEILING, MIN_INTERVAL);
 
-        return Math.max(MIN_INTERVAL, (long) (testNanos / (GpuWaitMeter.waitShare() * TEST_BUDGET)));
+        return Math.min(Math.min(interval, ceiling) * captureBackoff, ceiling);
     }
 
     public static void reset() {
         stopCulling();
     }
 
+    public static void hiddenRebuilt(RenderRegion region, int section) {
+        long[] hidden = ((RegionOcclusion) region).polydium$getHiddenSections();
+
+        if ((hidden[section >>> 6] >>> section & 1L) != 0L)
+            hiddenCount --;
+
+        hidden[section >>> 6] &= ~(1L << section);
+        ((RegionOcclusion) region).polydium$clearBatches();
+        boundsChanged(region, section);
+
+        if ((hidden[0] | hidden[1] | hidden[2] | hidden[3]) == 0L)
+            CULLED_REGIONS.remove(region);
+    }
+
+    public static void boundsChanged(RenderRegion region, int section) {
+        if (!culling)
+            return;
+
+        UNTESTED_REGIONS.add(region);
+        UNTESTED_SECTIONS.add(section);
+    }
+
+    public static void occluderChanged(RenderRegion region, int section, int bounds, long drawnThrough) {
+        int blockX = SectionPos.sectionToBlockCoord(region.getChunkX() + LocalSectionIndex.unpackX(section));
+        int blockY = SectionPos.sectionToBlockCoord(region.getChunkY() + LocalSectionIndex.unpackY(section));
+        int blockZ = SectionPos.sectionToBlockCoord(region.getChunkZ() + LocalSectionIndex.unpackZ(section));
+
+        OcclusionDepth.excludeFromPending(blockX, blockY, blockZ, bounds, drawnThrough);
+
+        if (OcclusionDepth.latestVersion() != 0L && OcclusionDepth.latestSequence() <= drawnThrough && clearDepth(blockX, blockY, blockZ, bounds, true, null))
+            retestPending = true;
+    }
+
+    private static void excludeOccluders() {
+        IntArrayList excluded = OcclusionDepth.latestExcluded();
+
+        float[] merged = excluded.size() > MAX_CARVED * 4 ? CARVE_HIGHEST : null;
+
+        if (merged != null)
+            Arrays.fill(merged, Float.NEGATIVE_INFINITY);
+
+        for (int index = 0; index < excluded.size(); index += 4)
+            clearDepth(excluded.getInt(index), excluded.getInt(index + 1), excluded.getInt(index + 2), excluded.getInt(index + 3), false, merged);
+
+        if (merged == null)
+            return;
+
+        float[] depths = OcclusionDepth.latestDepth();
+
+        for (int index = 0; index < depths.length; index ++) {
+            float depth = depths[index];
+
+            if (depth > 0.0F && depth <= merged[index / WIDTH / CARVE_TILE * CARVE_COLUMNS + index % WIDTH / CARVE_TILE])
+                depths[index] = 0.0F;
+        }
+    }
+
+    private static void collectAnimated(ChunkRenderListIterable lists) {
+        for (ChunkRenderList list : iterable(lists)) {
+            RenderRegion    region    = list.getRegion();
+            RegionOcclusion occlusion = (RegionOcclusion) region;
+            int[]           animated  = occlusion.polydium$getAnimatedBounds();
+            long[]          hidden    = occlusion.polydium$getHiddenSections();
+            ByteIterator    sections  = list.sectionsWithGeometryIterator(false);
+
+            if (sections == null)
+                continue;
+
+            while (sections.hasNext()) {
+                int section = sections.nextByteAsInt();
+
+                if (animated[section] != 0 && (hidden[section >>> 6] >>> section & 1L) == 0L)
+                    OcclusionDepth.addFrameAnimated(
+                        SectionPos.sectionToBlockCoord(region.getChunkX() + LocalSectionIndex.unpackX(section)),
+                        SectionPos.sectionToBlockCoord(region.getChunkY() + LocalSectionIndex.unpackY(section)),
+                        SectionPos.sectionToBlockCoord(region.getChunkZ() + LocalSectionIndex.unpackZ(section)),
+                        animated[section]);
+            }
+        }
+    }
+
+    private static boolean clearDepth(int blockX, int blockY, int blockZ, int bounds, boolean rebuilt, float[] merged) {
+        float[] matrix    = OcclusionDepth.latestMatrix();
+        float   originX   = (float) (blockX - OcclusionDepth.latestX());
+        float   originY   = (float) (blockY - OcclusionDepth.latestY());
+        float   originZ   = (float) (blockZ - OcclusionDepth.latestZ());
+        boolean crossing  = false;
+        boolean ahead     = false;
+        int     outside   = 0b1111;
+        float   nearest   = Float.NEGATIVE_INFINITY;
+        float   left      = Float.POSITIVE_INFINITY;
+        float   bottom    = Float.POSITIVE_INFINITY;
+        float   right     = Float.NEGATIVE_INFINITY;
+        float   top       = Float.NEGATIVE_INFINITY;
+
+        for (int corner = 0; corner < 8; corner ++) {
+            float x     = originX + ((corner & 1) == 0 ? SectionBounds.min(bounds, 0) : SectionBounds.max(bounds, 0));
+            float y     = originY + ((corner & 2) == 0 ? SectionBounds.min(bounds, 1) : SectionBounds.max(bounds, 1));
+            float z     = originZ + ((corner & 4) == 0 ? SectionBounds.min(bounds, 2) : SectionBounds.max(bounds, 2));
+            float clipX = matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12];
+            float clipY = matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13];
+            float w     = matrix[3] * x + matrix[7] * y + matrix[11] * z + matrix[15];
+
+            CLIP_CORNERS[corner * 3]     = clipX;
+            CLIP_CORNERS[corner * 3 + 1] = clipY;
+            CLIP_CORNERS[corner * 3 + 2] = w;
+
+            ahead    |= w > 0.0F;
+            crossing |= w <= NEAR;
+            outside  &= (clipX < -w ? 1 : 0) | (clipX > w ? 2 : 0) | (clipY < -w ? 4 : 0) | (clipY > w ? 8 : 0);
+
+            if (w <= CLIP_NEAR)
+                continue;
+
+            float inverseW = 1.0F / w;
+            float screenX  = (clipX * inverseW * 0.5F + 0.5F) * WIDTH;
+            float screenY  = (clipY * inverseW * 0.5F + 0.5F) * HEIGHT;
+            float depth    = (matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14]) * inverseW;
+
+            nearest = Math.max(nearest, depth);
+            left    = Math.min(left, screenX);
+            bottom  = Math.min(bottom, screenY);
+            right   = Math.max(right, screenX);
+            top     = Math.max(top, screenY);
+        }
+
+        if (!ahead || outside != 0)
+            return false;
+
+        if (crossing) {
+            for (int corner = 0; corner < 8; corner ++) {
+                for (int axis = 1; axis < 8; axis <<= 1) {
+                    if ((corner & axis) != 0)
+                        continue;
+
+                    int   start = corner * 3;
+                    int   end   = (corner | axis) * 3;
+                    float from  = CLIP_CORNERS[start + 2];
+                    float to    = CLIP_CORNERS[end + 2];
+
+                    if (from <= CLIP_NEAR == to <= CLIP_NEAR)
+                        continue;
+
+                    float along   = (CLIP_NEAR - from) / (to - from);
+                    float screenX = ((CLIP_CORNERS[start] + (CLIP_CORNERS[end] - CLIP_CORNERS[start]) * along) / CLIP_NEAR * 0.5F + 0.5F) * WIDTH;
+                    float screenY = ((CLIP_CORNERS[start + 1] + (CLIP_CORNERS[end + 1] - CLIP_CORNERS[start + 1]) * along) / CLIP_NEAR * 0.5F + 0.5F) * HEIGHT;
+
+                    left   = Math.min(left, screenX);
+                    bottom = Math.min(bottom, screenY);
+                    right  = Math.max(right, screenX);
+                    top    = Math.max(top, screenY);
+                }
+            }
+
+            if (left > right) {
+                left   = 0.0F;
+                bottom = 0.0F;
+                right  = WIDTH;
+                top    = HEIGHT;
+            }
+
+            nearest = Float.POSITIVE_INFINITY;
+            left    = Math.max(left, 0.0F);
+            bottom  = Math.max(bottom, 0.0F);
+        }
+
+        float[] depths    = OcclusionDepth.latestDepth();
+        float   highest   = nearest * (1.0F + DEPTH_RELATIVE) + DEPTH_ABSOLUTE;
+        int     pixelMinX = Math.max((int) (left - SCREEN_MARGIN) - 1, 0);
+        int     pixelMinY = Math.max((int) (bottom - SCREEN_MARGIN) - 1, 0);
+        int     pixelMaxX = Math.min((int) (right + SCREEN_MARGIN), WIDTH - 1);
+        int     pixelMaxY = Math.min((int) (top + SCREEN_MARGIN), HEIGHT - 1);
+        boolean cleared   = false;
+
+        if (merged != null) {
+            for (int y = pixelMinY / CARVE_TILE; y <= pixelMaxY / CARVE_TILE; y ++) {
+                for (int x = pixelMinX / CARVE_TILE; x <= pixelMaxX / CARVE_TILE; x ++)
+                    merged[y * CARVE_COLUMNS + x] = Math.max(merged[y * CARVE_COLUMNS + x], highest);
+            }
+
+            return false;
+        }
+
+        for (int y = pixelMinY; y <= pixelMaxY; y ++) {
+            for (int x = pixelMinX; x <= pixelMaxX; x ++) {
+                int   index = y * WIDTH + x;
+                float depth = depths[index];
+
+                if (depth > 0.0F && depth <= highest) {
+                    depths[index] = 0.0F;
+                    cleared       = true;
+                }
+            }
+        }
+
+        if (crossing && rebuilt && cleared)
+            OcclusionDepth.requestCapture();
+
+        return cleared;
+    }
+
     private static void stopCulling() {
         showAll();
+        REGIONS.clear();
         OcclusionDepth.reset();
+        testedVersion   = 0L;
+        excludedVersion = 0L;
+        retestPending   = false;
+        captureBackoff  = 1;
+        UNTESTED_REGIONS.clear();
+        UNTESTED_SECTIONS.clear();
+        yieldAverage    = -1.0F;
+    }
+
+    private static void trackYield() {
+        if (!CAN_BACK_OFF || testedCount < YIELD_SAMPLES)
+            return;
+
+        float yield = (float) hiddenCount / testedCount;
+
+        yieldAverage = yieldAverage < 0.0F ? yield : yieldAverage + (yield - yieldAverage) * YIELD_WEIGHT;
+
+        if (yield >= HIGH_YIELD)
+            captureBackoff = 1;
+        else if (yieldAverage <= LOW_YIELD)
+            captureBackoff = Math.min(captureBackoff << 1, MAX_BACKOFF);
+        else
+            captureBackoff = Math.max(captureBackoff >> 1, 1);
     }
 
     private static void showAll() {
@@ -192,44 +519,85 @@ public final class OcclusionCuller {
 
     private static void clearHidden(RenderRegion region) {
         Arrays.fill(((RegionOcclusion) region).polydium$getHiddenSections(), 0L);
-        region.clearAllCachedBatches();
+        ((RegionOcclusion) region).polydium$clearBatches();
     }
 
     private static boolean isUnchanged(double cameraX, double cameraY, double cameraZ) {
         if (!culling || sectionsChanged || isBeyond(cameraX, cameraY, cameraZ, testedX, testedY, testedZ, EYE_TOLERANCE))
             return false;
 
+        if (retestPending)
+            return false;
+
         if (OcclusionDepth.latestVersion() == testedVersion)
             return true;
 
-        return OcclusionDepth.latestX() == sourceX && OcclusionDepth.latestY() == sourceY && OcclusionDepth.latestZ() == sourceZ && Arrays.equals(OcclusionDepth.latestMatrix(), TESTED_MATRIX) && Arrays.equals(OcclusionDepth.latestDepth(), TESTED_DEPTH);
+        boolean identical = OcclusionDepth.latestX() == sourceX && OcclusionDepth.latestY() == sourceY && OcclusionDepth.latestZ() == sourceZ && Arrays.equals(OcclusionDepth.latestMatrix(), TESTED_MATRIX) && Arrays.equals(OcclusionDepth.latestDepth(), TESTED_DEPTH);
+
+        if (identical) {
+            testedVersion  = OcclusionDepth.latestVersion();
+            testedSequence = OcclusionDepth.latestSequence();
+
+            retestUntested();
+            trackYield();
+        }
+
+        return identical;
     }
 
     private static void remember(double cameraX, double cameraY, double cameraZ) {
-        testedVersion = OcclusionDepth.latestVersion();
-        sourceX       = OcclusionDepth.latestX();
-        sourceY       = OcclusionDepth.latestY();
-        sourceZ       = OcclusionDepth.latestZ();
-        testedX       = cameraX;
-        testedY       = cameraY;
-        testedZ       = cameraZ;
+        testedVersion  = OcclusionDepth.latestVersion();
+        testedSequence = OcclusionDepth.latestSequence();
+        sourceX        = OcclusionDepth.latestX();
+        sourceY        = OcclusionDepth.latestY();
+        sourceZ        = OcclusionDepth.latestZ();
+        testedX        = cameraX;
+        testedY        = cameraY;
+        testedZ        = cameraZ;
 
         System.arraycopy(OcclusionDepth.latestMatrix(), 0, TESTED_MATRIX, 0, TESTED_MATRIX.length);
         System.arraycopy(OcclusionDepth.latestDepth(), 0, TESTED_DEPTH, 0, TESTED_DEPTH.length);
-        testGeneration ++;
-        testedRegionCount = REGIONS.size();
+        Arrays.fill(CORNER_SIZES, 0);
+    }
 
-        for (int corner = 0; corner < 8; corner ++) {
-            float offsetX = (corner & 1) == 0 ? 0.0F : SECTION_SIZE;
-            float offsetY = (corner & 2) == 0 ? 0.0F : SECTION_SIZE;
-            float offsetZ = (corner & 4) == 0 ? 0.0F : SECTION_SIZE;
+    private static boolean isPyramidCurrent(double cameraX, double cameraY, double cameraZ) {
+        return culling && !retestPending && OcclusionDepth.latestVersion() == testedVersion && !isBeyond(cameraX, cameraY, cameraZ, testedX, testedY, testedZ, EYE_TOLERANCE);
+    }
 
-            for (int row = 0; row < 4; row ++)
-                CORNER_OFFSETS[corner * 4 + row] = TESTED_MATRIX[row] * offsetX + TESTED_MATRIX[4 + row] * offsetY + TESTED_MATRIX[8 + row] * offsetZ;
+    private static void retestUntested() {
+        int count = UNTESTED_SECTIONS.size();
+
+        for (int index = 0; index < count; index ++) {
+            RenderRegion region  = UNTESTED_REGIONS.get(index);
+            int          section = UNTESTED_SECTIONS.getInt(index);
+
+            if (!REGIONS.contains(region))
+                continue;
+
+            RegionOcclusion occlusion = (RegionOcclusion) region;
+            long[]          hidden    = occlusion.polydium$getHiddenSections();
+            long            bit       = 1L << section;
+
+            if ((occlusion.polydium$getTestedSections()[section >>> 6] & bit) == 0L || (hidden[section >>> 6] & bit) != 0L || !isOccluded(region, section))
+                continue;
+
+            hidden[section >>> 6] |= bit;
+            hiddenCount ++;
+            occlusion.polydium$setHiddenAfter(OcclusionDepth.captureCount());
+            occlusion.polydium$clearBatches();
+            CULLED_REGIONS.add(region);
         }
+
+        UNTESTED_REGIONS.removeElements(0, count);
+        UNTESTED_SECTIONS.removeElements(0, count);
     }
 
     private static void testSections(ChunkRenderListIterable lists) {
+        testedCount = 0;
+        hiddenCount = 0;
+        UNTESTED_REGIONS.clear();
+        UNTESTED_SECTIONS.clear();
+
         for (ChunkRenderList list : iterable(lists)) {
             RenderRegion    region    = list.getRegion();
             RegionOcclusion occlusion = (RegionOcclusion) region;
@@ -243,8 +611,12 @@ public final class OcclusionCuller {
                 while (sections.hasNext()) {
                     int section = sections.nextByteAsInt();
 
-                    if (isOccluded(region, section))
+                    testedCount ++;
+
+                    if (isOccluded(region, section)) {
                         HIDDEN[section >>> 6] |= 1L << section;
+                        hiddenCount ++;
+                    }
                 }
             }
 
@@ -253,8 +625,11 @@ public final class OcclusionCuller {
             if (Arrays.equals(current, HIDDEN))
                 continue;
 
+            if ((HIDDEN[0] & ~current[0] | HIDDEN[1] & ~current[1] | HIDDEN[2] & ~current[2] | HIDDEN[3] & ~current[3]) != 0L)
+                occlusion.polydium$setHiddenAfter(OcclusionDepth.captureCount());
+
             System.arraycopy(HIDDEN, 0, current, 0, MASK_WORDS);
-            region.clearAllCachedBatches();
+            occlusion.polydium$clearBatches();
 
             if ((HIDDEN[0] | HIDDEN[1] | HIDDEN[2] | HIDDEN[3]) == 0L)
                 CULLED_REGIONS.remove(region);
@@ -264,14 +639,59 @@ public final class OcclusionCuller {
     }
 
     private static boolean isOccluded(RenderRegion region, int section) {
+        long changedAt = ((RegionOcclusion) region).polydium$getChangedAt()[section];
+
+        if (changedAt >= testedSequence) {
+            UNTESTED_REGIONS.add(region);
+            UNTESTED_SECTIONS.add(section);
+            return false;
+        }
+
         double originX = SectionPos.sectionToBlockCoord(region.getChunkX() + LocalSectionIndex.unpackX(section)) - testedX;
         double originY = SectionPos.sectionToBlockCoord(region.getChunkY() + LocalSectionIndex.unpackY(section)) - testedY;
         double originZ = SectionPos.sectionToBlockCoord(region.getChunkZ() + LocalSectionIndex.unpackZ(section)) - testedZ;
 
-        return isCubeOccluded((float) originX, (float) originY, (float) originZ);
+        int bounds = (int) ((RegionOcclusion) region).polydium$getSectionBounds()[section];
+
+        if (bounds == 0)
+            bounds = SectionBounds.FULL;
+
+        return isBoxOccluded((float) originX, (float) originY, (float) originZ, bounds);
     }
 
-    private static boolean isCubeOccluded(float originX, float originY, float originZ) {
+    private static int placeCorners(int bounds) {
+        int sizes = 1 << SIZE_BITS * 3;
+
+        for (int axis = 0; axis < 3; axis ++)
+            sizes |= SectionBounds.max(bounds, axis) - SectionBounds.min(bounds, axis) << axis * SIZE_BITS;
+
+        int slot  = HashCommon.mix(sizes) & CORNER_SLOTS - 1;
+        int start = slot * CORNER_FLOATS;
+
+        if (CORNER_SIZES[slot] == sizes)
+            return start;
+
+        CORNER_SIZES[slot] = sizes;
+
+        for (int axis = 0; axis < 3; axis ++) {
+            int size  = SectionBounds.max(bounds, axis) - SectionBounds.min(bounds, axis);
+            int count = 1 << axis;
+
+            for (int corner = 0; corner < count; corner ++) {
+                for (int row = 0; row < 4; row ++)
+                    CORNER_OFFSETS[start + (corner + count) * 4 + row] = CORNER_OFFSETS[start + corner * 4 + row] + TESTED_MATRIX[axis * 4 + row] * size;
+            }
+        }
+
+        return start;
+    }
+
+    private static boolean isBoxOccluded(float originX, float originY, float originZ, int bounds) {
+        originX += SectionBounds.min(bounds, 0);
+        originY += SectionBounds.min(bounds, 1);
+        originZ += SectionBounds.min(bounds, 2);
+
+        int     start   = placeCorners(bounds);
         float[] matrix  = TESTED_MATRIX;
         float   baseX   = matrix[0] * originX + matrix[4] * originY + matrix[8] * originZ + matrix[12];
         float   baseY   = matrix[1] * originX + matrix[5] * originY + matrix[9] * originZ + matrix[13];
@@ -283,7 +703,7 @@ public final class OcclusionCuller {
         float   right   = Float.NEGATIVE_INFINITY;
         float   top     = Float.NEGATIVE_INFINITY;
 
-        for (int offset = 0; offset < CORNER_OFFSETS.length; offset += 4) {
+        for (int offset = start; offset < start + CORNER_FLOATS; offset += 4) {
             float w = baseW + CORNER_OFFSETS[offset + 3];
 
             if (w <= NEAR)

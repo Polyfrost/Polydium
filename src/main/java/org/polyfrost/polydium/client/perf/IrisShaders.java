@@ -13,9 +13,17 @@ public final class IrisShaders {
         return IRIS && Api.packInUse();
     }
 
+    public static boolean shadowPass() {
+        return IRIS && Api.shadowPass();
+    }
+
     private static final class Api {
         static boolean packInUse() {
             return IrisApi.getInstance().isShaderPackInUse();
+        }
+
+        static boolean shadowPass() {
+            return IrisApi.getInstance().isRenderingShadowPass();
         }
     }
 }

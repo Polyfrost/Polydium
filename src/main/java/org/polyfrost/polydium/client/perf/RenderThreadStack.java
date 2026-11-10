@@ -4,22 +4,25 @@ package org.polyfrost.polydium.client.perf;
 import org.lwjgl.system.MemoryStack;
 
 public final class RenderThreadStack {
-    private static Owner owner;
+    private static Thread thread;
+    private static MemoryStack stack;
 
     private RenderThreadStack() {
     }
 
-    public static void capture(MemoryStack stack) {
-        if (owner == null) {
-            owner = new Owner(Thread.currentThread(), stack);
+    public static void capture(MemoryStack captured) {
+        if (thread == null) {
+            stack = captured;
+            thread = Thread.currentThread();
         }
     }
 
-    public static Owner owner() {
-        return owner;
+    public static boolean isOwner() {
+        return Thread.currentThread() == thread;
     }
 
-    public record Owner(Thread thread, MemoryStack stack) {
+    public static MemoryStack stack() {
+        return stack;
     }
 }
 //?}

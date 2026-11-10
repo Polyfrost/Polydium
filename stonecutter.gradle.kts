@@ -14,6 +14,7 @@ val renderpearlRenames = mapOf(
     "renderpearl.api.buffers.GpuBuffer" to "blaze3d.buffers.GpuBuffer",
     "renderpearl.api.buffers.GpuBufferSlice" to "blaze3d.buffers.GpuBufferSlice",
     "renderpearl.api.commands.CommandEncoder" to "blaze3d.systems.CommandEncoder",
+    "renderpearl.api.device.BackendCreationException" to "blaze3d.systems.BackendCreationException",
     "renderpearl.api.commands.GpuFence" to "blaze3d.buffers.GpuFence",
     "renderpearl.api.commands.RenderPass" to "blaze3d.systems.RenderPass",
     "renderpearl.api.commands.RenderPassDescriptor" to "blaze3d.systems.RenderPassDescriptor",
@@ -41,12 +42,14 @@ val renderpearlRenames = mapOf(
     "renderpearl.backend.opengl.DirectStateAccess" to "blaze3d.opengl.DirectStateAccess",
     "renderpearl.backend.opengl.GlConst" to "blaze3d.opengl.GlConst",
     "renderpearl.backend.opengl.GlProgram" to "blaze3d.opengl.GlProgram",
+    "renderpearl.backend.opengl.Uniform" to "blaze3d.opengl.Uniform",
     "renderpearl.backend.opengl.GlStateManager" to "blaze3d.opengl.GlStateManager",
     "renderpearl.backend.opengl.GlCommandEncoder" to "blaze3d.opengl.GlCommandEncoder",
     "renderpearl.backend.opengl.GlDevice" to "blaze3d.opengl.GlDevice",
     "renderpearl.backend.opengl.GlBuffer" to "blaze3d.opengl.GlBuffer",
     "renderpearl.backend.opengl.GlFence" to "blaze3d.opengl.GlFence",
     "renderpearl.backend.opengl.GlRenderPass" to "blaze3d.opengl.GlRenderPass",
+    "renderpearl.backend.opengl.GlRenderPipeline" to "blaze3d.opengl.GlRenderPipeline",
     "renderpearl.backend.opengl.GlStateManager" to "blaze3d.opengl.GlStateManager",
     "renderpearl.backend.vulkan.Destroyable" to "blaze3d.vulkan.Destroyable",
     "renderpearl.backend.vulkan.DestructionQueue" to "blaze3d.vulkan.DestructionQueue",
@@ -55,6 +58,7 @@ val renderpearlRenames = mapOf(
     "renderpearl.backend.vulkan.VulkanPhysicalDevice" to "blaze3d.vulkan.VulkanPhysicalDevice",
     "renderpearl.backend.util.TransientBlockAllocator" to "blaze3d.util.TransientBlockAllocator",
     "renderpearl.backend.vulkan.VulkanCommandEncoder" to "blaze3d.vulkan.VulkanCommandEncoder",
+    "renderpearl.backend.vulkan.VulkanConst" to "blaze3d.vulkan.VulkanConst",
     "renderpearl.backend.vulkan.VulkanDebug" to "blaze3d.vulkan.VulkanDebug",
     "renderpearl.backend.vulkan.VulkanDevice" to "blaze3d.vulkan.VulkanDevice",
     "renderpearl.backend.vulkan.VulkanGpuBuffer" to "blaze3d.vulkan.VulkanGpuBuffer",
@@ -75,6 +79,13 @@ stonecutter parameters {
     replacements {
         string(eval(current.version, ">= 1.21.11"), "identifier") {
             replace("ResourceLocation", "Identifier")
+        }
+        string(eval(current.version, "< 26.1")) {
+            for (name in listOf(
+                "GLFWErrorCapture", "pipeline.ColorTargetState", "pipeline.DepthStencilState", "platform.CompareOp",
+                "shaders.GpuDebugOptions", "systems.BackendCreationException", "systems.CommandEncoderBackend",
+                "systems.GpuBackend", "systems.GpuDeviceBackend", "systems.RenderPassBackend",
+            )) replace("com.mojang.blaze3d.$name", "org.polyfrost.polydium.vulkan.compat.${name.substringAfterLast('.')}")
         }
         string(eval(current.version, "< 26.3")) {
             for ((new, old) in renderpearlRenames) {

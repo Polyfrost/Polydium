@@ -1,13 +1,13 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
 //? if >= 1.21.1 {
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import org.polyfrost.polydium.client.perf.EntityRendererCacheHolder;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
-@Mixin({Entity.class, BlockEntity.class})
+@Mixin({EntityType.class, BlockEntityType.class})
 public class MixinEntityRendererCacheHolder implements EntityRendererCacheHolder {
     @Unique
     private Entry polydium$rendererCache;

@@ -3,16 +3,26 @@ package org.polyfrost.polydium.mixin.client.perf;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
+//? if >= 1.21.10 {
+import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+//?} else {
+/*import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
+*///?}
 import net.minecraft.core.BlockPos;
+//? if >= 26.1 {
+import net.minecraft.world.level.BlockAndLightGetter;
+//?} else {
+/*import net.minecraft.world.level.BlockAndTintGetter;
+*///?}
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.polyfrost.polydium.client.perf.BlockEntityLight;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 //? if >= 1.21.10 {
-@Mixin(net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState.class)
+@Mixin(BlockEntityRenderState.class)
 //?} else {
-/*@Mixin(net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher.class)
+/*@Mixin(BlockEntityRenderDispatcher.class)
 *///?}
 public class MixinBlockEntityLightCache {
     @WrapOperation(
@@ -32,9 +42,9 @@ public class MixinBlockEntityLightCache {
     )
     private static int polydium$cachedLight(
             //? if >= 26.1 {
-            net.minecraft.world.level.BlockAndLightGetter level,
+            BlockAndLightGetter level,
             //?} else {
-            /*net.minecraft.world.level.BlockAndTintGetter level,
+            /*BlockAndTintGetter level,
             *///?}
             BlockPos pos, Operation<Integer> original, @Local(argsOnly = true) BlockEntity blockEntity
     ) {

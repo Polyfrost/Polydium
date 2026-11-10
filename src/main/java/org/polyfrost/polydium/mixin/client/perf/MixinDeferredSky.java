@@ -11,6 +11,10 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 /*import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.framegraph.FramePass;
 *///?}
+//? if >= 26.3 {
+import com.llamalad7.mixinextras.sugar.Local;
+import com.llamalad7.mixinextras.sugar.ref.LocalRef;
+//?}
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
@@ -27,6 +31,8 @@ import net.minecraft.client.renderer.state.level.SkyRenderState;
 //?} else {
 /*import net.minecraft.client.renderer.state.SkyRenderState;
 *///?}
+//? if >= 26.3
+import org.polyfrost.polydium.client.perf.MainPassSwap;
 import org.polyfrost.polydium.client.perf.SkyFarPlane;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -44,7 +50,15 @@ public abstract class MixinDeferredSky {
     private GameRenderer gameRenderer;
 
     @Unique
-    private RenderPass polydium$afterSkyPass;
+    private Boolean polydium$vulkan;
+
+    @Unique
+    private boolean polydium$vulkan() {
+        if (this.polydium$vulkan == null) {
+            this.polydium$vulkan = "Vulkan".equals(RenderSystem.getDevice().getDeviceInfo().backendName());
+        }
+        return this.polydium$vulkan;
+    }
 
     @WrapOperation(
             method = "lambda$addSkyPass$0",
@@ -52,7 +66,7 @@ public abstract class MixinDeferredSky {
     )
     private void polydium$deferSky(SkyRenderer renderer, GpuBufferSlice fog, SkyRenderState state, Operation<Void> original) {
         if (PolydiumToggles.deferredSky && SkyFarPlane.canDefer(state, this.gameRenderer.useImprovedTransparency())) {
-            SkyFarPlane.defer(renderer, fog, state);
+            SkyFarPlane.defer(renderer, fog, state, original);
         } else {
             original.call(renderer, fog, state);
         }
@@ -67,31 +81,29 @@ public abstract class MixinDeferredSky {
             original.call(frame, pass);
             return;
         }
-        if (this.polydium$afterSkyPass != null) {
-            this.polydium$afterSkyPass.close();
+        if (PolydiumToggles.skyMainPass && this.polydium$vulkan()) {
+            SkyFarPlane.drawDeferred(pass);
+            original.call(frame, pass);
+            return;
         }
         RenderTarget mainTarget = this.gameRenderer.mainRenderTarget();
         pass.close();
-        SkyFarPlane.drawDeferred();
+        SkyFarPlane.drawDeferred(null);
         RenderPass afterSky = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "Main", mainTarget.getColorTextureView(), Optional.empty(), mainTarget.getDepthTextureView(), OptionalDouble.empty());
         RenderSystem.bindDefaultUniforms(afterSky);
-        this.polydium$afterSkyPass = afterSky;
+        MainPassSwap.reopened(afterSky);
         original.call(frame, afterSky);
     }
 
     @WrapOperation(
             method = "lambda$addMainPass$0",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;executeClassicTransparency(Lnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher$PreparedFrame;Lcom/mojang/renderpearl/api/commands/RenderPass;)V")
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;executeSolid(Lnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher$PreparedFrame;Lcom/mojang/renderpearl/api/commands/RenderPass;)V")
     )
-    private void polydium$continueAfterSky(LevelRenderer renderer, ChunkSectionsToRender sections, FeatureRenderDispatcher.PreparedFrame frame, RenderPass pass, Operation<Void> original) {
-        RenderPass afterSky = this.polydium$afterSkyPass;
-        if (afterSky == null) {
-            original.call(renderer, sections, frame, pass);
-            return;
-        }
-        this.polydium$afterSkyPass = null;
-        try (afterSky) {
-            original.call(renderer, sections, frame, afterSky);
+    private void polydium$continueAfterSky(LevelRenderer renderer, ChunkSectionsToRender sections, FeatureRenderDispatcher.PreparedFrame frame, RenderPass pass, Operation<Void> original, @Local LocalRef<RenderPass> mainPass) {
+        original.call(renderer, sections, frame, pass);
+        RenderPass reopened = MainPassSwap.take();
+        if (reopened != null) {
+            mainPass.set(reopened);
         }
     }
     //?} else if >= 26.2 {

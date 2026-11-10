@@ -9,6 +9,9 @@
     ],
     "environment": "client",
     "entrypoints": {
+        "preLaunch": [
+            "org.polyfrost.polydium.early.EarlyVulkanPreLaunch"
+        ],
         "client": [
             "org.polyfrost.polydium.client.PolydiumClient"
         ],
