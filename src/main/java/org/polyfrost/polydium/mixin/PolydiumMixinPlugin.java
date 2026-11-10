@@ -79,6 +79,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final String[] FAR_SKY_MIXINS = {".cirrus.MixinCirrusVertexBuffer", ".cirrus.MixinCirrusSkyRenderer", ".nuit.MixinNuitRenderBackend", ".nuit.MixinNuitSkyDisc"};
     private static final List<ClassNode> FAR_SKY_TARGETS = new CopyOnWriteArrayList<>();
     private static final Map<String, Boolean> FAR_SKY_HOOKED = new ConcurrentHashMap<>();
+    private static final Map<String, Integer> FAR_SKY_MISSED_AT = new ConcurrentHashMap<>();
 
     private static final String SODIUM_08_PACKAGE = SODIUM_PERF_PACKAGE + "v08.";
     private static final Set<String> SODIUM_09_ONLY = Set.of(
@@ -151,9 +152,14 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         for (String handler : handlers) {
             Boolean hooked = FAR_SKY_HOOKED.get(handler);
             if (hooked == null) {
-                hooked = farSkyHandlerCalled(handler);
-                if (hooked == null)
+                int targets = FAR_SKY_TARGETS.size();
+                if (FAR_SKY_MISSED_AT.getOrDefault(handler, -1) == targets)
                     return false;
+                hooked = farSkyHandlerCalled(handler);
+                if (hooked == null) {
+                    FAR_SKY_MISSED_AT.put(handler, targets);
+                    return false;
+                }
                 FAR_SKY_HOOKED.put(handler, hooked);
             }
             if (!hooked)
