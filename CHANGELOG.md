@@ -12,3 +12,4 @@
 - Improved window resize and minimize handling on the Vulkan backend on 26.1.2 and 1.21.11
 - Reduced overhead of 3D Skin Layers checking resource packs for player skins
 - Improved terrain rendering performance with Sodium on OpenGL on 26.2 and above
+- Fixed a crash on the Vulkan backend during resource reloads, including at startup, on 26.2 and below
