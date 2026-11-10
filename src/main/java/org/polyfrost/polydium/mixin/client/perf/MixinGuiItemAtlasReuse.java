@@ -36,6 +36,8 @@ public abstract class MixinGuiItemAtlasReuse {
     @Shadow
     private int itemAtlasY;
     @Shadow
+    private int frameNumber;
+    @Shadow
     @Final
     GuiRenderState renderState;
 
@@ -94,6 +96,7 @@ public abstract class MixinGuiItemAtlasReuse {
         }
 
         Object slot = this.polydium$freeSlots.poll();
+        ((GuiAtlasPositionAccessor) slot).polydium$setLastAnimatedOnFrame(this.frameNumber - 1);
         this.atlasPositions.put(item.itemStackRenderState().getModelIdentity(), slot);
         this.polydium$reusedSlot = slot;
         return slot;

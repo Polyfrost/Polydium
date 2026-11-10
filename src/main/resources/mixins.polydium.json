@@ -780,6 +780,8 @@
     "client.perf.MixinGuiItemBakeAtlas",
     //? if >= 1.21.8 && < 26.1
     //"client.perf.MixinGuiItemAtlasReuse",
+    //? if >= 1.21.8 && < 26.1
+    //"client.perf.GuiAtlasPositionAccessor",
     "client.perf.MixinSpriteMipRelease",
     "client.perf.SpriteContentsMipAccessor",
     "client.perf.MixinTextEffectMerge",
