@@ -4,6 +4,7 @@ package org.polyfrost.polydium.mixin.client.perf.vulkan;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.mojang.blaze3d.platform.FramerateLimitTracker;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.renderpearl.api.commands.CommandEncoder;
 import com.mojang.renderpearl.api.device.GpuSurface;
@@ -16,6 +17,7 @@ import org.objectweb.asm.Opcodes;
 import org.polyfrost.polydium.client.PolydiumToggles;
 import org.polyfrost.polydium.client.perf.FramePath;
 import org.polyfrost.polydium.client.perf.PresentThread;
+import org.polyfrost.polydium.compat.PolyReflexCompat;
 import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -50,6 +52,9 @@ public abstract class MixinMinecraftPresentThread {
     @Shadow
     private boolean surfaceIsInvalid;
 
+    @Shadow
+    public abstract FramerateLimitTracker getFramerateLimitTracker();
+
     @Unique
     private boolean polydium$presentThread;
 
@@ -82,7 +87,7 @@ public abstract class MixinMinecraftPresentThread {
             FramePath.reset();
         }
 
-        boolean worker = FramePath.beginFrame(PresentThread.canDeferAcquire(this.windowSurface));
+        boolean worker = FramePath.beginFrame(PresentThread.canDeferAcquire(this.windowSurface) && PolyReflexCompat.allowsWorker(this.getFramerateLimitTracker().getFramerateLimit()));
 
         this.polydium$frameAcquiredEarly = this.polydium$imageAcquiredEarly || this.polydium$earlyAcquireFailure != null;
         this.polydium$acquireDeferred    = !needsReconfiguring && worker && !this.polydium$frameAcquiredEarly;
@@ -147,7 +152,7 @@ public abstract class MixinMinecraftPresentThread {
 
     @WrapOperation(method = "renderFrame", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/api/commands/CommandEncoder;submit()V"))
     private void polydium$presentOnPresentThread(CommandEncoder encoder, Operation<Void> original) {
-        if (!this.polydium$presentThread) {
+        if (!this.polydium$presentThread || PolyReflexCompat.presentsInline()) {
             original.call(encoder);
 
             return;

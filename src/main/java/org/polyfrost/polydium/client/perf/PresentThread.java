@@ -12,6 +12,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.KHRSwapchain;
 import org.lwjgl.vulkan.VkPresentInfoKHR;
 import org.lwjgl.vulkan.VkQueue;
+import org.polyfrost.polydium.compat.PolyReflexCompat;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
@@ -118,12 +119,18 @@ public final class PresentThread {
             worker  = thread = Thread.ofPlatform().name("Polydium Present").daemon().priority(Thread.MAX_PRIORITY).start(PresentThread::work);
         }
 
+        PolyReflexCompat.captureFrame();
+
         handedSubmission = submission;
         handedPresent    = present;
         job              = PRESENT_JOB;
 
         if (workerParked)
             LockSupport.unpark(thread);
+    }
+
+    public static boolean onWorker() {
+        return Thread.currentThread() == worker;
     }
 
     public static boolean isCapturing() {
@@ -144,7 +151,17 @@ public final class PresentThread {
             presentInfo.swapchainCount(1);
             presentInfo.pSwapchains(stack.longs(swapchain));
             presentInfo.pImageIndices(stack.ints(imageIndex));
-            return KHRSwapchain.vkQueuePresentKHR(queue, presentInfo);
+
+            if (!PolyReflexCompat.LOADED)
+                return KHRSwapchain.vkQueuePresentKHR(queue, presentInfo);
+
+            boolean marked = PolyReflexCompat.beforePresent(queue, presentInfo, stack);
+            int     result = KHRSwapchain.vkQueuePresentKHR(queue, presentInfo);
+
+            if (marked)
+                PolyReflexCompat.afterPresent(stack);
+
+            return result;
         }
     }
 
