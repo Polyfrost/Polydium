@@ -1,4 +1,4 @@
-## Unreleased changes
+## 1.4.0
 - Added a toggle for occlusion culling
 - Fixed stutters with occlusion culling
 - Reduced overhead when rendering items with Sodium
