@@ -250,7 +250,8 @@ public class VulkanBackend implements GpuBackend {
 
       VulkanDevice vulkanDevice = new VulkanDevice(defaultShaderSource, instance, physicalDevice, deviceExtensions, device, vma, checkpointExtension);
       LOGGER.info(
-        "Vulkan using {} and {}",
+        "Vulkan on {} using {} and {}",
+        physicalDevice.deviceName(),
         vulkanDevice.dynamicRendering() ? "dynamic rendering" : "render passes",
         vulkanDevice.pushDescriptors() ? "push descriptors" : "descriptor sets"
       );
@@ -326,6 +327,7 @@ public class VulkanBackend implements GpuBackend {
       for (int i = 0; i < numDevices; i++) {
         if (pPhysicalDevices.get(i) != 0L) {
           VkPhysicalDevice currentDevice = new VkPhysicalDevice(pPhysicalDevices.get(i), instance.vkInstance());
+          LOGGER.info("Found Vulkan device: {}", getDeviceName(currentDevice));
           if (firstDevice == null) {
             firstDevice = currentDevice;
           }
