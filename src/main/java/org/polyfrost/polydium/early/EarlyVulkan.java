@@ -393,6 +393,8 @@ public final class EarlyVulkan implements LanguageAdapter {
         String forced = System.getProperty("polydium.vulkanEligible");
         if (forced != null)
             return Boolean.parseBoolean(forced);
+        if (FabricLoader.getInstance().isModLoaded("iris"))
+            return Boolean.FALSE;
         boolean appleArm = System.getProperty("os.name", "").startsWith("Mac") && "aarch64".equals(System.getProperty("os.arch"));
         return appleArm ? Boolean.TRUE : discreteGpu();
     }
