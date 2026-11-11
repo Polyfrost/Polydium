@@ -1,4 +1,2 @@
-## 1.4.3
-- Fixed Reflex AntiLag crashing the game on the Vulkan backend
-- Fix chunk issues with Intel OpenGL
-- Fix items rendering weirdly with Gnetum
+## 1.4.4
+- Fixed mods that call OpenGL directly crashing the game on the Vulkan backend for 1.21.11 and 26.1.x. A notification now names any mod that may render incorrectly because of it.

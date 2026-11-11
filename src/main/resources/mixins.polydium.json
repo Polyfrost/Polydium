@@ -346,7 +346,6 @@
     "client.perf.vulkan.backport.MixinVulkanReflex",
     "client.perf.vulkan.backport.MixinVulkanRenderPassTexelViewBackport",
     "client.perf.vulkan.backport.MixinVulkanSemaphoreCounterReadBackport",
-    "client.perf.vulkan.backport.MixinVulkanServerEntryGl",
     "client.perf.vulkan.backport.MixinVulkanSubmissionPresentDrainBackport",
     "client.perf.vulkan.backport.MixinVulkanTexelViewCacheBackport",
     "client.perf.vulkan.backport.MixinVulkanUniversalCraft",

@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.vulkan;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
@@ -42,14 +41,6 @@ public final class VulkanActive {
   }
 
   private VulkanActive() {
-  }
-
-  public static void _enableBlend() {
-    if (!active) GlStateManager._enableBlend();
-  }
-
-  public static void _disableBlend() {
-    if (!active) GlStateManager._disableBlend();
   }
 
   public static int textureId(Object texture) {

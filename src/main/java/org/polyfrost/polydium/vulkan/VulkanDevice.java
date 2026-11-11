@@ -160,6 +160,7 @@ public class VulkanDevice implements GpuDeviceBackend {
     this.commandEncoder = new VulkanCommandEncoder(this);
     active = this;
     VulkanActive.active = true;
+    RawGl.install();
   }
 
   @Override
