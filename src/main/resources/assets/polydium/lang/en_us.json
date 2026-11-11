@@ -13,5 +13,7 @@
   "polydium.vulkanPrompt.no": "Not Now",
   "polydium.vulkanModNotice.title": "VulkanMod detected",
   "polydium.vulkanModNotice": "Polydium has its own Vulkan backend built for Sodium, which usually runs faster than VulkanMod and works with more mods. Users have seen up to 36% higher FPS with Polydium + Sodium than with VulkanMod. To try it, swap VulkanMod for Sodium.",
-  "polydium.vulkanPrompt.restart": "Takes effect after restarting the game."
+  "polydium.vulkanPrompt.restart": "Takes effect after restarting the game.",
+  "polydium.rawGl.title": "%s may not render correctly",
+  "polydium.rawGl.message": "It draws with OpenGL directly, which does nothing on Vulkan. If something looks wrong, switch to OpenGL in Video Settings → General → Graphics API."
 }
