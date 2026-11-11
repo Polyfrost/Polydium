@@ -20,6 +20,10 @@ public final class BlockStateCacheBatch {
         List<BlockState> states = pending;
 
         pending = new ArrayList<>();
-        states.parallelStream().forEach(BlockState::initCache);
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        states.parallelStream().forEach(state -> {
+            Thread.currentThread().setContextClassLoader(loader);
+            state.initCache();
+        });
     }
 }
