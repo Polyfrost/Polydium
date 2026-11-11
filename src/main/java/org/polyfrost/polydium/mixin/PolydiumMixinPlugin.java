@@ -594,15 +594,6 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             return;
         }
 
-        if (mixinClassName.endsWith("MixinVulkanServerEntryGl")) {
-            for (MethodNode method : targetClass.methods)
-                for (AbstractInsnNode insn : method.instructions)
-                    if (insn instanceof MethodInsnNode call && call.owner.equals("com/mojang/blaze3d/opengl/GlStateManager")
-                        && (call.name.equals("_enableBlend") || call.name.equals("_disableBlend")))
-                        call.owner = "org/polyfrost/polydium/vulkan/VulkanActive";
-            return;
-        }
-
         if (mixinClassName.endsWith("MixinVulkanBackendListAsyncParticles")) {
             ClassNode renamed = new ClassNode();
             targetClass.accept(new ClassRemapper(renamed, new Remapper() {

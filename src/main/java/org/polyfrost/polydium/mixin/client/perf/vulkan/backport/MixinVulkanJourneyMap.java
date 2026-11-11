@@ -34,11 +34,6 @@ public class MixinVulkanJourneyMap {
         if (VulkanActive.active) ci.cancel();
     }
 
-    @Inject(method = "getError", at = @At("HEAD"), cancellable = true, require = 0)
-    private static void polydium$getError(CallbackInfoReturnable<Integer> cir) {
-        if (VulkanActive.active) cir.setReturnValue(0);
-    }
-
     @Inject(method = "deleteTexture(I)Z", at = @At("HEAD"), cancellable = true, require = 0)
     private void polydium$deleteTexture(int textureId, CallbackInfoReturnable<Boolean> cir) {
         if (VulkanActive.active) cir.setReturnValue(true);

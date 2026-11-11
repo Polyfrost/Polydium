@@ -96,11 +96,6 @@ public class MixinVulkanXaeroWorldMap {
         if (VulkanActive.active) ci.cancel();
     }
 
-    @WrapOperation(method = "export", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glGetInteger(I)I"), require = 0)
-    private int polydium$maxTextureSize(int pname, Operation<Integer> original) {
-        return VulkanActive.active ? RenderSystem.getDevice().getMaxTextureSize() : original.call(pname);
-    }
-
     @WrapOperation(method = "export", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/buffers/GpuFence;awaitCompletion(J)Z"), require = 0)
     private boolean polydium$submitThenAwait(GpuFence fence, long timeout, Operation<Boolean> original) {
         if (VulkanActive.active) XaeroVulkan.submit();
