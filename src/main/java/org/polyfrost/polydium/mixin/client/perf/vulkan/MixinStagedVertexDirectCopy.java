@@ -39,6 +39,9 @@ public abstract class MixinStagedVertexDirectCopy implements VertexCopy.Owner {
     private final List<StagedVertexBuffer.Draw> polydium$copiedDraws = new ArrayList<>();
 
     @Unique
+    private static final int POLYDIUM$SUBDATA_MAX_BYTES = 16 * 1024;
+
+    @Unique
     private GpuBufferSlice.MappedView polydium$vertexView;
 
     @Unique
@@ -60,7 +63,8 @@ public abstract class MixinStagedVertexDirectCopy implements VertexCopy.Owner {
             this.polydium$queueCopies(draws, vertexGpuBuffer, indexGpuBuffer, vertexBufferSize, indexBufferSize);
             return;
         }
-        if (GlSubData.applies(vertexGpuBuffer) && (indexGpuBuffer == null || GlSubData.applies(indexGpuBuffer))) {
+        if (Math.max(vertexBufferSize, indexBufferSize) <= POLYDIUM$SUBDATA_MAX_BYTES
+            && GlSubData.applies(vertexGpuBuffer) && (indexGpuBuffer == null || GlSubData.applies(indexGpuBuffer))) {
             this.polydium$uploadWithSubData(draws, vertexGpuBuffer, indexGpuBuffer, vertexBufferSize, indexBufferSize);
             return;
         }
@@ -74,13 +78,9 @@ public abstract class MixinStagedVertexDirectCopy implements VertexCopy.Owner {
 
     @Unique
     private void polydium$uploadWithSubData(List<StagedVertexBuffer.Draw> draws, GpuBuffer vertexGpuBuffer, GpuBuffer indexGpuBuffer, int vertexBufferSize, int indexBufferSize) {
-        int size = indexGpuBuffer == null ? vertexBufferSize : Math.max(vertexBufferSize, indexBufferSize);
         ByteBuffer staging = this.polydium$subDataStaging;
-        if (staging == null || staging.capacity() < size) {
-            if (staging != null) {
-                MemoryUtil.memFree(staging);
-            }
-            staging = this.polydium$subDataStaging = MemoryUtil.memAlloc(size);
+        if (staging == null) {
+            staging = this.polydium$subDataStaging = MemoryUtil.memAlloc(POLYDIUM$SUBDATA_MAX_BYTES);
         }
         staging.clear().limit(vertexBufferSize);
         polydium$writeVertices(draws, staging);
