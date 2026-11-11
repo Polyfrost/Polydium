@@ -691,6 +691,8 @@
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLegacyDevice",
     //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanRawGl",
+    //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLegacyEncoder",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLegacyFeatures",

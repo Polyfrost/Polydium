@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.lwjgl.opengl.GL11C
 import org.lwjgl.system.Configuration
-import org.polyfrost.polydium.vulkan.RawGl
+import org.polyfrost.polydium.client.perf.RawGl
 
 class RawGlTest {
     // A regression here aborts the whole test JVM instead of failing an assertion
@@ -13,7 +13,7 @@ class RawGlTest {
     fun `raw OpenGL calls without a context return instead of aborting`() {
         // keeps LWJGL from loading a system OpenGL library, which CI doesn't have
         Configuration.OPENGL_EXPLICIT_INIT.set(true)
-        RawGl.install()
+        RawGl.install("vendor", "renderer", "version", 16384)
 
         GL11C.glEnable(GL11C.GL_BLEND)
         // mods loop on this until it reports no error

@@ -104,7 +104,7 @@ if (stonecutter.current.parsed < "26.3") {
 }
 
 val vulkanBackport = stonecutter.current.parsed >= "1.21.11" && stonecutter.current.parsed < "26.2"
-if (!vulkanBackport) sourceSets.test { kotlin.exclude("**/RawGlTest.kt") }
+if (stonecutter.current.parsed < "1.21.11") sourceSets.test { kotlin.exclude("**/RawGlTest.kt") }
 if (!vulkanBackport) sourceSets.main {
     java.exclude(
         "org/polyfrost/polydium/vulkan/**",

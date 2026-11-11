@@ -1,16 +1,23 @@
-package org.polyfrost.polydium.vulkan;
+package org.polyfrost.polydium.client.perf;
 
+//? if >= 1.21.11 {
 import com.mojang.blaze3d.platform.Window;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.language.I18n;
+import net.minecraft.locale.Language;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.PointerBuffer;
-import org.lwjgl.glfw.GLFWAllocateCallback;
+//? if >= 26.3 {
+import org.lwjgl.sdl.SDL_realloc_func;
+import org.lwjgl.sdl.SDL_realloc_funcI;
+//?} else {
+/*import org.lwjgl.glfw.GLFWAllocateCallback;
 import org.lwjgl.glfw.GLFWAllocateCallbackI;
+*///?}
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11C;
 import org.lwjgl.opengl.GLCapabilities;
@@ -54,10 +61,19 @@ public final class RawGl {
     private static final Map<Integer, Long> strings = new HashMap<>();
     private static long calls;
 
+    private static String vendor;
+    private static String renderer;
+    private static String version;
+    private static int maxTextureSize;
+
     private RawGl() {
     }
 
-    public static void install() {
+    public static void install(String vendor, String renderer, String version, int maxTextureSize) {
+        RawGl.vendor = vendor;
+        RawGl.renderer = renderer;
+        RawGl.version = version;
+        RawGl.maxTextureSize = maxTextureSize;
         try {
             long noop = stub((a, b) -> {
                 report(false);
@@ -103,17 +119,24 @@ public final class RawGl {
         }
     }
 
-    // The allocator callback is the one LWJGL exposes on every supported version that returns a pointer, and its two
-    // arguments are the first two of whichever OpenGL function it stands in for; the caller cleans up any others.
-    private static long stub(GLFWAllocateCallbackI function) {
+    // Any LWJGL callback taking two pointer-sized arguments and returning one works: its arguments are the first two of
+    // whichever OpenGL function it stands in for, and the caller cleans up any others. The windowing library's allocator
+    // callback is used because it's always on the classpath.
+    //? if >= 26.3 {
+    private static long stub(SDL_realloc_funcI function) {
+        return SDL_realloc_func.create(function).address();
+    }
+    //?} else {
+    /*private static long stub(GLFWAllocateCallbackI function) {
         return GLFWAllocateCallback.create(function).address();
     }
+    *///?}
 
     private static long string(int name) {
         String value = switch (name) {
-            case GL11C.GL_VENDOR -> VulkanDevice.active.getVendor();
-            case GL11C.GL_RENDERER -> VulkanDevice.active.getRenderer();
-            case GL11C.GL_VERSION -> VulkanDevice.active.getVersion();
+            case GL11C.GL_VENDOR -> vendor;
+            case GL11C.GL_RENDERER -> renderer;
+            case GL11C.GL_VERSION -> version;
             default -> null;
         };
         // never freed, the same as a driver's strings
@@ -122,7 +145,7 @@ public final class RawGl {
 
     private static boolean integers(int pname, long data) {
         switch (pname) {
-            case GL11C.GL_MAX_TEXTURE_SIZE -> MemoryUtil.memPutInt(data, VulkanDevice.active.getMaxTextureSize());
+            case GL11C.GL_MAX_TEXTURE_SIZE -> MemoryUtil.memPutInt(data, maxTextureSize);
             case GL11C.GL_VIEWPORT, GL11C.GL_SCISSOR_BOX -> {
                 Window window = Minecraft.getInstance().getWindow();
                 MemoryUtil.memPutInt(data, 0);
@@ -131,6 +154,8 @@ public final class RawGl {
                 MemoryUtil.memPutInt(data + 12, window.getHeight());
             }
             default -> {
+                // glGetInteger reads back an uninitialized stack value, so an unanswered query must not leave it as is
+                MemoryUtil.memPutInt(data, 0);
                 return false;
             }
         }
@@ -195,10 +220,11 @@ public final class RawGl {
 
     private static void showToasts() {
         // the first calls can come before translations have loaded
-        if (pendingToasts.isEmpty() || !I18n.exists(TOAST_TITLE))
+        if (pendingToasts.isEmpty() || !Language.getInstance().has(TOAST_TITLE))
             return;
         for (String mod : pendingToasts)
             Notifications.info(I18n.get(TOAST_TITLE, mod), I18n.get("polydium.rawGl.message"), 10_000F);
         pendingToasts.clear();
     }
 }
+//?}

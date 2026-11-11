@@ -28,13 +28,18 @@ import org.spongepowered.asm.service.MixinService;
 
 import org.polyfrost.polydium.compat.Mods;
 import org.polyfrost.polydium.early.EarlyVulkan;
-//? if >= 1.21.11 && < 26.2
-/*import org.polyfrost.polydium.early.EarlyVulkanPreLaunch;*/
+//? if >= 1.21.11
+import org.polyfrost.polydium.early.EarlyVulkanPreLaunch;
 import org.polyfrost.polydium.early.LocalRefHoister;
 import org.polyfrost.polydium.early.OperationInliner;
 //? if >= 1.21.11 && < 26.2
 /*import org.polyfrost.polydium.vulkan.IrisVulkanGate;*/
 import org.slf4j.LoggerFactory;
+
+//? if >= 26.2 {
+import java.nio.file.Files;
+import java.util.Locale;
+//?}
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -462,10 +467,13 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void onLoad(String mixinPackage) {
-        //? if >= 1.21.11 && < 26.2 {
-        /*// The game libraries are available now, before vulkanBackend() selects mixins or gates Iris.
+        //? if >= 1.21.11 {
         new EarlyVulkanPreLaunch().beforeMixinSelection();
-        *///?}
+        //?}
+        //? if >= 26.2 {
+        if (Mods.loaded("iris"))
+            syncIrisBackend();
+        //?}
         if (!isDisabled("OperationInliner") && (Mods.loaded("particle_core") || Mods.loaded("mountopacity") || Mods.loaded("overflowparticles") || Mods.loaded("lambdynlights") || Mods.loaded("obe") || Mods.loaded("entityculling")))
             MixinInternals.registerExtension(new OperationInliner("particle_core", "mountopacity", "overflowparticles", "obe", "inline"));
         if (!isDisabled("LocalRefHoister") && Mods.loaded("sodium"))
@@ -475,6 +483,19 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             IrisVulkanGate.apply();
         *///?}
     }
+
+    //? if >= 26.2 {
+    private static void syncIrisBackend() {
+        try {
+            boolean vulkan = Files.readAllLines(FabricLoader.getInstance().getGameDir().resolve("options.txt")).stream()
+                .anyMatch(line -> line.startsWith("preferredGraphicsBackend:") && line.toLowerCase(Locale.ROOT).contains("vulkan"));
+            MixinService.getService().getClassProvider().findClass("net.irisshaders.iris.mixin.IrisMixinPlugin", true)
+                .getField("usingVulkan").setBoolean(null, vulkan);
+        } catch (Throwable t) {
+            LoggerFactory.getLogger("polydium/perf").warn("Couldn't sync Iris graphics backend", t);
+        }
+    }
+    //?}
 
     @Override
     public String getRefMapperConfig() {
