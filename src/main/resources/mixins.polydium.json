@@ -23,6 +23,7 @@
     "client.perf.MixinCutoutTypeCacheClear",
     "client.perf.sodium.MixinModernFixModelCacheReset",
     "client.perf.MixinTaskWakeCoalesce",
+    "client.perf.MixinUtilPlatformCache",
     //? if >= 1.21.10
     "client.perf.MixinDebugEntryCache",
     //? if >= 1.21.8
@@ -249,6 +250,12 @@
     //? if >= 26.1 && < 26.2
     //"client.perf.sodium.v08.MixinSpriteSetSection",
     "client.perf.sodium.MixinCuboidNormals",
+    //? if >= 26.1
+    "client.perf.sodium.MixinCullTaskTreePool",
+    //? if >= 26.1
+    "client.perf.sodium.MixinCullTreeArray",
+    //? if >= 26.1
+    "client.perf.sodium.MixinCullTreeRelease",
     "client.perf.sodium.MixinDirectVertexCuboid",
     "client.perf.sodium.MixinDirectVertexGlyph",
     "client.perf.sodium.MixinDirectVertexItemQuad",
@@ -277,8 +284,6 @@
     "client.perf.sodium.MixinSodiumBoxPredicate",
     //? if >= 1.21.8 || < 1.21.4
     "client.perf.sodium.MixinSodiumPerFrameChecksEstimator",
-    //? if >= 26.2
-    "client.perf.sodium.MixinSodiumPerFrameChecksGpuLimits",
     //? if >= 1.21.8 || < 1.21.4
     "client.perf.sodium.MixinSortReuse",
     //? if >= 1.21.8 || < 1.21.4
