@@ -85,6 +85,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             SODIUM_PERF_PACKAGE + "MixinAnimatedSpriteMarksRegion",
             SODIUM_PERF_PACKAGE + "MixinSpriteSetRegion",
             SODIUM_PERF_PACKAGE + "MixinSodiumBoxPredicate",
+            SODIUM_PERF_PACKAGE + "MixinCullTaskTreePool",
+            SODIUM_PERF_PACKAGE + "MixinCullTreeArray",
+            SODIUM_PERF_PACKAGE + "MixinCullTreeRelease",
             SODIUM_PERF_PACKAGE + "MixinVisGraphScratch",
             SODIUM_PERF_PACKAGE + "MixinFluidDefaultDirect"
     );
@@ -229,6 +232,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             //?}
             Map.entry("OpaqueItemCutout", new String[]{"SpriteContentsTransparency", "ItemTintLayerAccessor"}),
             Map.entry("GlIndirectTerrainBatch", new String[]{"GlRenderPassIrisTessellation"}),
+            Map.entry("CullTreeRelease", new String[]{"CullTaskTreePool"}),
             //? if >= 1.21.4 {
             Map.entry("SkinTextureNoPackProbe", new String[]{"TextureManagerAccessor"})
             //?} else {
