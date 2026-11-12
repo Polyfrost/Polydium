@@ -60,10 +60,34 @@ class GlslRelaxerTest {
             """.trimIndent()
         )
 
-        assertFalse(out.contains("#define texture2D texture"))
-        assertFalse(out.contains("#define shadow2D("))
+        assertTrue(out.contains("#undef texture2D\n#line 2\n#define texture2D(s, c)"))
+        assertTrue(out.contains("#undef shadow2D\n#line 7\nvec4 shadow2D("))
         assertTrue(out.contains("#define texture2DLod textureLod"))
         assertTrue(out.contains("#define UBO uniform\nvec4 color;"))
         assertTrue(out.contains("#define packed 3\nlayout(std140) uniform Blk"))
+    }
+
+    @Test
+    fun `resolves macros and keeps comment line splices`() {
+        val out = GlslRelaxer.relax(
+            """
+            #version 150
+            #define PACK_SAMPLER sampler2D
+            #define COUNT 2
+            uniform PACK_SAMPLER Sampler0;
+            uniform vec4 palette[COUNT];
+            #ifdef LEGACY
+            #define texture2D(s, c) texture(s, c)
+            #endif
+            // spliced \
+            uniform float hidden;
+            """.trimIndent()
+        )
+
+        assertTrue(out.contains("uniform PACK_SAMPLER Sampler0;"))
+        assertTrue(out.contains("vec4 palette[COUNT] = vec4[COUNT](vec4(0), vec4(0));"))
+        assertTrue(out.contains("#define texture2D texture\n"))
+        assertTrue(out.contains("#ifdef LEGACY\n#undef texture2D\n#line 6\n#define texture2D(s, c)"))
+        assertFalse(out.contains("hidden"))
     }
 }
