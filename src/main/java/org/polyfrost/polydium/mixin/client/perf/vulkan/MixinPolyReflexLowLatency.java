@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
-//? if >= 26.2 {
+//? if >= 1.21.11 {
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import org.objectweb.asm.Opcodes;
 import org.polyfrost.polydium.client.PolydiumConstants;

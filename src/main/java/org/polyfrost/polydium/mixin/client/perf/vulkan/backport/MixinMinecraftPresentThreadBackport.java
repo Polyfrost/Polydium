@@ -2,9 +2,11 @@ package org.polyfrost.polydium.mixin.client.perf.vulkan.backport;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import net.minecraft.client.Minecraft;
 import org.polyfrost.polydium.client.PolydiumToggles;
 import org.polyfrost.polydium.client.perf.FramePath;
 import org.polyfrost.polydium.client.perf.PresentThread;
+import org.polyfrost.polydium.compat.PolyReflexCompat;
 import org.polyfrost.polydium.vulkan.VulkanCommandEncoder;
 import org.polyfrost.polydium.vulkan.VulkanDevice;
 import org.polyfrost.polydium.vulkan.compat.GpuSurface;
@@ -95,7 +97,11 @@ public abstract class MixinMinecraftPresentThreadBackport {
 
     @WrapOperation(method = "presentFrame", at = @At(value = "INVOKE", target = "Lorg/polyfrost/polydium/vulkan/VulkanCommandEncoder;submit()V"))
     private void polydium$presentOnPresentThread(VulkanCommandEncoder encoder, Operation<Void> original) {
-        FramePath.beginFrame(PresentThread.canDeferAcquire(this.surface));
+        FramePath.beginFrame(PresentThread.canDeferAcquire(this.surface) && PolyReflexCompat.allowsWorker(Minecraft.getInstance().getFramerateLimitTracker().getFramerateLimit()));
+        if (PolyReflexCompat.presentsInline()) {
+            original.call(encoder);
+            return;
+        }
         if (this.surface.isAcquired() && !this.polydium$imageAcquiredEarly)
             PresentThread.arm(this.surface);
         try {
