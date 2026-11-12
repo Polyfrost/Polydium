@@ -34,7 +34,8 @@
         "fabricloader": ">=0.16.0",
         "java": ">=21",
         "fabric-language-kotlin": ">=1.13.13",
-        "oneconfigv1": ">=${oneconfig_version}"
+        "oneconfigv1": ">=${oneconfig_version}",
+        "gpu_booster": ">=2147483647"
     },
     "recommends": {
         "sodium": ">=${sodium_min}"

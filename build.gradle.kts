@@ -5,6 +5,7 @@ import dev.kikugie.loomx.LoomCompatDependencyExtension
 import dev.kikugie.loomx.LoomCompatProjectExtension
 import dev.kikugie.stonecutter.build.StonecutterBuildExtension
 import net.fabricmc.loom.api.LoomGradleExtensionAPI
+import net.fabricmc.loom.task.NestJarsAction
 import net.fabricmc.loom.task.prod.ClientProductionRunTask
 import net.ltgt.gradle.errorprone.errorprone
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
@@ -312,6 +313,14 @@ tasks.matching { it.name == "publishModrinth" }.configureEach {
 }
 
 val modJar = extensions.getByType<LoomCompatProjectExtension>().modJar
+
+val gpuBoosterStub = tasks.register<Jar>("gpuBoosterStubJar") {
+    from(rootProject.file("src/gpu-booster-stub"))
+    archiveFileName = "gpu-booster-stub.jar"
+    destinationDirectory = layout.buildDirectory.dir("gpu-booster-stub")
+}
+modJar.configure { NestJarsAction.addToTask(this, files(gpuBoosterStub)) }
+dependencies { runtimeOnly(files(gpuBoosterStub)) }
 
 publishMods {
     file = modJar.flatMap { it.archiveFile }

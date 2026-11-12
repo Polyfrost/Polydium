@@ -1,0 +1,14 @@
+{
+    "schemaVersion": 1,
+    "id": "gpu_booster",
+    "version": "2147483647.0.0",
+    "name": "GPUBooster (disabled by Polydium)",
+    "description": "Empty stand-in that replaces GPUBooster, which breaks Polydium's buffer mapping and gains no performance.",
+    "environment": "*",
+    "custom": {
+        "modmenu": {
+            "badges": ["library"],
+            "parent": "polydium"
+        }
+    }
+}
