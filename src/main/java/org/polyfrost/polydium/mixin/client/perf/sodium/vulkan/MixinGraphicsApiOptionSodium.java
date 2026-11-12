@@ -35,7 +35,7 @@ public class MixinGraphicsApiOptionSodium {
                         .setElementNameProvider(EnumOptionBuilder.nameProviderFrom(
                                 Component.translatable("options.graphicsApi.default"),
                                 Component.translatable("options.graphicsApi.opengl"),
-                                Component.translatable("options.graphicsApi.vulkan")))
+                                Component.translatable("options.graphicsApi.vulkanSodium")))
                         .setDefaultValue(GraphicsApi.DEFAULT)
                         .setFlags(OptionFlag.REQUIRES_GAME_RESTART)
                         .setBinding(IrisVulkan::selectGraphicsApi, GraphicsApi.OPTION::get)));

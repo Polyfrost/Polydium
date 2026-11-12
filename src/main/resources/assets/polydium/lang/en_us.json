@@ -6,6 +6,7 @@
   "options.graphicsApi.tooltip.vulkan": "Experimental. Might reduce performance or cause instability on some systems.",
   "options.graphicsApi.tooltip.vulkanUnavailable": "Vulkan can't start on this device, so OpenGL is used: %s",
   "options.graphicsApi.vulkan": "Prefer Vulkan (Experimental)",
+  "options.graphicsApi.vulkanSodium": "Prefer Vulkan",
   "polydium.vulkanPrompt.title": "Try Vulkan with Polydium",
   "polydium.vulkanPrompt.message.backport": "Polydium now adds Vulkan support to this version of Minecraft. Unlike VulkanMod, it works with the majority of mods.\n\n§lIt is very likely your FPS will be better with Vulkan.§r\n\nTry it out and see if your FPS is better! You can switch anytime in Video Settings → General → Graphics API.",
   "polydium.vulkanPrompt.message": "Minecraft can render with Vulkan, and Polydium makes it even faster.\n\n§lIt is very likely your FPS will be better with Vulkan.§r\n\nTry it out and see if your FPS is better! You can switch anytime in Video Settings → General → Graphics API.",
