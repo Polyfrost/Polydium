@@ -101,6 +101,8 @@
     //? if >= 1.21.1
     "client.perf.MixinParticleCollisionReach",
     //? if >= 1.21.1
+    "client.perf.MixinParticleCollisionReachSection",
+    //? if >= 1.21.1
     "client.perf.MixinParticleLightCache",
     //? if >= 1.21.1
     "client.perf.MixinParticleRotationReuse",

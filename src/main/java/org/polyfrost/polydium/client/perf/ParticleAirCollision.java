@@ -13,12 +13,15 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunkSection;
+import net.minecraft.world.level.chunk.PalettedContainer;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+
+import java.lang.invoke.VarHandle;
 
 public final class ParticleAirCollision {
     private static final double EPSILON = 1.0E-7;
@@ -29,7 +32,7 @@ public final class ParticleAirCollision {
     private ParticleAirCollision() {
     }
 
-    public static boolean cannotCollide(Level level, CollisionContext context, AABB box, Vec3 movement) {
+    public static boolean cannotCollide(Level level, CollisionContext context, AABB box, Vec3 movement, Memo memo) {
         if (level.isDebug())
             return false;
         double dx = movement.x, dy = movement.y, dz = movement.z;
@@ -39,17 +42,25 @@ public final class ParticleAirCollision {
         int maxY = Mth.floor(box.maxY + Math.max(dy, 0.0) + EPSILON) + 1;
         int minZ = Mth.floor(box.minZ + Math.min(dz, 0.0) - EPSILON) - 1;
         int maxZ = Mth.floor(box.maxZ + Math.max(dz, 0.0) + EPSILON) + 1;
+        ClientChunkCache clientChunks = level instanceof ClientLevel clientLevel ? clientLevel.getChunkSource() : null;
+        if (memo != null && memo.matches(level, clientChunks, minX, minY, minZ, maxX, maxY, maxZ))
+            return true;
+        LevelChunkSection only = null;
+        PalettedContainer<BlockState> onlyStates = null;
+        int onlyVersion = 0;
+        boolean memoizable = memo != null;
         BlockPos.MutableBlockPos pos = null;
         AABB swept = null;
-        ClientChunkCache clientChunks = level instanceof ClientLevel clientLevel ? clientLevel.getChunkSource() : null;
 
         int maxChunkX = SectionPos.blockToSectionCoord(maxX);
         int maxChunkZ = SectionPos.blockToSectionCoord(maxZ);
         for (int chunkX = SectionPos.blockToSectionCoord(minX); chunkX <= maxChunkX; chunkX++) {
             for (int chunkZ = SectionPos.blockToSectionCoord(minZ); chunkZ <= maxChunkZ; chunkZ++) {
-                BlockGetter getter = clientChunks != null ? clientChunks.getChunk(chunkX, chunkZ, ChunkStatus.FULL, false) : level.getChunkForCollisions(chunkX, chunkZ);
-                if (getter == null)
+                BlockGetter getter = chunkAt(level, clientChunks, chunkX, chunkZ);
+                if (getter == null) {
+                    memoizable = false;
                     continue;
+                }
                 if (!(getter instanceof ChunkAccess chunk))
                     return false;
 
@@ -66,10 +77,15 @@ public final class ParticleAirCollision {
                 int maxSectionY = SectionPos.blockToSectionCoord(top);
                 for (int sectionY = SectionPos.blockToSectionCoord(bottom); sectionY <= maxSectionY; sectionY++) {
                     LevelChunkSection section = sections[chunk.getSectionIndexFromSectionY(sectionY)];
+                    if (only != null)
+                        memoizable = false;
+                    only = section;
+                    onlyStates = section.getStates();
+                    onlyVersion = version(onlyStates);
                     if (section.hasOnlyAir())
                         continue;
 
-                    int inset = mayReachNeighborCells(section) ? 0 : 1;
+                    int inset = mayReachNeighborCells(onlyStates, onlyVersion, section) ? 0 : 1;
                     int fromY = Math.max(Math.max(bottom, minY + inset), sectionY << 4);
                     int toY = Math.min(Math.min(top, maxY - inset), (sectionY << 4) + 15);
                     int insetToZ = Math.min(toZ, maxZ - inset);
@@ -103,20 +119,70 @@ public final class ParticleAirCollision {
                 }
             }
         }
+        if (memoizable && only != null && pos == null)
+            memo.remember(only, onlyStates, onlyVersion, minX, minY, minZ, maxX, maxY, maxZ);
         return true;
+    }
+
+    private static BlockGetter chunkAt(Level level, ClientChunkCache clientChunks, int chunkX, int chunkZ) {
+        return clientChunks != null ? clientChunks.getChunk(chunkX, chunkZ, ChunkStatus.FULL, false) : level.getChunkForCollisions(chunkX, chunkZ);
+    }
+
+    public static final class Memo {
+        private LevelChunkSection section;
+        private PalettedContainer<BlockState> states;
+        private int version, minX, minY, minZ, maxX, maxY, maxZ;
+
+        boolean matches(Level level, ClientChunkCache clientChunks, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+            if (this.section == null || this.minX != minX || this.minY != minY || this.minZ != minZ
+                || this.maxX != maxX || this.maxY != maxY || this.maxZ != maxZ
+                || this.section.getStates() != this.states || version(this.states) != this.version)
+                return false;
+            BlockGetter getter = chunkAt(level, clientChunks, SectionPos.blockToSectionCoord(minX), SectionPos.blockToSectionCoord(minZ));
+            if (!(getter instanceof ChunkAccess chunk))
+                return false;
+            //? if >= 1.21.4 {
+            int bottom = Math.max(minY, chunk.getMinY());
+            //?} else {
+            /*int bottom = Math.max(minY, chunk.getMinBuildHeight());
+            *///?}
+            int index = chunk.getSectionIndexFromSectionY(SectionPos.blockToSectionCoord(bottom));
+            LevelChunkSection[] sections = chunk.getSections();
+            return index >= 0 && index < sections.length && sections[index] == this.section;
+        }
+
+        void remember(LevelChunkSection section, PalettedContainer<BlockState> states, int version, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+            this.section = section;
+            this.states = states;
+            this.version = version;
+            this.minX = minX;
+            this.minY = minY;
+            this.minZ = minZ;
+            this.maxX = maxX;
+            this.maxY = maxY;
+            this.maxZ = maxZ;
+        }
+    }
+
+    private static int version(PalettedContainer<BlockState> states) {
+        int version = ((Reach) states).polydium$paletteVersion();
+        VarHandle.acquireFence();
+        return version;
     }
 
     public interface Reach {
         int polydium$paletteVersion();
+
+        void polydium$bumpPaletteVersion();
 
         int polydium$reachCode();
 
         void polydium$setReachCode(int code);
     }
 
-    private static boolean mayReachNeighborCells(LevelChunkSection section) {
-        Reach reach = (Reach) section.getStates();
-        int version = reach.polydium$paletteVersion() & 0x3FFFFFFF;
+    private static boolean mayReachNeighborCells(PalettedContainer<BlockState> states, int paletteVersion, LevelChunkSection section) {
+        Reach reach = (Reach) states;
+        int version = paletteVersion & 0x3FFFFFFF;
         int code = reach.polydium$reachCode();
         if (code >>> 1 == version)
             return (code & 1) != 0;

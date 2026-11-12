@@ -238,6 +238,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("OpaqueItemCutout", new String[]{"SpriteContentsTransparency", "ItemTintLayerAccessor"}),
             Map.entry("GlIndirectTerrainBatch", new String[]{"GlRenderPassIrisTessellation"}),
             Map.entry("CullTreeRelease", new String[]{"CullTaskTreePool"}),
+            Map.entry("ParticleAirCollision", new String[]{"ParticleCollisionReach", "ParticleCollisionReachSection"}),
             //? if >= 1.21.4 {
             Map.entry("SkinTextureNoPackProbe", new String[]{"TextureManagerAccessor"})
             //?} else {
@@ -380,6 +381,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             return false;
 
         if ((mixinClassName.contains("MixinOcclusion") || mixinClassName.contains("WaitMeter")) && isDisabled("OcclusionCull"))
+            return false;
+
+        if (mixinClassName.contains("ParticleCollisionReach") && isDisabled("ParticleAirCollision"))
             return false;
 
         if (mixinClassName.contains("VulkanBackendList") && !vulkanBackend())

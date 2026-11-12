@@ -13,12 +13,16 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.polyfrost.polydium.client.perf.ParticleAirCollision;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 
 import java.util.List;
 
 @Mixin(Particle.class)
 public abstract class MixinParticleAirCollision {
+    @Unique
+    private ParticleAirCollision.Memo polydium$airMemo;
+
     @WrapOperation(
             method = "move(DDD)V",
             at = @At(
@@ -31,11 +35,14 @@ public abstract class MixinParticleAirCollision {
             )
     )
     private Vec3 polydium$skipAirCollision(/*? if >= 26.2 {*/CollisionContext/*?} else {*//*Entity*//*?}*/ context, Vec3 movement, AABB box, Level level, List<VoxelShape> colliders, Operation<Vec3> original) {
+        ParticleAirCollision.Memo memo = this.polydium$airMemo;
+        if (memo == null)
+            this.polydium$airMemo = memo = new ParticleAirCollision.Memo();
         if (colliders.isEmpty()
             //? if >= 26.2 {
-            && ParticleAirCollision.cannotCollide(level, context, box, movement)
+            && ParticleAirCollision.cannotCollide(level, context, box, movement, memo)
             //?} else {
-            /*&& context == null && ParticleAirCollision.cannotCollide(level, CollisionContext.empty(), box, movement)
+            /*&& context == null && ParticleAirCollision.cannotCollide(level, CollisionContext.empty(), box, movement, memo)
             *///?}
         ) {
             return movement;

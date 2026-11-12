@@ -1,7 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
 //? if >= 1.21.1 {
-import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import net.minecraft.world.level.chunk.PalettedContainer;
 import org.polyfrost.polydium.client.perf.ParticleAirCollision;
 import org.spongepowered.asm.mixin.Mixin;
@@ -9,6 +8,9 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.lang.invoke.VarHandle;
 
 @Mixin(PalettedContainer.class)
 public abstract class MixinParticleCollisionReach implements ParticleAirCollision.Reach {
@@ -33,18 +35,25 @@ public abstract class MixinParticleCollisionReach implements ParticleAirCollisio
         this.polydium$reachCode = code;
     }
 
-    //? if >= 1.21.10 {
-    @ModifyExpressionValue(method = {"set(ILjava/lang/Object;)V", "getAndSet(ILjava/lang/Object;)Ljava/lang/Object;"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/chunk/Palette;idFor(Ljava/lang/Object;Lnet/minecraft/world/level/chunk/PaletteResize;)I"))
-    //?} else
-    //@ModifyExpressionValue(method = {"set(ILjava/lang/Object;)V", "getAndSet(ILjava/lang/Object;)Ljava/lang/Object;"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/chunk/Palette;idFor(Ljava/lang/Object;)I"))
-    private int polydium$bumpOnPaletteWrite(int id) {
+    @Override
+    public void polydium$bumpPaletteVersion() {
+        VarHandle.releaseFence();
         this.polydium$paletteVersion++;
-        return id;
+    }
+
+    @Inject(method = "set(ILjava/lang/Object;)V", at = @At("RETURN"))
+    private void polydium$bumpOnSet(CallbackInfo ci) {
+        this.polydium$bumpPaletteVersion();
+    }
+
+    @Inject(method = "getAndSet(ILjava/lang/Object;)Ljava/lang/Object;", at = @At("RETURN"))
+    private void polydium$bumpOnGetAndSet(CallbackInfoReturnable<Object> cir) {
+        this.polydium$bumpPaletteVersion();
     }
 
     @Inject(method = "read", at = @At("RETURN"))
     private void polydium$bumpOnRead(CallbackInfo ci) {
-        this.polydium$paletteVersion++;
+        this.polydium$bumpPaletteVersion();
     }
 }
 //?}
