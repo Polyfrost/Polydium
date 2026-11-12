@@ -31,6 +31,7 @@ class EarlyVulkanTest {
     private val extraGraphicsApi = gameDir.resolve("config/defaultoptions/extra/polydium/graphics-api")
     private val yosbrGraphicsApi = gameDir.resolve("config/yosbr/polydium/graphics-api")
     private val yosbrNestedGraphicsApi = gameDir.resolve("config/yosbr/config/defaultoptions/extra/polydium/graphics-api")
+    private val irisConfig = gameDir.resolve("config/iris.properties")
 
     @BeforeEach
     @AfterEach
@@ -46,6 +47,10 @@ class EarlyVulkanTest {
         gameDir.resolve("config/defaultoptions").toFile().deleteRecursively()
         System.clearProperty("polydium.disable")
         EarlyVulkan::class.java.getDeclaredField("vulkanAtStartup").apply { isAccessible = true }.set(null, null)
+        //? if >= 26.2 {
+        EarlyVulkan::class.java.getDeclaredField("irisLoaded").apply { isAccessible = true }.set(null, false)
+        Files.deleteIfExists(irisConfig)
+        //?}
     }
 
     @Test
@@ -121,19 +126,6 @@ class EarlyVulkanTest {
         EarlyVulkanPreLaunch().onPreLaunch()
 
         assertTrue(EarlyVulkan.discreteGpuKnown())
-    }
-
-    @Test
-    fun disableAllSkipsGpuDetection() {
-        useRealGpuCheck()
-        System.setProperty("polydium.disableAll", "true")
-        try {
-            EarlyVulkanPreLaunch().onPreLaunch()
-        } finally {
-            System.clearProperty("polydium.disableAll")
-        }
-
-        assertFalse(EarlyVulkan.discreteGpuKnown())
     }
 
     @Test
@@ -488,6 +480,52 @@ class EarlyVulkanTest {
 
         assertFalse(Files.exists(options))
         assertTrue(EarlyVulkan.failed())
+    }
+
+    private fun failedIrisInstall(vararg irisProperties: String) {
+        EarlyVulkan::class.java.getDeclaredField("irisLoaded").apply { isAccessible = true }.set(null, true)
+        Files.createDirectories(irisConfig.parent)
+        Files.write(irisConfig, irisProperties.toList())
+        Files.writeString(options, "version:${EarlyVulkan.BACKEND_FIX_VERSION}\npreferredGraphicsBackend:\"default\"\n")
+        EarlyVulkan.setGraphicsApi("default")
+        Files.createDirectories(polydiumDir)
+        Files.writeString(marker, "failed")
+    }
+
+    @Test
+    fun failedIrisInstallWithoutShadersRetriesOnce() {
+        failedIrisInstall("enableShaders=true")
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.switchPending())
+        assertEquals(listOf("version:${EarlyVulkan.BACKEND_FIX_VERSION}", "preferredGraphicsBackend:\"vulkan\""), Files.readAllLines(options))
+
+        EarlyVulkan.markFailed("test")
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun newIrisFailureIsNotRetried() {
+        failedIrisInstall("enableShaders=true")
+        EarlyVulkan.markFailed("test")
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.failed())
+        assertEquals(listOf("version:${EarlyVulkan.BACKEND_FIX_VERSION}", "preferredGraphicsBackend:\"default\""), Files.readAllLines(options))
+    }
+
+    @Test
+    fun failedIrisInstallWithShaderPackStaysOff() {
+        failedIrisInstall("enableShaders=true", "shaderPack=BSL.zip")
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.failed())
+        assertEquals(listOf("version:${EarlyVulkan.BACKEND_FIX_VERSION}", "preferredGraphicsBackend:\"default\""), Files.readAllLines(options))
     }
 
     @Test

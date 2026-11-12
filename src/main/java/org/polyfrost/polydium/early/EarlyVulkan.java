@@ -6,6 +6,7 @@ import net.fabricmc.loader.api.ModContainer;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -14,6 +15,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Properties;
 import java.util.regex.Pattern;
 
 public final class EarlyVulkan implements LanguageAdapter {
@@ -37,6 +39,8 @@ public final class EarlyVulkan implements LanguageAdapter {
 
     //? if >= 26.2 {
     private static List<String> createdOptions;
+
+    private static boolean irisLoaded = FabricLoader.getInstance().isModLoaded("iris");
     //?}
 
     public EarlyVulkan() {
@@ -89,6 +93,7 @@ public final class EarlyVulkan implements LanguageAdapter {
         try {
             Files.createDirectories(marker().getParent());
             Files.writeString(marker(), "failed");
+            Files.writeString(marker().resolveSibling("iris-retry"), "");
         } catch (IOException ignored) {
         }
     }
@@ -257,12 +262,13 @@ public final class EarlyVulkan implements LanguageAdapter {
     }
 
     private static void preferVulkan() throws IOException {
-        if (Boolean.getBoolean("polydium.disableAll") || mixinDisabled(MIXIN))
+        if (mixinDisabled(MIXIN))
             return;
         carryPackGraphicsApi();
 
         //? if >= 26.2 {
-        boolean retry = "done".equals(markerState());
+        boolean irisRetry = irisRetryDue();
+        boolean retry = irisRetry || "done".equals(markerState());
         //?} else {
         /*boolean retry = false;
         *///?}
@@ -342,6 +348,10 @@ public final class EarlyVulkan implements LanguageAdapter {
         Files.writeString(marker(), vulkan ? "" : "no");
         if (!vulkan)
             return;
+        //? if >= 26.2 {
+        if (irisRetry)
+            Files.writeString(irisRetryFile(), "");
+        //?}
 
         //? if < 26.2 {
         /*setGraphicsApi("vulkan");
@@ -371,6 +381,25 @@ public final class EarlyVulkan implements LanguageAdapter {
         } finally {
             Files.deleteIfExists(temp);
         }
+    }
+
+    private static Path irisRetryFile() {
+        return FabricLoader.getInstance().getGameDir().resolve("polydium").resolve("iris-retry");
+    }
+
+    private static boolean irisRetryDue() {
+        return failed() && irisLoaded && !Files.exists(irisRetryFile()) && !irisShadersOn();
+    }
+
+    private static boolean irisShadersOn() {
+        Properties iris = new Properties();
+        try (InputStream in = Files.newInputStream(FabricLoader.getInstance().getConfigDir().resolve("iris.properties"))) {
+            iris.load(in);
+        } catch (IOException e) {
+            return false;
+        }
+        String pack = iris.getProperty("shaderPack", "");
+        return !"false".equals(iris.getProperty("enableShaders")) && !pack.isEmpty() && !"(internal)".equals(pack);
     }
 
     public static void removeCreatedOptions() {

@@ -28,13 +28,18 @@ import org.spongepowered.asm.service.MixinService;
 
 import org.polyfrost.polydium.compat.Mods;
 import org.polyfrost.polydium.early.EarlyVulkan;
-//? if >= 1.21.11 && < 26.2
-/*import org.polyfrost.polydium.early.EarlyVulkanPreLaunch;*/
+//? if >= 1.21.11
+import org.polyfrost.polydium.early.EarlyVulkanPreLaunch;
 import org.polyfrost.polydium.early.LocalRefHoister;
 import org.polyfrost.polydium.early.OperationInliner;
 //? if >= 1.21.11 && < 26.2
 /*import org.polyfrost.polydium.vulkan.IrisVulkanGate;*/
 import org.slf4j.LoggerFactory;
+
+//? if >= 26.2 {
+import java.nio.file.Files;
+import java.util.Locale;
+//?}
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -85,6 +90,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             SODIUM_PERF_PACKAGE + "MixinAnimatedSpriteMarksRegion",
             SODIUM_PERF_PACKAGE + "MixinSpriteSetRegion",
             SODIUM_PERF_PACKAGE + "MixinSodiumBoxPredicate",
+            SODIUM_PERF_PACKAGE + "MixinCullTaskTreePool",
+            SODIUM_PERF_PACKAGE + "MixinCullTreeArray",
+            SODIUM_PERF_PACKAGE + "MixinCullTreeRelease",
             SODIUM_PERF_PACKAGE + "MixinVisGraphScratch",
             SODIUM_PERF_PACKAGE + "MixinFluidDefaultDirect"
     );
@@ -98,8 +106,6 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final String SODIUM_WRITER = "net/caffeinemc/mods/sodium/api/vertex/buffer/VertexBufferWriter";
     private static final String SODIUM_VULKAN_PACKAGE = SODIUM_PERF_PACKAGE + "vulkan.";
     private static final String[] SODIUM_VULKAN_09_ONLY = {"MixinVulkanGlTexelBuffer", "MixinVulkanGpuBufferHandle", "MixinVulkanChunkRenderer"};
-
-    private static final boolean ALL_DISABLED = Boolean.getBoolean("polydium.disableAll");
 
     private static final String[] DISABLED = System.getProperty("polydium.disable", "").split(",");
 
@@ -117,7 +123,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("SinglePassTextShadow", new String[]{"caxton"}),
             Map.entry("VulkanBackendList", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"}),
             Map.entry("GraphicsApiOption", new String[]{"vulkanmod", "modernui", "longview", "photonics", "physicsmod"}),
-            Map.entry("HideReloadOverlay", new String[]{"forcecloseworldloadingscreen"}),
+            Map.entry("HideReloadOverlay", new String[]{"forcecloseworldloadingscreen", "rrls"}),
             Map.entry("FpsLimit", new String[]{"sodiumfpscapfix", "not-enough-fps"}),
             Map.entry("WaitMeter", new String[]{"vulkanmod"}),
             // Vitrail wraps VulkanRenderPass.pushDescriptors to swap in its comparison samplers and storage bindings, which writing the descriptors directly would skip
@@ -231,6 +237,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             //?}
             Map.entry("OpaqueItemCutout", new String[]{"SpriteContentsTransparency", "ItemTintLayerAccessor"}),
             Map.entry("GlIndirectTerrainBatch", new String[]{"GlRenderPassIrisTessellation"}),
+            Map.entry("CullTreeRelease", new String[]{"CullTaskTreePool"}),
             //? if >= 1.21.4 {
             Map.entry("SkinTextureNoPackProbe", new String[]{"TextureManagerAccessor"})
             //?} else {
@@ -239,9 +246,6 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     );
 
     public static boolean isDisabled(String mixinClassName) {
-        if (ALL_DISABLED)
-            return true;
-
         if (contains(DISABLED, mixinClassName))
             return true;
 
@@ -467,10 +471,13 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void onLoad(String mixinPackage) {
-        //? if >= 1.21.11 && < 26.2 {
-        /*// The game libraries are available now, before vulkanBackend() selects mixins or gates Iris.
+        //? if >= 1.21.11 {
         new EarlyVulkanPreLaunch().beforeMixinSelection();
-        *///?}
+        //?}
+        //? if >= 26.2 {
+        if (Mods.loaded("iris"))
+            syncIrisBackend();
+        //?}
         if (!isDisabled("OperationInliner") && (Mods.loaded("particle_core") || Mods.loaded("mountopacity") || Mods.loaded("overflowparticles") || Mods.loaded("lambdynlights") || Mods.loaded("obe") || Mods.loaded("entityculling")))
             MixinInternals.registerExtension(new OperationInliner("particle_core", "mountopacity", "overflowparticles", "obe", "inline"));
         if (!isDisabled("LocalRefHoister") && Mods.loaded("sodium"))
@@ -480,6 +487,19 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             IrisVulkanGate.apply();
         *///?}
     }
+
+    //? if >= 26.2 {
+    private static void syncIrisBackend() {
+        try {
+            boolean vulkan = Files.readAllLines(FabricLoader.getInstance().getGameDir().resolve("options.txt")).stream()
+                .anyMatch(line -> line.startsWith("preferredGraphicsBackend:") && line.toLowerCase(Locale.ROOT).contains("vulkan"));
+            MixinService.getService().getClassProvider().findClass("net.irisshaders.iris.mixin.IrisMixinPlugin", true)
+                .getField("usingVulkan").setBoolean(null, vulkan);
+        } catch (Throwable t) {
+            LoggerFactory.getLogger("polydium/perf").warn("Couldn't sync Iris graphics backend", t);
+        }
+    }
+    //?}
 
     @Override
     public String getRefMapperConfig() {
@@ -596,15 +616,6 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".MixinFaceCullCacheFix")) {
             for (MethodNode method : targetClass.methods)
                 fixBitMaskEqualsOne(method);
-            return;
-        }
-
-        if (mixinClassName.endsWith("MixinVulkanServerEntryGl")) {
-            for (MethodNode method : targetClass.methods)
-                for (AbstractInsnNode insn : method.instructions)
-                    if (insn instanceof MethodInsnNode call && call.owner.equals("com/mojang/blaze3d/opengl/GlStateManager")
-                        && (call.name.equals("_enableBlend") || call.name.equals("_disableBlend")))
-                        call.owner = "org/polyfrost/polydium/vulkan/VulkanActive";
             return;
         }
 
@@ -753,6 +764,14 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
                         method.instructions.insert(call, new MethodInsnNode(Opcodes.INVOKESTATIC, SHINE_VULKAN, "attachmentGate", "(Ljava/lang/Object;)Ljava/lang/Object;"));
                     else if (call.owner.equals("org/lwjgl/opengl/GL20") && SHINE_GL.contains(call.name + call.desc))
                         call.owner = SHINE_VULKAN;
+            return;
+        }
+
+        if (mixinClassName.endsWith("MixinVulkanReflex")) {
+            for (MethodNode method : targetClass.methods)
+                for (AbstractInsnNode insn : method.instructions)
+                    if (insn instanceof MethodInsnNode call && call.owner.startsWith("org/lwjgl/opengl/GL3") && REFLEX_GL.contains(call.name + call.desc))
+                        call.owner = REFLEX_VULKAN;
             return;
         }
 
@@ -912,6 +931,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     private static final String STELLA_VULKAN = "org/polyfrost/polydium/vulkan/StellaVulkan";
     private static final String SHINE_VULKAN = "org/polyfrost/polydium/vulkan/ShineVulkan";
     private static final Set<String> SHINE_GL = Set.of("glGetUniformLocation(ILjava/lang/CharSequence;)I", "glUniform1i(II)V", "glUniform4fv(ILjava/nio/FloatBuffer;)V");
+    private static final String REFLEX_VULKAN = "org/polyfrost/polydium/vulkan/ReflexVulkan";
+    private static final Set<String> REFLEX_GL = Set.of("glGenQueries()I", "glDeleteQueries(I)V", "glQueryCounter(II)V", "glGetQueryObjecti64(II)J",
+        "glGetInteger64v(I[J)V", "glGetQueryiv(II[I)V", "glFinish()V");
     private static final String MOULBERRY_VULKAN = "org/polyfrost/polydium/vulkan/MoulberryVulkan";
     private static final Set<String> MOULBERRY_GL = Set.of("glGetInteger(I)I", "_glBindFramebuffer(II)V", "_viewport(IIII)V",
         "glGetIntegerv(I[I)V", "_bindTexture(I)V", "glTexParameteri(III)V", "_deleteTexture(I)V", "glCullFace(I)V", "glReadPixels(IIIIII[F)V",

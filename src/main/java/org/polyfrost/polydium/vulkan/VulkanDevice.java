@@ -1,5 +1,6 @@
 package org.polyfrost.polydium.vulkan;
 
+import org.polyfrost.polydium.client.perf.RawGl;
 import org.polyfrost.polydium.vulkan.compat.SurfaceException;
 import org.polyfrost.polydium.vulkan.compat.GpuSurface;
 import com.mojang.blaze3d.buffers.GpuBuffer;
@@ -160,6 +161,7 @@ public class VulkanDevice implements GpuDeviceBackend {
     this.commandEncoder = new VulkanCommandEncoder(this);
     active = this;
     VulkanActive.active = true;
+    RawGl.install(getVendor(), getRenderer(), getVersion(), getMaxTextureSize());
   }
 
   @Override

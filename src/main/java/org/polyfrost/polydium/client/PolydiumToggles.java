@@ -22,7 +22,8 @@ public class PolydiumToggles {
     //? if < 26.1
     //@Switch(title = "Precise Frame Limiter", description = "Replaces the vanilla FPS limiter with a more accurate one implemented in MC 26.1+.")
     public static boolean preciseFrameLimiter = true;
-    @Switch(title = "Hide Level Loading Screen", description = "Stops drawing the level loading screen once the world is loaded.")
+    //? if >= 1.21.10
+    @Switch(title = "Skip Level Loading Delay", description = "Closes the level loading screen as soon as the world is ready instead of waiting an extra half second on new worlds.")
     public static boolean hideLevelLoadingScreen = true;
     @Switch(title = "Hide Reload Overlay")
     public static boolean hideReloadOverlay = true;

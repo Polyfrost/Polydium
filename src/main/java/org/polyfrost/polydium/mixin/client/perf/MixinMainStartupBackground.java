@@ -19,7 +19,7 @@ public abstract class MixinMainStartupBackground {
 
     @WrapOperation(method = "main", at = @At(value = "INVOKE", target = "Lnet/minecraft/CrashReport;preload()V"))
     private static void polydium$preloadCrashReportInBackground(Operation<Void> original) {
-        StartupBackground.preloadCrashReport();
+        StartupBackground.preloadCrashReport(original::call);
     }
 
     @WrapOperation(method = "main", at = @At(value = "INVOKE", target = "Ljava/util/concurrent/CompletableFuture;join()Ljava/lang/Object;"))

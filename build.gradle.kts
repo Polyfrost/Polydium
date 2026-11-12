@@ -18,7 +18,6 @@ plugins {
     id("me.modmuss50.mod-publish-plugin") version "2.2.0"
     id("dev.detekt") version "2.0.0-alpha.6"
     id("net.ltgt.errorprone") version "5.1.1"
-    `maven-publish`
 }
 
 val stonecutter = extensions.getByName("stonecutter") as StonecutterBuildExtension
@@ -105,6 +104,7 @@ if (stonecutter.current.parsed < "26.3") {
 }
 
 val vulkanBackport = stonecutter.current.parsed >= "1.21.11" && stonecutter.current.parsed < "26.2"
+if (stonecutter.current.parsed < "1.21.11") sourceSets.test { kotlin.exclude("**/RawGlTest.kt") }
 if (!vulkanBackport) sourceSets.main {
     java.exclude(
         "org/polyfrost/polydium/vulkan/**",
@@ -250,11 +250,13 @@ tasks.test {
 tasks.withType<ProcessResources>().configureEach {
     val modName = project.property("mod.name") as String
     val oneconfigVersion = project.property("deps.oneconfig") as String
+    val sodiumMin = project.property("mod.sodium_min") as String
     inputs.property("modId", modId)
     inputs.property("modName", modName)
     inputs.property("modVersion", modVersion)
     inputs.property("minorMcVersion", minecraftPredicate)
     inputs.property("oneconfigVersion", oneconfigVersion)
+    inputs.property("sodiumMin", sodiumMin)
     filesMatching("fabric.mod.json") {
         expand(
             mapOf(
@@ -264,6 +266,7 @@ tasks.withType<ProcessResources>().configureEach {
                 "mod_description" to "Client performance optimizations for OneClient",
                 "minor_mc_version" to minecraftPredicate,
                 "oneconfig_version" to oneconfigVersion,
+                "sodium_min" to sodiumMin,
             ),
         )
     }
@@ -349,25 +352,6 @@ publishMods {
             requires("oneconfig")
             requires("fabric-api")
             requires("fabric-language-kotlin")
-        }
-    }
-}
-
-publishing {
-    repositories {
-        maven("https://repo.polyfrost.org/releases") {
-            name = "releases"
-            credentials {
-                username = providers.gradleProperty("polyfrostRepoUsername").orNull
-                password = providers.gradleProperty("polyfrostRepoToken").orNull
-            }
-            authentication { create<BasicAuthentication>("basic") }
-        }
-    }
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
-            artifactId = modId
         }
     }
 }

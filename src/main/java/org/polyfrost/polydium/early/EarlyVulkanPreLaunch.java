@@ -19,7 +19,7 @@ public final class EarlyVulkanPreLaunch implements PreLaunchEntrypoint {
 
     private void detect(boolean decide) {
         //? if >= 1.21.11 {
-        if (Boolean.getBoolean("polydium.disableAll") || EarlyVulkan.discreteGpuKnown())
+        if (EarlyVulkan.discreteGpuKnown())
             return;
         try {
             boolean discrete = false;
