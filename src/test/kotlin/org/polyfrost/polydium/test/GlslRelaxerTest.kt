@@ -45,4 +45,25 @@ class GlslRelaxerTest {
             assertTrue(out.trimStart().startsWith("#version 450\n"), header)
         }
     }
+
+    @Test
+    fun `leaves preprocessor directives and shader-defined aliases alone`() {
+        val out = GlslRelaxer.relax(
+            """
+            #version 330
+            #define texture2D(s, c) texture(s, c)
+            #define UBO uniform
+            vec4 color;
+            #define packed 3
+            layout(std140) uniform Blk { vec4 X; };
+            vec4 shadow2D(sampler2DShadow s, vec3 c) { return vec4(texture(s, c)); }
+            """.trimIndent()
+        )
+
+        assertFalse(out.contains("#define texture2D texture"))
+        assertFalse(out.contains("#define shadow2D("))
+        assertTrue(out.contains("#define texture2DLod textureLod"))
+        assertTrue(out.contains("#define UBO uniform\nvec4 color;"))
+        assertTrue(out.contains("#define packed 3\nlayout(std140) uniform Blk"))
+    }
 }
