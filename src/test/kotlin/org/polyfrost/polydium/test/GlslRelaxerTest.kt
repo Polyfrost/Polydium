@@ -42,7 +42,7 @@ class GlslRelaxerTest {
             val out = GlslRelaxer.relax(header + "out vec4 c;\nvoid main() { c = vec4(1); }\n")
 
             assertEquals(1, Regex("#version").findAll(out).count(), header)
-            assertTrue(out.trimStart().startsWith("#version 450\n"), header)
+            assertTrue(out.startsWith("#version 450\n"), header)
         }
     }
 
@@ -61,7 +61,7 @@ class GlslRelaxerTest {
         )
 
         assertTrue(out.contains("#undef texture2D\n#line 2\n#define texture2D(s, c)"))
-        assertTrue(out.contains("#undef shadow2D\n#line 7\nvec4 shadow2D("))
+        assertTrue(out.contains("#undef shadow2D\n#define shadow2D polydium_shadow2D\n#line 7\nvec4 shadow2D("))
         assertTrue(out.contains("#define texture2DLod textureLod"))
         assertTrue(out.contains("#define UBO uniform\nvec4 color;"))
         assertTrue(out.contains("#define packed 3\nlayout(std140) uniform Blk"))
@@ -112,5 +112,49 @@ class GlslRelaxerTest {
         assertFalse(out.contains("#undef texture2D"))
         assertEquals(8, Regex("vec4\\(0\\)").findAll(out.substringAfter("vec4 octal").substringBefore(";")).count())
         assertTrue(out.contains("vec4 hex[0x2u] = vec4[0x2u](vec4(0), vec4(0));"))
+    }
+
+    @Test
+    fun `keeps macro conditions and continued directives intact`() {
+        val out = GlslRelaxer.relax(
+            """
+            #version 150
+            #define TEX \
+                sampler2D
+            uniform TEX tex;
+            #ifndef texture2D
+            vec4 texture2D(sampler2D s, vec2 c) { return texture(s, c * 2.0); }
+            #endif
+            #define \
+                shadow2D(s, c) vec4(texture(s, c))
+            #if defined(shadow2D)
+            #undef shadow2D
+            #endif
+            """.trimIndent()
+        )
+
+        assertTrue(out.contains("uniform TEX tex;"))
+        assertTrue(out.contains("#ifndef POLYDIUM_DEFINED_texture2D\n#undef texture2D\n#define texture2D polydium_texture2D\n#line 5\nvec4 texture2D("))
+        assertTrue(out.contains("#undef shadow2D\n#line 7\n#define \\\n    shadow2D(s, c) vec4(texture(s, c))\n#define POLYDIUM_DEFINED_shadow2D\n#line 9\n"))
+        assertTrue(out.contains("#if defined(POLYDIUM_DEFINED_shadow2D)"))
+        assertTrue(out.contains("#undef shadow2D\n#undef POLYDIUM_DEFINED_shadow2D\n#define shadow2D(s, c) vec4(texture(s, c))\n#line 11\n#endif"))
+    }
+
+    @Test
+    fun `keeps block comments inside directives and packing macros intact`() {
+        val out = GlslRelaxer.relax(
+            """
+            #version 450
+            #define COLOR /* multi
+            line */ vec4(1.0)
+            #define packed 0
+            layout(packed, binding = packed) uniform Globals { vec4 tint; };
+            void main() { do texture2D(tex, vec2(0)); while (false); }
+            """.trimIndent()
+        )
+
+        assertTrue(out.contains("#define COLOR   vec4(1.0)\n\n#define packed 0"))
+        assertTrue(out.contains("layout(std140, binding = packed) uniform"))
+        assertFalse(out.contains("polydium_texture2D"))
     }
 }
