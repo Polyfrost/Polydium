@@ -7,7 +7,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class GlslRelaxer {
-    private static final Pattern VERSION = Pattern.compile("^[ \\t]*#[ \\t]*version[ \\t]+(\\d+)(?:[ \\t]+(\\w+))?[ \\t]*$", Pattern.MULTILINE);
+    private static final Pattern VERSION = Pattern.compile("^[ \\t]*#[ \\t]*version[ \\t]+(\\d+)(?:[ \\t]+(\\w+))?(?:[ \\t]*//.*|[ \\t]*/\\*.*?\\*/)?[ \\t]*$", Pattern.MULTILINE);
     private static final Pattern LOOSE_UNIFORM = Pattern.compile(
             "(?:\\blayout\\s*\\([^)]*\\)\\s*)?\\buniform\\s+(?:(?:lowp|mediump|highp)\\s+)?(?!(?:[iu]?sampler|[iu]?image|[iu]?texture|atomic_uint|subpassInput)\\w*\\b)(\\w+)\\s+([^;{]+);"
     );

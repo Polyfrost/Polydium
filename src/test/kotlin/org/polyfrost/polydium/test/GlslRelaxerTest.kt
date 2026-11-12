@@ -1,5 +1,6 @@
 package org.polyfrost.polydium.test
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -28,5 +29,13 @@ class GlslRelaxerTest {
         assertTrue(out.contains("mat4 M = mat4(0);"))
         assertTrue(out.contains("layout(std140) uniform Blk { vec4 X; };"))
         assertFalse(out.contains("compatibility"))
+    }
+
+    @Test
+    fun `keeps a single version directive when it has a trailing comment`() {
+        val out = GlslRelaxer.relax("#version 450 // core\nout vec4 c;\nvoid main() { c = vec4(1); }\n")
+
+        assertEquals(1, Regex("#version").findAll(out).count())
+        assertTrue(out.startsWith("#version 450\n"))
     }
 }
