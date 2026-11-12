@@ -37,7 +37,10 @@
         "oneconfigv1": ">=${oneconfig_version}"
     },
     "recommends": {
-        "sodium": "*"
+        "sodium": ">=${sodium_min}"
+    },
+    "breaks": {
+        "sodium": "<${sodium_min}"
     },
     "conflicts": {
         "vulkanmod": "*"

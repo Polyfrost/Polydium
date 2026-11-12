@@ -1,5 +1,2 @@
-## 1.4.5
-- Optimize allocations in Sodium code
-- Fix horrible chunk graphical corruption on Intel Arc GPUs
-- Fix compat with Iris on 26.2+
-- Fix parallel block state cache initialization
+## Unreleased changes
+- Outdated Sodium versions that crash with Polydium (e.g. below 0.8.12 on 1.21.11) are now rejected with a clear error on launch
