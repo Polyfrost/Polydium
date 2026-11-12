@@ -6,6 +6,7 @@ import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.renderer.ShaderManager;
 import net.minecraft.resources.Identifier;
+import org.polyfrost.polydium.client.perf.DhLodDepth;
 import org.polyfrost.polydium.client.perf.IrisShaders;
 import org.polyfrost.polydium.client.perf.SkyFarPlane;
 import org.spongepowered.asm.mixin.Mixin;
@@ -28,6 +29,7 @@ public abstract class MixinShaderSourcePatch {
     *///?}
     private static String polydium$patchSources(String contents, @Local(argsOnly = true) Identifier location) {
         contents = SkyFarPlane.patch(location, contents);
+        contents = DhLodDepth.patchFade(location.toString(), contents);
         return polydium$rgssSkip(location, contents);
     }
 

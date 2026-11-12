@@ -81,7 +81,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     private static volatile ClassNode skyboxifyRenderer;
     private static boolean skyboxifyFarSky;
-    private static final String[] FAR_SKY_MIXINS = {".cirrus.MixinCirrusVertexBuffer", ".cirrus.MixinCirrusSkyRenderer", ".nuit.MixinNuitRenderBackend", ".nuit.MixinNuitSkyDisc"};
+    private static final String[] FAR_SKY_MIXINS = {".cirrus.MixinCirrusVertexBuffer", ".cirrus.MixinCirrusSkyRenderer", ".nuit.MixinNuitRenderBackend", ".nuit.MixinNuitSkyDisc", ".dh.MixinDhBlazeMetaRenderer", ".dh.MixinDhGlMetaRenderer", ".dh.MixinDhGlShader"};
     private static final List<ClassNode> FAR_SKY_TARGETS = new CopyOnWriteArrayList<>();
     private static final Map<String, Boolean> FAR_SKY_HOOKED = new ConcurrentHashMap<>();
 
