@@ -12,6 +12,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.PalettedContainer;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
@@ -43,12 +44,12 @@ public final class ParticleAirCollision {
         int minZ = Mth.floor(box.minZ + Math.min(dz, 0.0) - EPSILON) - 1;
         int maxZ = Mth.floor(box.maxZ + Math.max(dz, 0.0) + EPSILON) + 1;
         ClientChunkCache clientChunks = level instanceof ClientLevel clientLevel ? clientLevel.getChunkSource() : null;
-        if (memo != null && memo.matches(level, clientChunks, minX, minY, minZ, maxX, maxY, maxZ))
+        if (memo != null && memo.matches(minX, minY, minZ, maxX, maxY, maxZ))
             return true;
         LevelChunkSection only = null;
         PalettedContainer<BlockState> onlyStates = null;
         int onlyVersion = 0;
-        boolean memoizable = memo != null;
+        boolean memoizable = memo != null && clientChunks != null;
         BlockPos.MutableBlockPos pos = null;
         AABB swept = null;
 
@@ -119,7 +120,7 @@ public final class ParticleAirCollision {
                 }
             }
         }
-        if (memoizable && only != null && pos == null)
+        if (memoizable && only != null && pos == null && onlyVersion >= 0)
             memo.remember(only, onlyStates, onlyVersion, minX, minY, minZ, maxX, maxY, maxZ);
         return true;
     }
@@ -133,22 +134,11 @@ public final class ParticleAirCollision {
         private PalettedContainer<BlockState> states;
         private int version, minX, minY, minZ, maxX, maxY, maxZ;
 
-        boolean matches(Level level, ClientChunkCache clientChunks, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
-            if (this.section == null || this.minX != minX || this.minY != minY || this.minZ != minZ
-                || this.maxX != maxX || this.maxY != maxY || this.maxZ != maxZ
-                || this.section.getStates() != this.states || version(this.states) != this.version)
-                return false;
-            BlockGetter getter = chunkAt(level, clientChunks, SectionPos.blockToSectionCoord(minX), SectionPos.blockToSectionCoord(minZ));
-            if (!(getter instanceof ChunkAccess chunk))
-                return false;
-            //? if >= 1.21.4 {
-            int bottom = Math.max(minY, chunk.getMinY());
-            //?} else {
-            /*int bottom = Math.max(minY, chunk.getMinBuildHeight());
-            *///?}
-            int index = chunk.getSectionIndexFromSectionY(SectionPos.blockToSectionCoord(bottom));
-            LevelChunkSection[] sections = chunk.getSections();
-            return index >= 0 && index < sections.length && sections[index] == this.section;
+        boolean matches(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+            return this.section != null
+                && this.minX == minX && this.minY == minY && this.minZ == minZ
+                && this.maxX == maxX && this.maxY == maxY && this.maxZ == maxZ
+                && this.section.getStates() == this.states && version(this.states) == this.version;
         }
 
         void remember(LevelChunkSection section, PalettedContainer<BlockState> states, int version, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
@@ -164,6 +154,11 @@ public final class ParticleAirCollision {
         }
     }
 
+    public static void detach(LevelChunk chunk) {
+        for (LevelChunkSection section : chunk.getSections())
+            ((Reach) section.getStates()).polydium$detachPaletteVersion();
+    }
+
     private static int version(PalettedContainer<BlockState> states) {
         int version = ((Reach) states).polydium$paletteVersion();
         VarHandle.acquireFence();
@@ -174,6 +169,8 @@ public final class ParticleAirCollision {
         int polydium$paletteVersion();
 
         void polydium$bumpPaletteVersion();
+
+        void polydium$detachPaletteVersion();
 
         int polydium$reachCode();
 

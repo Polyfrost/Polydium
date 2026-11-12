@@ -41,6 +41,12 @@ public abstract class MixinParticleCollisionReach implements ParticleAirCollisio
         this.polydium$paletteVersion++;
     }
 
+    @Override
+    public void polydium$detachPaletteVersion() {
+        VarHandle.releaseFence();
+        this.polydium$paletteVersion |= Integer.MIN_VALUE;
+    }
+
     @Inject(method = "set(ILjava/lang/Object;)V", at = @At("RETURN"))
     private void polydium$bumpOnSet(CallbackInfo ci) {
         this.polydium$bumpPaletteVersion();
