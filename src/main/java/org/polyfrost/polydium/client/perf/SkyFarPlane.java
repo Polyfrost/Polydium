@@ -79,7 +79,7 @@ public final class SkyFarPlane {
     private static final boolean NUIT = FabricLoader.getInstance().isModLoaded("nuit");
     private static final boolean CIRRUS = FabricLoader.getInstance().isModLoaded("cirrus");
     private static final MethodHandle NUIT_ACTIVE_SKYBOXES = NUIT ? nuitActiveSkyboxes() : null;
-    private static final boolean SKY_MOD = Stream.of("optiboxes", "vitrail", "distanthorizons").anyMatch(FabricLoader.getInstance()::isModLoaded);
+    private static final boolean SKY_MOD = Stream.of("optiboxes", "vitrail", "distanthorizons", "immersivevfx").anyMatch(FabricLoader.getInstance()::isModLoaded);
     private static final boolean VOXY_CLAMP = CIRRUS && !SKY_MOD && FabricLoader.getInstance().isModLoaded("voxy");
     private static final String VOXY_BLIT_SHADER = "voxy:post/blit_texture_depth_cutout.frag";
     private static final String VOXY_CLAMP_SOURCE = "CLOSER_SIGN*(2.0f/((1<<24)-1))";

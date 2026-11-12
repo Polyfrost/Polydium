@@ -30,6 +30,7 @@ import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 
 import java.lang.StackWalker.StackFrame;
 import java.lang.reflect.Constructor;
+import java.nio.file.InvalidPathException;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -212,9 +213,13 @@ public final class RawGl {
         }
 
         String path = owner.replace('.', '/') + ".class";
-        for (ModContainer mod : FabricLoader.getInstance().getAllMods())
-            if (mod.findPath(path).isPresent())
-                return mod;
+        for (ModContainer mod : FabricLoader.getInstance().getAllMods()) {
+            try {
+                if (mod.findPath(path).isPresent())
+                    return mod;
+            } catch (InvalidPathException ignored) {
+            }
+        }
         return null;
     }
 
