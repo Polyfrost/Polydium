@@ -18,7 +18,9 @@ public final class GlslRelaxer {
     private static final Pattern LOOSE_UNIFORM = Pattern.compile(
             "(?:\\blayout\\s*\\([^)]*\\)\\s*)?\\buniform\\s+(?:(?:lowp|mediump|highp)\\s+)?(?!" + OPAQUE_TYPE.pattern() + "\\b)(\\w+)\\s+([^;{#]+);"
     );
-    private static final Pattern OBJECT_MACRO = Pattern.compile("^[ \\t]*#[ \\t]*define[ \\t]+(\\w+)[ \\t]+(\\w+)[ \\t]*$", Pattern.MULTILINE);
+    private static final Pattern OBJECT_MACRO = Pattern.compile("^[ \\t]*#[ \\t]*define[ \\t]+(\\w+)[ \\t]+(.*?)[ \\t]*$", Pattern.MULTILINE);
+    private static final Pattern WORD = Pattern.compile("\\w+");
+    private static final Pattern INT_LITERAL = Pattern.compile("(0[xX][0-9a-fA-F]+|\\d+)[uU]?");
     private static final Pattern DECLARATOR = Pattern.compile("\\s*(\\w+)\\s*(?:\\[\\s*([^]]*?)\\s*])?\\s*(?:=\\s*(.*?))?\\s*", Pattern.DOTALL);
     private static final Pattern BUILTIN_TYPE = Pattern.compile("float|double|u?int|bool|[biud]?vec[234]|d?mat[234](?:x[234])?");
     private static final Pattern BLOCK_LAYOUT = Pattern.compile("\\blayout\\s*\\(([^)#]*)\\)(?=\\s*(?:uniform|buffer)\\b)");
@@ -74,9 +76,16 @@ public final class GlslRelaxer {
     private static String replaceOutsideDirectives(final String source, final Pattern pattern, final Function<MatchResult, String> replacer) {
         return pattern.matcher(source).replaceAll(m -> {
             int lineStart = source.lastIndexOf('\n', m.start() - 1) + 1;
+            while (lineStart > 0 && continues(source.substring(source.lastIndexOf('\n', lineStart - 2) + 1, lineStart - 1))) {
+                lineStart = source.lastIndexOf('\n', lineStart - 2) + 1;
+            }
             boolean directive = source.substring(lineStart, m.start()).trim().startsWith("#");
             return Matcher.quoteReplacement(directive ? m.group() : replacer.apply(m));
         });
+    }
+
+    private static boolean continues(final String line) {
+        return line.stripTrailing().endsWith("\\");
     }
 
     // The aliases are always defined up front, so any line that defines one of those names itself (as a macro or
@@ -92,7 +101,7 @@ public final class GlslRelaxer {
 
             Matcher m = (lines[i].trim().startsWith("#") ? ALIAS_MACRO : ALIAS_FUNCTION).matcher(lines[i]);
             boolean found = false;
-            while (m.find()) {
+            while (!(i > 0 && continues(lines[i - 1])) && m.find()) {
                 out.append("#undef ").append(m.group(1)).append('\n');
                 found = true;
             }
@@ -138,7 +147,7 @@ public final class GlslRelaxer {
 
     private static String toGlobals(final String original, final String type, final String declarators, final Map<String, List<String>> macros) {
         List<String> types = expand(type, macros);
-        if (types.stream().anyMatch(t -> OPAQUE_TYPE.matcher(t).matches())) {
+        if (types.stream().anyMatch(t -> WORD.matcher(t).results().anyMatch(w -> OPAQUE_TYPE.matcher(w.group()).matches()))) {
             return original;
         }
 
@@ -174,14 +183,20 @@ public final class GlslRelaxer {
         }
 
         List<String> sizes = expand(size, macros);
-        if (sizes.size() != 1 || !sizes.get(0).matches("\\d+")) {
+        Matcher literal = INT_LITERAL.matcher(sizes.get(0));
+        if (sizes.size() != 1 || !literal.matches()) {
             return null;
         }
 
-        return type + "[" + size + "](" + String.join(", ", Collections.nCopies(Integer.parseInt(sizes.get(0)), type + "(0)")) + ")";
+        int count;
+        try {
+            count = Integer.decode(literal.group(1));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        return type + "[" + size + "](" + String.join(", ", Collections.nCopies(count, type + "(0)")) + ")";
     }
 
-    // Every value a single-token object-like macro can resolve to, one per #define branch.
     private static List<String> expand(final String token, final Map<String, List<String>> macros) {
         List<String> out = new ArrayList<>();
         expand(token, macros, out, 0);
@@ -195,7 +210,13 @@ public final class GlslRelaxer {
             return;
         }
         for (String value : values) {
-            expand(value, macros, out, depth + 1);
+            if (WORD.matcher(value).matches()) {
+                expand(value, macros, out, depth + 1);
+            } else {
+                List<String> words = new ArrayList<>();
+                WORD.matcher(value).results().forEach(w -> expand(w.group(), macros, words, depth + 1));
+                out.add(String.join(" ", words));
+            }
         }
     }
 

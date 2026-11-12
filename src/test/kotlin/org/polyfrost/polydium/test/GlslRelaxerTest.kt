@@ -90,4 +90,27 @@ class GlslRelaxerTest {
         assertTrue(out.contains("#ifdef LEGACY\n#undef texture2D\n#line 6\n#define texture2D(s, c)"))
         assertFalse(out.contains("hidden"))
     }
+
+    @Test
+    fun `handles spliced macros, multi-token type macros and octal sizes`() {
+        val out = GlslRelaxer.relax(
+            """
+            #version 450
+            #define DECLARE(T, N) \
+                uniform T N;
+            #define TEX_TYPE highp sampler2D
+            #define TEXT(s) \
+                vec4 texture2D(s)
+            uniform TEX_TYPE tex;
+            uniform vec4 octal[010];
+            uniform vec4 hex[0x2u];
+            """.trimIndent()
+        )
+
+        assertTrue(out.contains("\\\n    uniform T N;"))
+        assertTrue(out.contains("uniform TEX_TYPE tex;"))
+        assertFalse(out.contains("#undef texture2D"))
+        assertEquals(8, Regex("vec4\\(0\\)").findAll(out.substringAfter("vec4 octal").substringBefore(";")).count())
+        assertTrue(out.contains("vec4 hex[0x2u] = vec4[0x2u](vec4(0), vec4(0));"))
+    }
 }
