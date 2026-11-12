@@ -39,9 +39,6 @@
     "recommends": {
         "sodium": "*"
     },
-    "breaks": {
-        "rrls": "*"
-    },
     "conflicts": {
         "vulkanmod": "*"
     }
