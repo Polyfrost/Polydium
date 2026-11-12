@@ -100,8 +100,9 @@ public final class GlslRelaxer {
 
     // The aliases are always defined up front, so a directive that defines one of those names gets an #undef first
     // and a directive that undefines one restores the alias, matching GL where the name falls back to the builtin.
-    // Conditionals test a marker instead of the name, so #ifdef only sees the shader's own definitions. A function
-    // with one of those names is renamed, since texture2D and friends are type keywords in Vulkan GLSL.
+    // Conditionals test a marker instead of the name. The marker copies the shader's own definition, so #ifdef and
+    // #if see only that and never the alias. A function with one of those names is renamed, since texture2D and
+    // friends are type keywords in Vulkan GLSL.
     private static String undefAliases(final String body, final int firstLine, final int version) {
         String[] lines = body.split("\n", -1);
         List<String> out = new ArrayList<>();
@@ -119,7 +120,7 @@ public final class GlslRelaxer {
                 Matcher m = ALIAS_MACRO.matcher(joined);
                 if (m.find()) {
                     before.add("#undef " + m.group(1));
-                    after.add("#define " + MARKER + m.group(1));
+                    after.add("#define " + MARKER + joined.substring(m.start(1)));
                 }
                 m = ALIAS_UNDEF.matcher(joined);
                 if (m.find()) {

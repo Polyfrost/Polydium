@@ -135,9 +135,24 @@ class GlslRelaxerTest {
 
         assertTrue(out.contains("uniform TEX tex;"))
         assertTrue(out.contains("#ifndef POLYDIUM_DEFINED_texture2D\n#undef texture2D\n#define texture2D polydium_texture2D\n#line 5\nvec4 texture2D("))
-        assertTrue(out.contains("#undef shadow2D\n#line 7\n#define \\\n    shadow2D(s, c) vec4(texture(s, c))\n#define POLYDIUM_DEFINED_shadow2D\n#line 9\n"))
+        assertTrue(out.contains("#undef shadow2D\n#line 7\n#define \\\n    shadow2D(s, c) vec4(texture(s, c))\n#define POLYDIUM_DEFINED_shadow2D(s, c) vec4(texture(s, c))\n#line 9\n"))
         assertTrue(out.contains("#if defined(POLYDIUM_DEFINED_shadow2D)"))
         assertTrue(out.contains("#undef shadow2D\n#undef POLYDIUM_DEFINED_shadow2D\n#define shadow2D(s, c) vec4(texture(s, c))\n#line 11\n#endif"))
+    }
+
+    @Test
+    fun `keeps shader macro values in conditions`() {
+        val out = GlslRelaxer.relax(
+            """
+            #version 150
+            #define texture2D 1
+            #if texture2D == 1
+            #endif
+            """.trimIndent()
+        )
+
+        assertTrue(out.contains("#define texture2D 1\n#define POLYDIUM_DEFINED_texture2D 1\n"))
+        assertTrue(out.contains("#if POLYDIUM_DEFINED_texture2D == 1"))
     }
 
     @Test
