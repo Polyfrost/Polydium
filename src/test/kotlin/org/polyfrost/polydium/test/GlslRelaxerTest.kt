@@ -32,10 +32,17 @@ class GlslRelaxerTest {
     }
 
     @Test
-    fun `keeps a single version directive when it has a trailing comment`() {
-        val out = GlslRelaxer.relax("#version 450 // core\nout vec4 c;\nvoid main() { c = vec4(1); }\n")
+    fun `keeps a single version directive when comments follow it`() {
+        listOf(
+            "#version 450 // core\n",
+            "#version 450 /* core */ // pack shader\n",
+            "#version 450 /* multi\n  line */\n",
+            "/* header\n */ #version 450 /* a */ /* b */\n",
+        ).forEach { header ->
+            val out = GlslRelaxer.relax(header + "out vec4 c;\nvoid main() { c = vec4(1); }\n")
 
-        assertEquals(1, Regex("#version").findAll(out).count())
-        assertTrue(out.startsWith("#version 450\n"))
+            assertEquals(1, Regex("#version").findAll(out).count(), header)
+            assertTrue(out.trimStart().startsWith("#version 450\n"), header)
+        }
     }
 }

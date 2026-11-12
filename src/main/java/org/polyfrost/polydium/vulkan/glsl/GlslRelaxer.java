@@ -7,7 +7,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class GlslRelaxer {
-    private static final Pattern VERSION = Pattern.compile("^[ \\t]*#[ \\t]*version[ \\t]+(\\d+)(?:[ \\t]+(\\w+))?(?:[ \\t]*//.*|[ \\t]*/\\*.*?\\*/)?[ \\t]*$", Pattern.MULTILINE);
+    private static final Pattern COMMENT = Pattern.compile("/\\*[\\s\\S]*?\\*/|//[^\\n]*");
+    private static final Pattern VERSION = Pattern.compile("^[ \\t]*#[ \\t]*version[ \\t]+(\\d+)(?:[ \\t]+(\\w+))?[ \\t]*$", Pattern.MULTILINE);
     private static final Pattern LOOSE_UNIFORM = Pattern.compile(
             "(?:\\blayout\\s*\\([^)]*\\)\\s*)?\\buniform\\s+(?:(?:lowp|mediump|highp)\\s+)?(?!(?:[iu]?sampler|[iu]?image|[iu]?texture|atomic_uint|subpassInput)\\w*\\b)(\\w+)\\s+([^;{]+);"
     );
@@ -34,10 +35,22 @@ public final class GlslRelaxer {
     }
 
     public static String relax(String source) {
-        source = relaxVersion(source);
+        source = relaxVersion(stripComments(source));
         source = LOOSE_UNIFORM.matcher(source).replaceAll(m -> Matcher.quoteReplacement(toGlobals(m.group(), m.group(1), m.group(2))));
         source = BLOCK_PACKING.matcher(source).replaceAll("std140");
         return EXTENSION_REQUIRE.matcher(source).replaceAll("$1enable");
+    }
+
+    private static String stripComments(final String source) {
+        Matcher m = COMMENT.matcher(source);
+        StringBuilder out = new StringBuilder();
+        while (m.find()) {
+            String comment = m.group();
+            String blank = comment.startsWith("/*") ? comment.replaceAll("[^\\n]", " ") : "";
+            m.appendReplacement(out, Matcher.quoteReplacement(blank));
+        }
+        m.appendTail(out);
+        return out.toString();
     }
 
     private static String relaxVersion(final String source) {
