@@ -79,6 +79,12 @@ public final class SkyFarPlane {
     private static final boolean NUIT = FabricLoader.getInstance().isModLoaded("nuit");
     private static final boolean CIRRUS = FabricLoader.getInstance().isModLoaded("cirrus");
     private static final MethodHandle NUIT_ACTIVE_SKYBOXES = NUIT ? nuitActiveSkyboxes() : null;
+    private static final boolean OVERFLOW = FabricLoader.getInstance().isModLoaded("overflowanimations");
+    //? if >= 26.2 {
+    private static final String[] OVERFLOW_UNHOOKED_SKY = {"planarSkyFog"};
+    //?} else
+    /*private static final String[] OVERFLOW_UNHOOKED_SKY = {"planarSkyFog", "blueVoidSky", "playerVoidBox"};*/
+    private static final MethodHandle[] OVERFLOW_SKY_OPTIONS = OVERFLOW ? overflowSkyOptions() : null;
     private static final boolean SKY_MOD = Stream.of("optiboxes", "vitrail", "immersivevfx").anyMatch(FabricLoader.getInstance()::isModLoaded);
     private static final boolean VOXY_CLAMP = CIRRUS && !SKY_MOD && FabricLoader.getInstance().isModLoaded("voxy");
     private static final String VOXY_BLIT_SHADER = "voxy:post/blit_texture_depth_cutout.frag";
@@ -257,6 +263,49 @@ public final class SkyFarPlane {
                 lookup.findVirtual(manager, "getActiveSkyboxes", MethodType.methodType(List.class)));
         } catch (ReflectiveOperationException e) {
             return null;
+        }
+    }
+
+    private static MethodHandle[] overflowSkyOptions() {
+        try {
+            ClassLoader loader = SkyFarPlane.class.getClassLoader();
+            Class<?> mod = Class.forName("org.polyfrost.overflowanimations.OverflowAnimations", false, loader);
+            Class<?> config = Class.forName("org.polyfrost.overflowanimations.config.OverflowAnimationsConfig", false, loader);
+            Class<?> other = Class.forName("org.polyfrost.overflowanimations.config.category.OtherConfigCategory", false, loader);
+            MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+            MethodHandle otherCategory = MethodHandles.filterReturnValue(
+                lookup.findStatic(config, "instance", MethodType.methodType(config)),
+                lookup.findGetter(config, "other", other));
+            MethodHandle[] handles = new MethodHandle[OVERFLOW_UNHOOKED_SKY.length + 1];
+            handles[0] = lookup.findStatic(mod, "isEnabled", MethodType.methodType(boolean.class));
+            for (int i = 0; i < OVERFLOW_UNHOOKED_SKY.length; i++) {
+                handles[i + 1] = MethodHandles.filterReturnValue(otherCategory, lookup.findGetter(other, OVERFLOW_UNHOOKED_SKY[i], boolean.class));
+            }
+            return handles;
+        } catch (ReflectiveOperationException e) {
+            return null;
+        }
+    }
+
+    private static boolean overflowSkyOverTerrain() {
+        if (!OVERFLOW) {
+            return false;
+        }
+        if (OVERFLOW_SKY_OPTIONS == null) {
+            return true;
+        }
+        try {
+            if (!(boolean) OVERFLOW_SKY_OPTIONS[0].invokeExact()) {
+                return false;
+            }
+            for (int i = 1; i < OVERFLOW_SKY_OPTIONS.length; i++) {
+                if ((boolean) OVERFLOW_SKY_OPTIONS[i].invokeExact()) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Throwable e) {
+            return true;
         }
     }
 
@@ -440,6 +489,7 @@ public final class SkyFarPlane {
         *///?}
                 && !improvedTransparency
                 && !SKY_MOD
+                && !overflowSkyOverTerrain()
                 && allPatched();
     }
 

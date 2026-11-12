@@ -3,7 +3,7 @@ package org.polyfrost.polydium.mixin.client.perf.overflow;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 
-//? if >= 1.21.10 {
+//? if >= 26.2 {
 import org.polyfrost.polydium.client.perf.SkyFarPlane;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -20,11 +20,5 @@ public class MixinLegacySkyRenderer {
             SkyFarPlane.blockNextDefer();
         }
     }
-    //?} else if >= 1.21.10 {
-    /*// the void box and blue void use OverflowAnimations' own depth-tested pipelines, which would cover terrain if drawn after it
-    @Inject(method = {"renderVoidBox", "renderBlueVoid"}, at = @At("HEAD"), require = 0)
-    private static void polydium$blockDeferredSky(CallbackInfo ci) {
-        SkyFarPlane.blockNextDefer();
-    }
-    *///?}
+    //?}
 }
