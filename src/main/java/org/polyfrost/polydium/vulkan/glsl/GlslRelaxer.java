@@ -16,8 +16,9 @@ public final class GlslRelaxer {
     private static final Pattern COMMENT = Pattern.compile("/\\*[\\s\\S]*?\\*/|//(?:\\\\\\r?\\n|[^\\n])*");
     private static final Pattern VERSION = Pattern.compile("^[ \\t]*#[ \\t]*version[ \\t]+(\\d+)(?:[ \\t]+(\\w+))?[ \\t]*$", Pattern.MULTILINE);
     private static final Pattern OPAQUE_TYPE = Pattern.compile("(?:[iu]?sampler|[iu]?image|[iu]?texture|atomic_uint|subpassInput)\\w*");
+    // The trailing lookahead skips block members, which may legally repeat the block's uniform qualifier.
     private static final Pattern LOOSE_UNIFORM = Pattern.compile(
-            "(?:\\blayout\\s*\\([^)]*\\)\\s*)?\\buniform\\s+(?:(?:lowp|mediump|highp)\\s+)?(?!" + OPAQUE_TYPE.pattern() + "\\b)(\\w+)\\s+([^;{#]+);"
+            "(?:\\blayout\\s*\\([^)]*\\)\\s*)?\\buniform\\s+(?:(?:lowp|mediump|highp)\\s+)?(?!" + OPAQUE_TYPE.pattern() + "\\b)(\\w+)\\s+([^;{#]+);(?![^{}]*})"
     );
     private static final Pattern OBJECT_MACRO = Pattern.compile("^[ \\t]*#[ \\t]*define[ \\t]+(\\w+)[ \\t]+(.*?)[ \\t]*$", Pattern.MULTILINE);
     private static final Pattern WORD = Pattern.compile("\\w+");

@@ -32,6 +32,16 @@ class GlslRelaxerTest {
     }
 
     @Test
+    fun `keeps uniform qualifiers on block members`() {
+        val block = "layout(std140) uniform DiscardAlphaBlock {\n    uniform float DiscardAlpha;\n};"
+        val out = GlslRelaxer.relax("#version 330\nuniform float Before;\n$block\nuniform float After;\n")
+
+        assertTrue(out.contains(block))
+        assertTrue(out.contains("float Before = float(0);"))
+        assertTrue(out.contains("float After = float(0);"))
+    }
+
+    @Test
     fun `keeps a single version directive when comments follow it`() {
         listOf(
             "#version 450 // core\n",
