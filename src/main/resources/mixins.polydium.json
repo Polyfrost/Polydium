@@ -318,6 +318,7 @@
     "client.perf.sodium.vulkan.MixinVulkanGlBuffer",
     "client.perf.sodium.vulkan.MixinVulkanRenderAhead",
     "client.perf.sodium.vulkan.MixinVulkanRenderDevice",
+    "client.perf.sodium.vulkan.MixinVulkanSodium08ChunkFades",
     "client.perf.sodium.vulkan.MixinVulkanSodium08ChunkRenderer",
     "client.perf.sodium.vulkan.MixinVulkanSodiumGuard",
     "client.perf.sodium.vulkan.MixinVulkanSodiumOptions",
