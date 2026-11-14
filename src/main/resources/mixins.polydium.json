@@ -89,6 +89,8 @@
     "client.perf.MixinClimateSearchScratch",
     //? if >= 26.3
     "client.perf.c2me.MixinC2meSamplePoolKeep",
+    //? if >= 26.1
+    "client.perf.flashback.MixinReplayEntityTickets",
     //? if >= 26.3
     "client.perf.MixinDensityPoolContexts",
     //? if >= 26.3
