@@ -109,6 +109,11 @@ public final class OwoVulkan {
       }
     }
 
+    VulkanCommandEncoder encoder = VulkanDevice.active.createCommandEncoder();
+    if (encoder.isInRenderPass()) {
+      throw new IllegalStateException("Close the existing render pass before presenting with a command encoder");
+    }
+
     try {
       braid.surface.acquireNextTexture();
     } catch (SurfaceException e) {
@@ -117,7 +122,6 @@ public final class OwoVulkan {
       return;
     }
 
-    VulkanCommandEncoder encoder = VulkanDevice.active.createCommandEncoder();
     braid.surface.blitFromTexture(encoder, target.getColorTextureView());
     encoder.submit();
     braid.surface.present();

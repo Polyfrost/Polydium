@@ -489,6 +489,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith("MixinVulkanBackendListImGui") && !Mods.loaded("flashback") && !Mods.loaded("axiom"))
         return false;
 
+        if (mixinClassName.endsWith("MixinVulkanBackendListFlashbackExport") && !Mods.loaded("flashback"))
+            return false;
+
         if (mixinClassName.startsWith(SODIUM_VULKAN_PACKAGE))
             return SODIUM_V08 ? !Arrays.asList(SODIUM_VULKAN_09_ONLY).contains(mixinClassName.substring(SODIUM_VULKAN_PACKAGE.length()))
                 : SODIUM_PERF && !mixinClassName.contains("Sodium08");

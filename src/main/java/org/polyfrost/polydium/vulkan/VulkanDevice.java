@@ -443,6 +443,10 @@ public class VulkanDevice implements GpuDeviceBackend {
   }
 
   void presentTexture(final GpuTextureView texture) {
+    if (this.commandEncoder.isInRenderPass()) {
+      throw new IllegalStateException("Close the existing render pass before presenting with a command encoder");
+    }
+
     boolean iconified = Minecraft.getInstance().getWindow().isIconified();
     if (iconified != this.wasIconified) {
       this.wasIconified = iconified;
@@ -489,6 +493,7 @@ public class VulkanDevice implements GpuDeviceBackend {
 
   @Override
   public void presentFrame() {
+    this.commandEncoder.closeLeakedRenderPass();
     this.commandEncoder.submit();
     if (this.surface.isAcquired()) {
       this.surface.present();

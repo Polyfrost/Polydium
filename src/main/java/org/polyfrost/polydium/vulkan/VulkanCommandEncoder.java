@@ -59,6 +59,7 @@ import org.lwjgl.vulkan.VkSemaphoreWaitInfo;
 import org.lwjgl.vulkan.VkSubpassBeginInfo;
 import org.lwjgl.vulkan.VkSubpassEndInfo;
 import org.lwjgl.vulkan.VkMemoryBarrier2.Buffer;
+import org.slf4j.LoggerFactory;
 
 public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable {
   /**
@@ -1189,6 +1190,18 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
     final int height
   ) {
     this.writeToTexture(destination, source, mipLevel, depthOrLayer, destX, destY, width, height);
+  }
+
+  private boolean warnedLeakedRenderPass;
+
+  public void closeLeakedRenderPass() {
+    if (this.currentRenderPass == null)
+      return;
+    if (!this.warnedLeakedRenderPass) {
+      this.warnedLeakedRenderPass = true;
+      LoggerFactory.getLogger("polydium/vulkan").warn("Render pass '{}' was never closed, closing it", this.currentRenderPass.getLabel().get());
+    }
+    this.currentRenderPass.close();
   }
 
   @Override
