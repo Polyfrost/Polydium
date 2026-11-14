@@ -310,6 +310,7 @@
     /*"client.perf.vulkan.backport.MixinVulkanBackendListRenderSystem",
     "client.perf.vulkan.backport.MixinVulkanBackendListWindow",
     "client.perf.vulkan.backport.MixinVkInstanceDeviceExtensions",
+    "client.perf.vulkan.backport.MixinVulkanBackendListVertexAlign",
     *///?}
     //? if >= 1.21.11 && < 26.2 {
     /*"client.perf.vulkan.backport.MixinGraphicsApiOption",
