@@ -215,6 +215,12 @@
     "client.perf.QuadParticleStorageAccessor",
     //? if >= 26.2
     "client.perf.MixinStagedVertexBufferPool",
+    //? if >= 26.2
+    "client.perf.MixinPreparedFrameRecover",
+    //? if >= 26.2
+    "client.perf.PreparedFrameAccessor",
+    //? if >= 26.2
+    "client.perf.StagedVertexBufferAccessor",
     //? if >= 26.1
     "client.perf.iris.MixinClientLevelData",
     "client.perf.iris.MixinFogRenderer",
