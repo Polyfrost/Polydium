@@ -1,3 +1,2 @@
-## 1.4.8
-- Fixed Cirrus's aurora with Deferred Sky enabled
-- Fixed terrain inside explosion craters sometimes rendering invisible on Vulkan with Sodium 0.8
+## Unreleased changes
+- Vulkan is now unavailable on 1.21.11 with CatLean installed, as it only supports OpenGL

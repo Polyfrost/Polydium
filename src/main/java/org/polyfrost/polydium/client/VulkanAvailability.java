@@ -9,6 +9,8 @@ import org.jspecify.annotations.Nullable;
 import com.mojang.renderpearl.backend.vulkan.VulkanBackend;
 //?} else
 /*import org.polyfrost.polydium.vulkan.VulkanBackend;*/
+//? if < 26.1
+/*import org.polyfrost.polydium.compat.Mods;*/
 
 public final class VulkanAvailability {
     private static boolean checked;
@@ -26,6 +28,13 @@ public final class VulkanAvailability {
     // exists: creating a Vulkan instance under a current GL context can break that context on some drivers
     public static @Nullable String probe() {
         if (!checked) {
+            //? if < 26.1 {
+            /*// CatLean's 1.21.11 build drives GlRenderPass internals directly, so it crashes on Vulkan
+            if (Mods.loaded("catlean")) {
+                record("CatLean only supports OpenGL");
+                return unavailableReason;
+            }
+            *///?}
             try {
                 var unavailable = VulkanBackend.checkBackendAvailable();
                 record(unavailable == null ? null : unavailable.getMessage());
