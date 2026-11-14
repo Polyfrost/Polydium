@@ -3,6 +3,7 @@ package org.polyfrost.polydium.vulkan;
 import org.polyfrost.polydium.client.perf.ImmediateDrawRing;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
+import org.polyfrost.polydium.client.perf.VulkanDescriptorWrites;
 import org.polyfrost.polydium.client.perf.VulkanDynamicState;
 import org.polyfrost.polydium.vulkan.compat.RenderArea;
 import com.mojang.blaze3d.buffers.GpuBuffer;
@@ -273,6 +274,7 @@ public class VulkanRenderPass implements RenderPassBackend {
   public void drawIndexed(final int indexCount, final int instanceCount, final int firstIndex, final int vertexOffset, final int firstInstance) {
     if (this.pipeline != null && this.pipeline.isValid()) {
       this.pushDescriptors();
+      if (this.anyDescriptorDirty) return;
       boolean profiled = GpuProfileFlag.ENABLED && GpuProfiler.recording;
       if (profiled)
         GpuProfiler.beginDraw(this.commandBuffer, 1);
@@ -287,6 +289,7 @@ public class VulkanRenderPass implements RenderPassBackend {
   public void multiDrawIndexed(final IntBuffer drawParameters, final int instanceCount, final int firstInstance, final int drawCount) {
     if (this.pipeline != null && this.pipeline.isValid()) {
       this.pushDescriptors();
+      if (this.anyDescriptorDirty) return;
       boolean profiled = GpuProfileFlag.ENABLED && GpuProfiler.recording;
       if (profiled)
         GpuProfiler.beginDraw(this.commandBuffer, drawCount);
@@ -311,6 +314,7 @@ public class VulkanRenderPass implements RenderPassBackend {
   public void drawIndexedIndirect(final GpuBufferSlice commands, final int drawCount) {
     if (this.pipeline != null && this.pipeline.isValid()) {
       this.pushDescriptors();
+      if (this.anyDescriptorDirty) return;
       boolean profiled = GpuProfileFlag.ENABLED && GpuProfiler.recording;
       if (profiled)
         GpuProfiler.beginDraw(this.commandBuffer, drawCount);
@@ -388,6 +392,7 @@ public class VulkanRenderPass implements RenderPassBackend {
   public void draw(final int vertexCount, final int instanceCount, final int firstVertex, final int firstInstance) {
     if (this.pipeline != null && this.pipeline.isValid()) {
       this.pushDescriptors();
+      if (this.anyDescriptorDirty) return;
       boolean profiled = GpuProfileFlag.ENABLED && GpuProfiler.recording;
       if (profiled)
         GpuProfiler.beginDraw(this.commandBuffer, 1);
@@ -400,6 +405,7 @@ public class VulkanRenderPass implements RenderPassBackend {
   public void multiDraw(final IntBuffer drawParameters, final int instanceCount, final int firstInstance, final int drawCount) {
     if (this.pipeline != null && this.pipeline.isValid()) {
       this.pushDescriptors();
+      if (this.anyDescriptorDirty) return;
       boolean profiled = GpuProfileFlag.ENABLED && GpuProfiler.recording;
       if (profiled)
         GpuProfiler.beginDraw(this.commandBuffer, drawCount);
@@ -420,6 +426,7 @@ public class VulkanRenderPass implements RenderPassBackend {
   public void drawIndirect(final GpuBufferSlice commands, final int drawCount) {
     if (this.pipeline != null && this.pipeline.isValid()) {
       this.pushDescriptors();
+      if (this.anyDescriptorDirty) return;
       boolean profiled = GpuProfileFlag.ENABLED && GpuProfiler.recording;
       if (profiled)
         GpuProfiler.beginDraw(this.commandBuffer, drawCount);
@@ -431,6 +438,7 @@ public class VulkanRenderPass implements RenderPassBackend {
     }
   }
 
+  // leaves anyDescriptorDirty set when a sampled texture view was closed; callers must then skip the draw
   private void pushDescriptors() {
     if (this.anyDescriptorDirty) {
       if (VALIDATION) {
@@ -469,18 +477,13 @@ public class VulkanRenderPass implements RenderPassBackend {
       assert this.pipeline != null;
 
       VulkanBindGroupLayout layout = this.pipeline.layout();
-      // Without VK_KHR_push_descriptor, write a fresh set from the encoder's per-submit pool and bind it
-      long descriptorSet = this.device.pushDescriptors() ? 0L : this.encoder.allocateDescriptorSet(layout.handle());
-      MemoryStack stack = MemoryStack.stackPush();
-
-      try {
+      try (MemoryStack stack = MemoryStack.stackPush()) {
         org.lwjgl.vulkan.VkWriteDescriptorSet.Buffer writes = VkWriteDescriptorSet.calloc(layout.entries().size(), stack);
 
         for (int i = 0; i < layout.entries().size(); i++) {
           VulkanBindGroupLayout.Entry entry = layout.entries().get(i);
           VkWriteDescriptorSet set = ((VkWriteDescriptorSet)writes.get()).sType$Default();
           set.dstBinding(i);
-          set.dstSet(descriptorSet);
           set.dstArrayElement(0);
           set.descriptorCount(1);
           if (entry.type() == VulkanBindGroupLayout.VulkanBindGroupEntryType.UNIFORM_BUFFER) {
@@ -513,6 +516,12 @@ public class VulkanRenderPass implements RenderPassBackend {
 
             if (valuex == null) {
               throw new IllegalStateException("Missing sampler " + entry.name());
+            }
+
+            // leaving the descriptors dirty skips the draw; forget the cached set so the next draw is checked again
+            if (VulkanDescriptorWrites.closed(valuex.view)) {
+              VulkanDynamicState.forgetDescriptors();
+              return;
             }
 
             org.lwjgl.vulkan.VkDescriptorImageInfo.Buffer imageInfo = VkDescriptorImageInfo.calloc(1, stack);
@@ -566,28 +575,18 @@ public class VulkanRenderPass implements RenderPassBackend {
           }
         }
 
-        if (descriptorSet == 0L) {
-          KHRPushDescriptor.vkCmdPushDescriptorSetKHR(
-            this.commandBuffer(), 0, this.pipeline.pipelineLayout(), 0, (org.lwjgl.vulkan.VkWriteDescriptorSet.Buffer)writes.flip()
-          );
+        writes.flip();
+        if (this.device.pushDescriptors()) {
+          KHRPushDescriptor.vkCmdPushDescriptorSetKHR(this.commandBuffer(), 0, this.pipeline.pipelineLayout(), 0, writes);
         } else {
-          VK12.vkUpdateDescriptorSets(this.device.vkDevice(), (org.lwjgl.vulkan.VkWriteDescriptorSet.Buffer)writes.flip(), null);
+          // without VK_KHR_push_descriptor, write a fresh set from the encoder's per-submit pool and bind it
+          long descriptorSet = this.encoder.allocateDescriptorSet(layout.handle());
+          for (int i = 0; i < writes.limit(); i++) {
+            writes.get(i).dstSet(descriptorSet);
+          }
+          VK12.vkUpdateDescriptorSets(this.device.vkDevice(), writes, null);
           VK12.vkCmdBindDescriptorSets(this.commandBuffer(), 0, this.pipeline.pipelineLayout(), 0, stack.longs(descriptorSet), null);
         }
-      } catch (Throwable var16) {
-        if (stack != null) {
-          try {
-            stack.close();
-          } catch (Throwable var13) {
-            var16.addSuppressed(var13);
-          }
-        }
-
-        throw var16;
-      }
-
-      if (stack != null) {
-        stack.close();
       }
 
       this.anyDescriptorDirty = false;

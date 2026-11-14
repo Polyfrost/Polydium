@@ -66,7 +66,8 @@ public abstract class MixinVulkanDescriptorWriteBackport {
                 VulkanBindGroupLayout.VulkanBindGroupEntryType type = entry.type();
                 if (type == VulkanBindGroupLayout.VulkanBindGroupEntryType.SAMPLED_IMAGE) {
                     VulkanRenderPass.TextureViewAndSampler texture = this.textures.get(entry.name());
-                    if (texture == null) {
+                    // the regular path resolves missing samplers and refuses closed views
+                    if (texture == null || texture.view().isClosed()) {
                         return false;
                     }
                     VulkanDescriptorWrites.imageSampler(stack, VulkanDescriptorWrites.write(writes, index), texture.sampler().vkSampler(), texture.view().vkImageView());

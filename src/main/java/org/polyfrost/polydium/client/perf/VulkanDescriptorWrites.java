@@ -14,6 +14,8 @@ import org.polyfrost.polydium.vulkan.VulkanDevice;
 import org.polyfrost.polydium.vulkan.VulkanGpuBuffer;
 import org.polyfrost.polydium.vulkan.VulkanUtils;
 *///?}
+import com.mojang.logging.LogUtils;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.vulkan.KHRPushDescriptor;
@@ -23,11 +25,32 @@ import org.lwjgl.vulkan.VkCommandBuffer;
 import org.lwjgl.vulkan.VkDescriptorBufferInfo;
 import org.lwjgl.vulkan.VkDescriptorImageInfo;
 import org.lwjgl.vulkan.VkWriteDescriptorSet;
+import org.slf4j.Logger;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public final class VulkanDescriptorWrites {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final int IMAGE_LAYOUT = 1;
+    private static final Set<String> WARNED_CLOSED_TEXTURES = new HashSet<>();
 
     private VulkanDescriptorWrites() {
+    }
+
+    /**
+     * Returns whether a draw must be skipped because {@code view} was closed, warning once per texture label.
+     * The view's {@code VkImageView} is freed after a few frames, so writing it into a descriptor hands the driver freed memory.
+     */
+    public static boolean closed(GpuTextureView view) {
+        if (!view.isClosed()) {
+            return false;
+        }
+        String label = view.texture().getLabel();
+        if (WARNED_CLOSED_TEXTURES.add(label)) {
+            LOGGER.warn("Skipping Vulkan draws that sample texture '{}' after it was closed", label);
+        }
+        return true;
     }
 
     public static long writes(MemoryStack stack, int count) {

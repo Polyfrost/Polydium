@@ -573,6 +573,8 @@
     "client.perf.vulkan.MixinVulkanDescriptorPushSkip",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanDescriptorWrite",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanClosedTextureSkip",
     //? if >= 26.2 && < 26.3
     //"client.perf.vulkan.VulkanTextureBindingAccessor",
     //? if >= 26.2 && < 26.3
