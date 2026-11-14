@@ -19,6 +19,7 @@ import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.TryCatchBlockNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import com.llamalad7.mixinextras.utils.MixinInternals;
@@ -230,6 +231,8 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("OcclusionCull", new String[]{"OcclusionRegion", "OcclusionListAccessor"}),
             Map.entry("ImmediateDrawRing", new String[]{"ImmediateDrawRingSeparate", "ImmediateDrawRingEmulated", "ImmediateDrawRingFrame", "ImmediateDrawRingClose"}),
             Map.entry("EntityCullingBlockEntityBox", new String[]{"MixinBlockEntityCullBox"}),
+            Map.entry("ParticleLightBatch", new String[]{"ParticleLightDrain", "ParticleLightSourceInvoker", "ParticleLevelAccessor"}),
+            Map.entry("ParticleCoreAsyncThreshold", new String[]{"ParticleSoundClientThread"}),
             //? if < 1.21.10 {
             /*Map.entry("OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency", "OpaqueParticleRenderOrder"}),
             *///?} else {
@@ -417,10 +420,19 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if ((mixinClassName.endsWith(".MixinLightNibbleView") || mixinClassName.endsWith(".MixinClonedLightView")) && !Mods.loaded("scalablelux"))
             return false;
 
-        if ((mixinClassName.endsWith(".MixinParticleCoreFinalizeCycle") || mixinClassName.endsWith(".MixinParticleCoreFinalizeDead") || mixinClassName.endsWith(".MixinParticleCoreLightCacheRead") || mixinClassName.endsWith(".MixinParticleTickOverlap") || mixinClassName.endsWith(".MixinParticleTickOverlapFrame") || mixinClassName.contains(".MixinParticleExtractDefer")) && !Mods.loaded("particle_core"))
+        if ((mixinClassName.endsWith(".MixinParticleCoreFinalizeCycle") || mixinClassName.endsWith(".MixinParticleCoreFinalizeDead") || mixinClassName.endsWith(".MixinParticleCoreLightCacheRead") || mixinClassName.endsWith(".MixinParticleTickOverlap") || mixinClassName.endsWith(".MixinParticleTickOverlapFrame") || mixinClassName.contains(".MixinParticleExtractDefer") || mixinClassName.endsWith(".MixinParticleCoreAsyncThreshold") || mixinClassName.endsWith(".MixinParticleGroupVanillaOnly")) && !Mods.loaded("particle_core"))
             return false;
 
-        if ((mixinClassName.endsWith(".MixinParticleLightBatch") || mixinClassName.endsWith(".MixinParticleLightDrain") || mixinClassName.endsWith(".ParticleLightSourceInvoker"))
+        if ((mixinClassName.endsWith(".MixinParticleTickOverlap") || mixinClassName.endsWith(".MixinParticleTickOverlapFrame") || mixinClassName.contains(".MixinParticleExtractDefer")) && Mods.loaded("smart_particles"))
+            return false;
+
+        if (mixinClassName.endsWith(".MixinParticleCoreAsyncThreshold") && Mods.loaded("lambdynlights") && isDisabled("org.polyfrost.polydium.mixin.client.perf.lambdynlights.MixinParticleLightBatch"))
+            return false;
+
+        if (mixinClassName.endsWith(".MixinParticleCoreAsyncThreshold") && (Mods.loaded("eg_particle_interactions") || Mods.loaded("particular") || Mods.loaded("ripple") || Mods.loaded("smart_particles")))
+            return false;
+
+        if ((mixinClassName.endsWith(".MixinParticleLightBatch") || mixinClassName.endsWith(".MixinParticleLightDrain") || mixinClassName.endsWith(".ParticleLightSourceInvoker") || mixinClassName.endsWith(".ParticleLevelAccessor"))
             && !(Mods.loaded("lambdynlights") && Mods.loaded("particle_core")))
             return false;
 
@@ -582,6 +594,22 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             for (MethodNode method : targetClass.methods)
                 if (method.name.endsWith("asyncParticleTicking") && method.desc.startsWith("(Ljava/util/Map;Ljava/util/function/BiConsumer;"))
                     deferParticleCoreJoin(method);
+            return;
+        }
+
+        if (mixinClassName.endsWith(".MixinParticleLightDrain") || mixinClassName.endsWith(".MixinParticleCoreFinalizeDead")) {
+            for (MethodNode method : targetClass.methods)
+                if (method.name.endsWith("asyncParticleTicking") && method.desc.startsWith("(Ljava/util/Map;Ljava/util/function/BiConsumer;"))
+                    trackParticleCoreTasks(method);
+            return;
+        }
+
+        if (mixinClassName.endsWith(".MixinParticleCoreAsyncThreshold")) {
+            for (MethodNode method : targetClass.methods)
+                if (method.name.endsWith("asyncParticleTicking") && method.desc.startsWith("(Ljava/util/Map;Ljava/util/function/BiConsumer;")) {
+                    lowerParticleCoreAsyncThreshold(method);
+                    trackParticleCoreTasks(method);
+                }
             return;
         }
 
@@ -1364,10 +1392,57 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         method.instructions.set(allOf, new MethodInsnNode(Opcodes.INVOKESTATIC, overlap, "allOf", "([Ljava/util/concurrent/CompletableFuture;Ljava/lang/Object;)Ljava/util/concurrent/CompletableFuture;", false));
         method.instructions.insertBefore(iterator, new VarInsnNode(Opcodes.ALOAD, 0));
         method.instructions.set(iterator, new MethodInsnNode(Opcodes.INVOKESTATIC, overlap, "iterator", "(Ljava/util/List;Ljava/lang/Object;)Ljava/util/Iterator;", false));
-        for (AbstractInsnNode insn : method.instructions)
+        trackParticleCoreTasks(method);
+    }
+
+    private static void trackParticleCoreTasks(MethodNode method) {
+        String overlap = "org/polyfrost/polydium/client/perf/ParticleTickOverlap";
+        boolean tracked = false;
+        for (AbstractInsnNode insn : method.instructions) {
             if (insn instanceof MethodInsnNode call && call.getOpcode() == Opcodes.INVOKESTATIC && call.owner.equals("java/util/concurrent/CompletableFuture")
-                    && call.name.equals("supplyAsync") && call.desc.equals("(Ljava/util/function/Supplier;)Ljava/util/concurrent/CompletableFuture;"))
+                    && call.name.equals("supplyAsync") && call.desc.equals("(Ljava/util/function/Supplier;)Ljava/util/concurrent/CompletableFuture;")) {
                 call.owner = overlap;
+                tracked = true;
+            }
+        }
+        if (!tracked)
+            return;
+        method.instructions.insert(new MethodInsnNode(Opcodes.INVOKESTATIC, overlap, "joinLaunched", "()V", false));
+        for (TryCatchBlockNode block : method.tryCatchBlocks) {
+            if (!"java/lang/Exception".equals(block.type))
+                continue;
+            AbstractInsnNode at = block.handler;
+            while (at.getNext() != null && at.getNext().getOpcode() < 0)
+                at = at.getNext();
+            method.instructions.insert(at, new MethodInsnNode(Opcodes.INVOKESTATIC, overlap, "awaitWorkers", "()V", false));
+        }
+    }
+
+    private static void lowerParticleCoreAsyncThreshold(MethodNode method) {
+        List<MethodInsnNode> sizes = new ArrayList<>();
+        List<VarInsnNode> entries = new ArrayList<>();
+        for (AbstractInsnNode insn : method.instructions) {
+            if (!(insn instanceof MethodInsnNode size) || !size.desc.equals("()I") || size.getNext() == null || size.getNext().getOpcode() != Opcodes.I2F)
+                continue;
+            AbstractInsnNode prev = size.getPrevious();
+            if (prev != null && prev.getOpcode() == Opcodes.CHECKCAST)
+                prev = prev.getPrevious();
+            if (prev instanceof MethodInsnNode getValue && getValue.owner.equals("java/util/Map$Entry") && getValue.name.equals("getValue")
+                    && getValue.getPrevious() instanceof VarInsnNode entry && entry.getOpcode() == Opcodes.ALOAD) {
+                sizes.add(size);
+                entries.add(entry);
+            }
+        }
+        if (sizes.size() != 2) {
+            LoggerFactory.getLogger("polydium/perf").warn("Particle Core's async tick has {} group size checks instead of 2, leaving its async threshold as is", sizes.size());
+            return;
+        }
+        for (int i = 0; i < 2; i++) {
+            InsnList adjust = new InsnList();
+            adjust.add(new VarInsnNode(Opcodes.ALOAD, entries.get(i).var));
+            adjust.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "org/polyfrost/polydium/client/perf/ParticleTickOverlap", "asyncSize", "(ILjava/util/Map$Entry;)I", false));
+            method.instructions.insert(sizes.get(i), adjust);
+        }
     }
 
     private static void chunkLoadDirtyOnce(ClassNode owner, MethodNode method) {

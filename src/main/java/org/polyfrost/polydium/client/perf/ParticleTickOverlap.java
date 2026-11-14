@@ -2,7 +2,11 @@ package org.polyfrost.polydium.client.perf;
 
 //? if >= 1.21.10 {
 import net.minecraft.client.Camera;
+import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleEngine;
+import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.particle.PlayerCloudParticle;
+import net.minecraft.client.particle.VibrationSignalParticle;
 import net.minecraft.client.renderer.culling.Frustum;
 //? if >= 26.1 {
 import net.minecraft.client.renderer.state.level.ParticlesRenderState;
@@ -16,17 +20,24 @@ import org.lwjgl.system.macosx.DynamicLinkLoader;
 import org.polyfrost.polydium.client.PolydiumToggles;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 public final class ParticleTickOverlap {
     public interface Finisher {
         void polydium$finishTick(CompletableFuture<?>[] futures);
+    }
+
+    public interface VanillaOnly {
+        boolean polydium$vanillaOnly();
     }
 
     private static Finisher pending;
@@ -43,13 +54,27 @@ public final class ParticleTickOverlap {
 
     private static ForkJoinPool pool;
 
+    private static final List<CompletableFuture<?>> launched = new ArrayList<>();
+
     public static <U> CompletableFuture<U> supplyAsync(Supplier<U> task) {
-        if (!PolydiumToggles.particleTickOverlap)
-            return CompletableFuture.supplyAsync(task);
         ForkJoinPool p = pool;
         if (p == null)
             pool = p = new ForkJoinPool(ForkJoinPool.getCommonPoolParallelism(), TickWorker::new, null, false);
-        return CompletableFuture.supplyAsync(task, p);
+        CompletableFuture<U> future = CompletableFuture.supplyAsync(task, p);
+        launched.add(future);
+        return future;
+    }
+
+    public static void joinLaunched() {
+        if (!launched.isEmpty())
+            awaitWorkers();
+    }
+
+    public static void awaitWorkers() {
+        launched.clear();
+        ForkJoinPool p = pool;
+        if (p != null)
+            CompletableFuture.runAsync(() -> p.awaitQuiescence(Long.MAX_VALUE, TimeUnit.NANOSECONDS), p).join();
     }
 
     public static boolean isTickPool(ForkJoinPool p) {
@@ -91,6 +116,7 @@ public final class ParticleTickOverlap {
     }
 
     public static CompletableFuture<Void> allOf(CompletableFuture<?>[] futures, Object engine) {
+        launched.clear();
         if (futures.length == 0 || pending != null || !enabled() || !(engine instanceof Finisher)) {
             kept = null;
             return CompletableFuture.allOf(futures);
@@ -158,7 +184,31 @@ public final class ParticleTickOverlap {
 
     public static void fail(Throwable t) {
         broken = true;
+        awaitWorkers();
         LoggerFactory.getLogger("polydium/perf").error("Deferred Particle Core tick failed; joining it in the tick again", t);
     }
+
+    public static int asyncSize(int size, Map.Entry<?, ?> group) {
+        return size > SINGLE_QUADS_ASYNC_MIN && group.getKey() == ParticleRenderType.SINGLE_QUADS && vanillaOnly(group.getValue()) ? Integer.MAX_VALUE : size;
+    }
+
+    private static boolean vanillaOnly(Object group) {
+        return group instanceof VanillaOnly vanilla && vanilla.polydium$vanillaOnly();
+    }
+
+    public static boolean vanilla(Particle particle) {
+        return VANILLA.get(particle.getClass());
+    }
+
+    private static final ClassValue<Boolean> VANILLA = new ClassValue<>() {
+        @Override
+        protected Boolean computeValue(Class<?> type) {
+            return type.getName().startsWith("net.minecraft.")
+                    && !PlayerCloudParticle.class.isAssignableFrom(type)
+                    && !VibrationSignalParticle.class.isAssignableFrom(type);
+        }
+    };
+
+    private static final int SINGLE_QUADS_ASYNC_MIN = 64;
 }
 //?}

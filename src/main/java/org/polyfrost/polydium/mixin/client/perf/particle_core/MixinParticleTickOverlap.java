@@ -9,10 +9,9 @@ import net.minecraft.client.particle.ParticleGroup;
 import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.TrackingEmitter;
 import net.minecraft.core.particles.ParticleLimit;
+import org.polyfrost.polydium.client.perf.ParticleLightBatch;
 import org.polyfrost.polydium.client.perf.ParticleReservoir;
 import org.polyfrost.polydium.client.perf.ParticleTickOverlap;
-//? if >= 26.1
-import org.polyfrost.polydium.client.perf.ParticleLightBatch;
 import org.polyfrost.polydium.mixin.PolydiumMixinPlugin;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -109,7 +108,6 @@ public abstract class MixinParticleTickOverlap implements ParticleTickOverlap.Fi
             *///?}
         }
 
-        //? if >= 26.1
         ParticleLightBatch.drain();
     }
 }

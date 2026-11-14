@@ -868,11 +868,18 @@
     "client.perf.particle_core.MixinParticleExtractDefer",
     //? if >= 1.21.10
     "client.perf.particle_core.MixinParticleExtractDeferSubmit",
-    //? if >= 26.1
+    //? if >= 1.21.10
+    "client.perf.particle_core.MixinParticleCoreAsyncThreshold",
+    //? if >= 1.21.10
+    "client.perf.particle_core.MixinParticleGroupVanillaOnly",
+    "client.perf.MixinParticleSoundClientThread",
+    //? if >= 1.21.10
     "client.perf.lambdynlights.ParticleLightSourceInvoker",
-    //? if >= 26.1
+    //? if >= 1.21.10
+    "client.perf.lambdynlights.ParticleLevelAccessor",
+    //? if >= 1.21.10
     "client.perf.lambdynlights.MixinParticleLightBatch",
-    //? if >= 26.1
+    //? if >= 1.21.10
     "client.perf.lambdynlights.MixinParticleLightDrain",
     "client.perf.sodium.MixinBlockRendererLambdaCache",
     //? if >= 1.21.8 || < 1.21.4

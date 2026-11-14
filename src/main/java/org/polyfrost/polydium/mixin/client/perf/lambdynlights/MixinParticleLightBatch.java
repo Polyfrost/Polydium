@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf.lambdynlights;
 
-//? if >= 26.1 {
+//? if >= 1.21.10 {
 import net.minecraft.client.particle.Particle;
 import org.polyfrost.polydium.client.perf.ParticleLightBatch;
 import org.spongepowered.asm.mixin.Mixin;

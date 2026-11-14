@@ -1,6 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf.lambdynlights;
 
-//? if >= 26.1 {
+//? if >= 1.21.10 {
 import net.minecraft.client.particle.ParticleEngine;
 import org.polyfrost.polydium.client.perf.ParticleLightBatch;
 import org.polyfrost.polydium.client.perf.ParticleTickOverlap;
@@ -15,6 +15,11 @@ public abstract class MixinParticleLightDrain {
     private void polydium$drainParticleLights(CallbackInfo ci) {
         if (!ParticleTickOverlap.pending())
             ParticleLightBatch.drain();
+    }
+
+    @Inject(method = "setLevel", at = @At("HEAD"))
+    private void polydium$dropStaleParticleLights(CallbackInfo ci) {
+        ParticleLightBatch.drainOverflow();
     }
 }
 //?}
