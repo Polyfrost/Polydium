@@ -52,6 +52,12 @@ public abstract class MixinAutoVulkan {
         EarlyVulkan.markFailed("last game startup did not finish");
     }
 
+    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;set(Ljava/lang/Object;)V", ordinal = 0), slice = @Slice(
+        from = @At(value = "CONSTANT", args = "stringValue=Detected unexpected shutdown during last game startup: forcing preferred graphics API to OpenGL")))
+    private void polydium$markVanillaOpenGl(CallbackInfo ci) {
+        EarlyVulkan.vanillaOpenGl = true;
+    }
+
     @Inject(method = "saveReport(Ljava/io/File;Lnet/minecraft/CrashReport;I)I", at = @At("HEAD"))
     private static void polydium$keepVulkanOnJavaCrash(CallbackInfoReturnable<Integer> cir, @Local(argsOnly = true) CrashReport crash) {
         if (EarlyVulkan.renderCrash(crash.getException()))
@@ -99,7 +105,11 @@ public abstract class MixinAutoVulkan {
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void polydium$undoFailedVulkan(CallbackInfo ci) {
-        if (!EarlyVulkan.switchPending() || PolydiumMixinPlugin.SODIUM_BLOCKS_VULKAN)
+        if (PolydiumMixinPlugin.SODIUM_BLOCKS_VULKAN) {
+            EarlyVulkan.retrySodiumBlockedFailure();
+            return;
+        }
+        if (!EarlyVulkan.switchPending())
             return;
         if (EarlyVulkan.vulkanAtStartup() && !VulkanActive.active) {
             EarlyVulkan.markFailed("automatic Vulkan switch failed");

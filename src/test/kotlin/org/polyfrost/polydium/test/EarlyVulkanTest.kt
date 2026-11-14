@@ -322,6 +322,86 @@ class EarlyVulkanTest {
 
         assertEquals("vulkan", EarlyVulkan.graphicsApi())
     }
+
+    private fun legacyFailure() {
+        Files.createDirectories(polydiumDir)
+        Files.writeString(marker, "failed")
+        EarlyVulkan.setGraphicsApi("default")
+    }
+
+    @Test
+    fun sodiumBlockedFailureRetriesOnce() {
+        legacyFailure()
+
+        EarlyVulkan.retrySodiumBlockedFailure()
+
+        assertEquals("sodium", Files.readString(marker))
+        EarlyVulkan()
+        assertTrue(EarlyVulkan.switchPending())
+
+        Files.writeString(marker, "failed")
+        EarlyVulkan.setGraphicsApi("default")
+        EarlyVulkan.retrySodiumBlockedFailure()
+
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun currentFailureIsNotRetried() {
+        EarlyVulkan.markFailed("test")
+        EarlyVulkan.setGraphicsApi("default")
+        assertFalse(Files.exists(polydiumDir.resolve("sodium-retry")))
+
+        EarlyVulkan.retrySodiumBlockedFailure()
+
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun failureIsGuardedWhenIrisRetryCannotBeWritten() {
+        Files.createDirectories(polydiumDir.resolve("iris-retry"))
+        EarlyVulkan.markFailed("test")
+        EarlyVulkan.setGraphicsApi("default")
+
+        EarlyVulkan.retrySodiumBlockedFailure()
+
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun backendSavedBeforeFailureIsKept() {
+        legacyFailure()
+        Files.setLastModifiedTime(polydiumDir.resolve("graphics-api"), FileTime.from(Instant.now().minus(Duration.ofDays(2))))
+
+        EarlyVulkan.retrySodiumBlockedFailure()
+
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun backendPickedAfterFailureIsKept() {
+        legacyFailure()
+        Files.setLastModifiedTime(marker, FileTime.from(Instant.now().minus(Duration.ofMinutes(1))))
+
+        EarlyVulkan.retrySodiumBlockedFailure()
+
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun backendPickedDuringSodiumRetryIsKept() {
+        legacyFailure()
+        EarlyVulkan.retrySodiumBlockedFailure()
+
+        EarlyVulkan.setGraphicsApi("opengl")
+        EarlyVulkan.setGraphicsApi("default")
+        EarlyVulkan()
+
+        assertEquals("checked", Files.readString(marker))
+        assertEquals("default", EarlyVulkan.graphicsApi())
+        //? if >= 26.2
+        assertFalse(Files.exists(options))
+    }
     //?}
 
     @Test
@@ -468,6 +548,43 @@ class EarlyVulkanTest {
         EarlyVulkan()
 
         assertFalse(Files.exists(options))
+    }
+
+    @Test
+    fun checkedDefaultBeatsSharedVulkan() {
+        val saved = listOf("version:${EarlyVulkan.BACKEND_FIX_VERSION}", "fov:1.0", "preferredGraphicsBackend:\"default\"")
+        Files.write(options, saved)
+        EarlyVulkan.setGraphicsApi("vulkan")
+        Files.writeString(marker, "checked")
+
+        EarlyVulkan()
+
+        assertEquals("checked", Files.readString(marker))
+        assertEquals(saved, Files.readAllLines(options))
+    }
+
+    @Test
+    fun pendingSwitchFromOtherVersionBeatsSavedDefault() {
+        Files.writeString(options, "version:${EarlyVulkan.BACKEND_FIX_VERSION}\nfov:1.0\npreferredGraphicsBackend:\"default\"\n")
+        EarlyVulkan.setGraphicsApi("vulkan")
+        Files.writeString(marker, "")
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.switchPending())
+        assertEquals(listOf("version:${EarlyVulkan.BACKEND_FIX_VERSION}", "fov:1.0", "preferredGraphicsBackend:\"vulkan\""), Files.readAllLines(options))
+    }
+
+    @Test
+    fun defaultPickedDuringPendingSwitchKeepsSavedDefault() {
+        val saved = listOf("version:${EarlyVulkan.BACKEND_FIX_VERSION}", "fov:1.0", "preferredGraphicsBackend:\"default\"")
+        Files.write(options, saved)
+        EarlyVulkan.setGraphicsApi("default")
+        Files.writeString(marker, "")
+
+        EarlyVulkan()
+
+        assertEquals(saved, Files.readAllLines(options))
     }
 
     @Test

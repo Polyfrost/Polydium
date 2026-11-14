@@ -140,18 +140,20 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
     *///?}
 
     private static boolean vulkanBackend() {
-        if (isDisabled("VulkanBackendList") || !(contains(ENABLED, "VulkanBackendList") || EarlyVulkan.vulkanAtStartup()))
+        if (isDisabled("VulkanBackendList"))
             return false;
         //? if >= 1.21.11 && < 26.2 {
-        /*if (SODIUM_BLOCKS_VULKAN) {
+        /*// Before vulkanAtStartup, which would count an unclean OpenGL start here as a failed Vulkan start
+        if (SODIUM_BLOCKS_VULKAN) {
             if (!sodiumVulkanWarned) {
                 sodiumVulkanWarned = true;
-                LoggerFactory.getLogger("polydium/vulkan").warn("Sodium {} has no Vulkan support in Polydium, staying on OpenGL. Update Sodium to use Vulkan", SODIUM_VERSION);
+                if (contains(ENABLED, "VulkanBackendList") || "vulkan".equals(EarlyVulkan.graphicsApi()))
+                    LoggerFactory.getLogger("polydium/vulkan").warn("Sodium {} has no Vulkan support in Polydium, staying on OpenGL. Update Sodium to use Vulkan", SODIUM_VERSION);
             }
             return false;
         }
         *///?}
-        return true;
+        return contains(ENABLED, "VulkanBackendList") || EarlyVulkan.vulkanAtStartup();
     }
 
     public static boolean skyboxifyFarSky() {

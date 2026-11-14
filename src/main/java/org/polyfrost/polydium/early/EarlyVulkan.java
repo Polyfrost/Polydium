@@ -40,6 +40,8 @@ public final class EarlyVulkan implements LanguageAdapter {
     //? if >= 26.2 {
     private static List<String> createdOptions;
 
+    public static boolean vanillaOpenGl;
+
     private static boolean irisLoaded = FabricLoader.getInstance().isModLoaded("iris");
     //?}
 
@@ -66,8 +68,11 @@ public final class EarlyVulkan implements LanguageAdapter {
 
     // "" = auto-switched, first launch not checked yet; "no" = not switched
     // "checked" = checked, so a default backend is the user's own choice
-    // "failed" = a Vulkan start failed and the backend was reset, not retried until the user picks Vulkan
+    // "vulkan-failed" = a Vulkan start failed and the backend was reset, not retried until the user picks Vulkan
+    // "failed" = the same, written by builds that counted Sodium blocking Vulkan as a failure
     // "done" = checked, but vanilla's backend datafix may have reset it, so 26.2+ retries once
+    // "sodium" = a failure that may have been Sodium blocking Vulkan, decided again once like a fresh install
+    // unless the user picks a backend first
     public static boolean switched() {
         String state = markerState();
         return state != null && !state.equals("no");
@@ -78,7 +83,12 @@ public final class EarlyVulkan implements LanguageAdapter {
     }
 
     public static boolean failed() {
-        return "failed".equals(markerState());
+        String state = markerState();
+        return "vulkan-failed".equals(state) || "failed".equals(state);
+    }
+
+    private static boolean sodiumRetryPending() {
+        return "sodium".equals(markerState());
     }
 
     public static void finishSwitch() {
@@ -92,8 +102,26 @@ public final class EarlyVulkan implements LanguageAdapter {
         LoggerFactory.getLogger("polydium/vulkan").warn("Resetting graphics API to Default: {}", reason);
         try {
             Files.createDirectories(marker().getParent());
-            Files.writeString(marker(), "failed");
+            Files.writeString(marker(), "vulkan-failed");
             Files.writeString(marker().resolveSibling("iris-retry"), "");
+        } catch (IOException ignored) {
+        }
+    }
+
+    private static Path sodiumRetryFile() {
+        return marker().resolveSibling("sodium-retry");
+    }
+
+    public static void retrySodiumBlockedFailure() {
+        try {
+            if (!"failed".equals(markerState()) || Files.exists(sodiumRetryFile()) || !graphicsApiSaved() || !"default".equals(graphicsApi()))
+                return;
+            Instant failedAt = Files.getLastModifiedTime(marker()).toInstant();
+            Instant apiAt = Files.getLastModifiedTime(graphicsApiFile()).toInstant();
+            if (apiAt.isBefore(failedAt.minus(Duration.ofSeconds(2))) || apiAt.isAfter(failedAt.plus(Duration.ofSeconds(5))))
+                return;
+            Files.writeString(marker(), "sodium");
+            Files.writeString(sodiumRetryFile(), "");
         } catch (IOException ignored) {
         }
     }
@@ -152,7 +180,7 @@ public final class EarlyVulkan implements LanguageAdapter {
             return;
         }
         // Vulkan can only be written after a failure if the user chose it, and a new failure records itself again.
-        if ("vulkan".equals(api) && failed())
+        if (("vulkan".equals(api) && failed()) || sodiumRetryPending())
             finishSwitch();
     }
 
@@ -272,9 +300,9 @@ public final class EarlyVulkan implements LanguageAdapter {
 
         //? if >= 26.2 {
         boolean irisRetry = irisRetryDue();
-        boolean retry = irisRetry || "done".equals(markerState());
+        boolean retry = irisRetry || "done".equals(markerState()) || sodiumRetryPending();
         //?} else {
-        /*boolean retry = false;
+        /*boolean retry = sodiumRetryPending();
         *///?}
         boolean decided = !retry && Files.exists(marker()) && (switched() || (!Boolean.TRUE.equals(vulkanEligible())
                 && Files.getLastModifiedTime(marker()).toInstant().isAfter(Instant.now().minus(Duration.ofDays(30)))));
@@ -320,7 +348,7 @@ public final class EarlyVulkan implements LanguageAdapter {
         boolean savedOverPack = apiUsable && backendInFile && !Files.exists(options) && Files.exists(graphicsApiFile());
         if (!savedOverPack && !lines.isEmpty() && version < BACKEND_FIX_VERSION)
             return;
-        if (savedOverPack || (apiUsable && !saved && !backendInFile && !"default".equals(api))) {
+        if (savedOverPack || (apiUsable && (!saved || switchPending()) && !backendInFile && !"default".equals(api))) {
             writeBackend(options, lines, index, api);
             if (retry)
                 finishSwitch();

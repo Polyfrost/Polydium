@@ -49,7 +49,10 @@ public abstract class MixinKeepVulkanOptions {
     @Inject(method = "save", at = @At("HEAD"))
     private void polydium$shareBackend(CallbackInfo ci) {
         PreferredGraphicsApi backend = this.preferredGraphicsBackend().get();
-        if (this.polydium$sharedBackend == null || (backend == this.polydium$sharedBackend && EarlyVulkan.graphicsApiSaved()))
+        if (backend != PreferredGraphicsApi.OPENGL)
+            EarlyVulkan.vanillaOpenGl = false;
+        if (this.polydium$sharedBackend == null || (backend == this.polydium$sharedBackend && EarlyVulkan.graphicsApiSaved())
+                || EarlyVulkan.vanillaOpenGl)
             return;
         this.polydium$sharedBackend = backend;
         EarlyVulkan.setGraphicsApi(backend.getSerializedName());
