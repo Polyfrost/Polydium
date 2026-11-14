@@ -140,6 +140,10 @@ public final class EarlyVulkan implements LanguageAdapter {
         }
     }
 
+    public static boolean graphicsApiSaved() {
+        return Files.exists(graphicsApiFile());
+    }
+
     public static void setGraphicsApi(String api) {
         try {
             Files.createDirectories(graphicsApiFile().getParent());

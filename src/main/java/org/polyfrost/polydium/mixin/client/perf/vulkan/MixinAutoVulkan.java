@@ -40,6 +40,8 @@ public abstract class MixinAutoVulkan {
             this.options.save();
             return device;
         }
+        if (this.options.preferredGraphicsBackend().get() == PreferredGraphicsApi.VULKAN)
+            EarlyVulkan.setGraphicsApi("vulkan");
         EarlyVulkan.finishSwitch();
         return device;
     }
@@ -75,6 +77,7 @@ import net.minecraft.CrashReport;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import org.polyfrost.polydium.early.EarlyVulkan;
+import org.polyfrost.polydium.mixin.PolydiumMixinPlugin;
 import org.polyfrost.polydium.vulkan.VulkanActive;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -96,7 +99,7 @@ public abstract class MixinAutoVulkan {
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void polydium$undoFailedVulkan(CallbackInfo ci) {
-        if (!EarlyVulkan.switchPending())
+        if (!EarlyVulkan.switchPending() || PolydiumMixinPlugin.SODIUM_BLOCKS_VULKAN)
             return;
         if (EarlyVulkan.vulkanAtStartup() && !VulkanActive.active) {
             EarlyVulkan.markFailed("automatic Vulkan switch failed");

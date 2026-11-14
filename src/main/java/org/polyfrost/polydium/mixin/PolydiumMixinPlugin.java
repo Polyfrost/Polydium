@@ -133,8 +133,25 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     private static final String[] OPT_IN = {"UnfocusedFullscreenThrottle"};
 
+    private static boolean sodiumVulkanWarned;
+
+    //? if >= 1.21.11 && < 26.2 {
+    /*public static final boolean SODIUM_BLOCKS_VULKAN = !SODIUM_VERSION.isEmpty() && !SODIUM_V08 && !SODIUM_PERF;
+    *///?}
+
     private static boolean vulkanBackend() {
-        return !isDisabled("VulkanBackendList") && (contains(ENABLED, "VulkanBackendList") || EarlyVulkan.vulkanAtStartup());
+        if (isDisabled("VulkanBackendList") || !(contains(ENABLED, "VulkanBackendList") || EarlyVulkan.vulkanAtStartup()))
+            return false;
+        //? if >= 1.21.11 && < 26.2 {
+        /*if (SODIUM_BLOCKS_VULKAN) {
+            if (!sodiumVulkanWarned) {
+                sodiumVulkanWarned = true;
+                LoggerFactory.getLogger("polydium/vulkan").warn("Sodium {} has no Vulkan support in Polydium, staying on OpenGL. Update Sodium to use Vulkan", SODIUM_VERSION);
+            }
+            return false;
+        }
+        *///?}
+        return true;
     }
 
     public static boolean skyboxifyFarSky() {

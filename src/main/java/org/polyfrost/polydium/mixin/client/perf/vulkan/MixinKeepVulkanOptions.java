@@ -13,6 +13,7 @@ import net.minecraft.util.datafix.DataFixTypes;
 import org.polyfrost.polydium.early.EarlyVulkan;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -36,14 +37,22 @@ public abstract class MixinKeepVulkanOptions {
         return fixed;
     }
 
+    @Unique
+    private PreferredGraphicsApi polydium$sharedBackend;
+
     @Inject(method = "<init>", at = @At("TAIL"))
     private void polydium$removeCreatedOptions(Minecraft minecraft, File gameDirectory, CallbackInfo ci) {
         EarlyVulkan.removeCreatedOptions();
+        this.polydium$sharedBackend = this.preferredGraphicsBackend().get();
     }
 
     @Inject(method = "save", at = @At("HEAD"))
     private void polydium$shareBackend(CallbackInfo ci) {
-        EarlyVulkan.setGraphicsApi(this.preferredGraphicsBackend().get().getSerializedName());
+        PreferredGraphicsApi backend = this.preferredGraphicsBackend().get();
+        if (this.polydium$sharedBackend == null || (backend == this.polydium$sharedBackend && EarlyVulkan.graphicsApiSaved()))
+            return;
+        this.polydium$sharedBackend = backend;
+        EarlyVulkan.setGraphicsApi(backend.getSerializedName());
     }
 }
 //?}
