@@ -10,6 +10,7 @@ import com.mojang.renderpearl.backend.vulkan.VulkanDevice;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.lwjgl.vulkan.VkRenderingInfo;
 import org.polyfrost.polydium.client.perf.VulkanLegacyRendering;
+import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -40,10 +41,17 @@ public abstract class MixinVulkanLegacyEncoder implements VulkanLegacyRendering.
         at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/KHRDynamicRendering;vkCmdBeginRenderingKHR(Lorg/lwjgl/vulkan/VkCommandBuffer;Lorg/lwjgl/vulkan/VkRenderingInfo;)V")
     )
     private void polydium$beginRenderPass(VkCommandBuffer commandBuffer, VkRenderingInfo renderingInfo, Operation<Void> original, @Local(argsOnly = true) RenderPassDescriptor descriptor) {
+        boolean profiled = GpuProfiler.recording;
+        if (profiled) {
+            GpuProfiler.beginPass(commandBuffer);
+        }
         if (((VulkanLegacyRendering.Device) this.device).polydium$dynamicRendering()) {
             original.call(commandBuffer, renderingInfo);
         } else {
             VulkanLegacyRendering.beginRenderPass(this.device, (VulkanCommandEncoder) (Object) this, commandBuffer, descriptor, renderingInfo.renderArea());
+        }
+        if (profiled) {
+            GpuProfiler.end(commandBuffer);
         }
     }
 

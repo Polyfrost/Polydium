@@ -2,6 +2,7 @@ package org.polyfrost.polydium.vulkan;
 
 import java.util.function.Supplier;
 import org.polyfrost.polydium.client.PolydiumToggles;
+import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 import org.polyfrost.polydium.vulkan.compat.RenderArea;
@@ -203,7 +204,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
     }
   }
 
-  private void endCommandBuffer() {
+  void endCommandBuffer() {
     if (this.currentCommandBuffer != null || this.currentInitCommandBuffer != null) {
       if (this.currentRenderPass != null) {
         throw new IllegalStateException("Cannot end command buffer while inside RenderPass");
@@ -364,6 +365,11 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
 
       vkRenderArea.extent().set(descriptor.renderArea.width(), descriptor.renderArea.height());
       vkRenderArea.offset().set(descriptor.renderArea.x(), descriptor.renderArea.y());
+      boolean profiled = GpuProfiler.recording;
+      if (profiled) {
+        GpuProfiler.pass(descriptor.label());
+        GpuProfiler.beginPass(this.commandBuffer());
+      }
       if (!this.device.dynamicRendering()) {
         this.beginLegacyRenderPass(stack, descriptor, colorTextures, depthAttachment, vkRenderArea, width, height);
       } else {
@@ -420,6 +426,9 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
         }
 
         KHRDynamicRendering.vkCmdBeginRenderingKHR(this.commandBuffer(), renderingInfo);
+      }
+      if (profiled) {
+        GpuProfiler.end(this.commandBuffer());
       }
 
       this.currentRenderPass = new VulkanRenderPass(

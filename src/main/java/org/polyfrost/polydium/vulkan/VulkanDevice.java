@@ -1,6 +1,7 @@
 package org.polyfrost.polydium.vulkan;
 
 import org.polyfrost.polydium.client.perf.RawGl;
+import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
 import org.polyfrost.polydium.vulkan.compat.SurfaceException;
 import org.polyfrost.polydium.vulkan.compat.GpuSurface;
 import com.mojang.blaze3d.buffers.GpuBuffer;
@@ -167,6 +168,7 @@ public class VulkanDevice implements GpuDeviceBackend {
   @Override
   public void close() {
     this.graphicsQueue.waitIdle();
+    GpuProfiler.shutdown();
     if (this.surface != null) {
       this.surface.close();
     }

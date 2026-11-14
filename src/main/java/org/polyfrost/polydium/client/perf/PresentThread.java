@@ -12,6 +12,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.KHRSwapchain;
 import org.lwjgl.vulkan.VkPresentInfoKHR;
 import org.lwjgl.vulkan.VkQueue;
+import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
@@ -37,6 +38,7 @@ public final class PresentThread {
     public static boolean             vulkanSurface;
     private static VulkanQueue.Submission handedSubmission;
     private static Runnable               handedPresent;
+    private static long                   handedFrame = -1L;
 
     private PresentThread() {
     }
@@ -102,6 +104,8 @@ public final class PresentThread {
 
         drain();
 
+        handedFrame = GpuProfiler.presentHandedOff();
+
         if (!FramePath.frameUsesWorker()) {
             long wallStart = System.nanoTime();
             long cpuStart  = THREADS.getCurrentThreadCpuTime();
@@ -144,7 +148,13 @@ public final class PresentThread {
             presentInfo.swapchainCount(1);
             presentInfo.pSwapchains(stack.longs(swapchain));
             presentInfo.pImageIndices(stack.ints(imageIndex));
-            return KHRSwapchain.vkQueuePresentKHR(queue, presentInfo);
+
+            long start  = GpuProfiler.presentStart();
+            int  result = KHRSwapchain.vkQueuePresentKHR(queue, presentInfo);
+
+            GpuProfiler.presentWait(start, true, handedFrame);
+
+            return result;
         }
     }
 

@@ -353,6 +353,7 @@
     "client.perf.vulkan.backport.MixinVulkanBufferMappingBackport",
     "client.perf.vulkan.backport.MixinVulkanBufferMappingUnmapBackport",
     "client.perf.vulkan.backport.MixinVulkanCommandEncoderPresentThreadBackport",
+    "client.perf.vulkan.backport.MixinGpuProfileVulkanEncoderBackport",
     "client.perf.vulkan.backport.MixinVulkanCubesWithoutBorders",
     "client.perf.vulkan.backport.MixinVulkanDeferralBackport",
     "client.perf.vulkan.backport.MixinVulkanSampledAttachmentBackport",
@@ -911,6 +912,31 @@
     //? if >= 26.1
     "client.perf.MixinBlockModelHookPrecheck",
     "client.perf.MixinPerfClockFrame",
+    "client.perf.gpuprofile.MixinGpuProfileGlSwap",
+    "client.perf.gpuprofile.MixinGpuProfileIrisComposite",
+    "client.perf.gpuprofile.MixinGpuProfileIrisCompute",
+    "client.perf.gpuprofile.MixinGpuProfileFrame",
+    //? if >= 26.2 {
+    "client.perf.gpuprofile.MixinGpuProfileFrontendPass",
+    "client.perf.gpuprofile.MixinGpuProfileFrontendEncoder",
+    "client.perf.gpuprofile.MixinGpuProfileVulkanSurface",
+    "client.perf.gpuprofile.MixinGpuProfileVulkanDevice",
+    "client.perf.gpuprofile.VulkanQueryPoolAccessor",
+    "client.perf.gpuprofile.VulkanCommandEncoderInvoker",
+    //?} else {
+    /*"client.perf.gpuprofile.MixinGpuProfileSodiumGl",
+    "client.perf.gpuprofile.MixinGpuProfileSodiumPass",
+    *///?}
+    //? if >= 1.21.5 && < 26.2
+    //"client.perf.gpuprofile.MixinGpuProfileGlPass",
+    //? if >= 1.21.5
+    "client.perf.gpuprofile.MixinGpuProfileGlEncoder",
+    //? if < 1.21.5 {
+    /*"client.perf.gpuprofile.MixinGpuProfileLegacyDraw",
+    "client.perf.gpuprofile.MixinGpuProfileLegacyRenderType",
+    *///?}
+    //? if = 1.21.4
+    //"client.perf.gpuprofile.MixinGpuProfileLegacyShader",
     "client.perf.punchy.MixinPunchyAnimationMergeCache",
     "client.perf.punchy.MixinPunchyArmorArmCloneCache",
     "client.perf.punchy.MixinPunchyIrisHandRendererCache",

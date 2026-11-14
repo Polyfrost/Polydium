@@ -6,6 +6,7 @@ import org.polyfrost.polydium.vulkan.compat.GpuSurfaceBackend;
 import org.polyfrost.polydium.vulkan.compat.SurfaceException;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
+import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
 import org.polyfrost.polydium.vulkan.checkpoints.CheckpointExtension;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongArrays;
@@ -362,7 +363,9 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
         this.currentAcquireSemaphore++;
         this.currentAcquireSemaphore = this.currentAcquireSemaphore % this.acquireSemaphores.length;
         long acquireSemaphore = this.acquireSemaphores[this.currentAcquireSemaphore];
+        long acquireStart = GpuProfiler.presentStart();
         int result = KHRSwapchain.vkAcquireNextImageKHR(this.device.vkDevice(), this.swapchain, 5000000000L, acquireSemaphore, 0L, frameIndexPtr);
+        GpuProfiler.presentWait(acquireStart, false);
         if (result == 2) {
           List<CheckpointExtension.QueueCheckpoints> checkpoints = this.device.checkpointExtension().retrieveCheckpoints(false);
           throw new IllegalStateException("GPU timeout attempting to acquire next frame: " + VulkanUtils.formatCheckpoints(checkpoints));
@@ -412,7 +415,14 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
       }
 
       VulkanCommandEncoder vulkanCommandEncoder = (VulkanCommandEncoder)commandEncoder;
+      boolean profiled = GpuProfiler.recording;
+      if (profiled) {
+        vulkanCommandEncoder.endCommandBuffer();
+      }
       VkCommandBuffer blitCommandBuffer = vulkanCommandEncoder.allocateAndBeginTransientCommandBuffer();
+      if (profiled) {
+        GpuProfiler.beginOp(blitCommandBuffer, GpuProfiler.OP_PRESENT);
+      }
       long swapchainImage = direct != null ? direct.image() : this.swapchainImages.getLong(this.currentImageIndex);
       MemoryStack stack = MemoryStack.stackGet();
       MemoryStack var8 = stack.push();
@@ -548,6 +558,10 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
         var8.close();
       }
 
+      if (profiled) {
+        GpuProfiler.end(blitCommandBuffer);
+      }
+
       VulkanUtils.crashIfFailure(this.device, VK12.vkEndCommandBuffer(blitCommandBuffer), "Failed to end VkCommandBuffer");
       if (direct != null) {
         vulkanCommandEncoder.execute(blitCommandBuffer);
@@ -564,7 +578,9 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
   @Override
   public void present() {
     if (this.directPresenter != null) {
+      long presentStart = GpuProfiler.presentStart();
       this.directPresenter.present();
+      GpuProfiler.presentWait(presentStart, true);
       this.currentImageIndex = -1;
       return;
     }
@@ -581,7 +597,9 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
         presentInfo.pSwapchains(stack.longs(this.swapchain));
         presentInfo.pImageIndices(stack.ints(this.currentImageIndex));
         this.currentImageIndex = -1;
+        long presentStart = GpuProfiler.presentStart();
         int result = KHRSwapchain.vkQueuePresentKHR(this.presentQueue, presentInfo);
+        GpuProfiler.presentWait(presentStart, true);
         if (result == -1000001004) {
           this.swapchainSuboptimal = true;
           this.swapchainOutOfDate = true;
