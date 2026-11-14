@@ -1,2 +1,3 @@
-## 1.4.7
-- Fixed a crash with certain mods using GLSL shaders, such as Xaero's Minimap, with Vulkan on 1.21.11 and 26.1.x
+## Unreleased changes
+- Vulkan is now unavailable on 1.21.11 with CatLean installed, as it only supports OpenGL
+- Fixed a crash when another mod queried Iris' config on the Vulkan backend

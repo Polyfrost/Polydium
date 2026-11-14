@@ -63,12 +63,13 @@ public final class SkyFarPlane {
     private static final String CIRRUS_POSITION = "gl_Position = clipPosition;";
     private static final Set<String> SHADERS = Set.of("minecraft:shaders/core/sky.vsh", "minecraft:shaders/core/stars.vsh", "minecraft:shaders/core/position_color.vsh", "minecraft:shaders/core/position_tex.vsh");
     private static final String NUIT_END_SKY_SHADER = "minecraft:shaders/core/position_tex_color.vsh";
+    private static final String CIRRUS_MASK_SHADER = "cirrus:shaders/core/cirrus_cloud_mask.vsh";
     private static final Map<String, String> MOD_SHADERS = Map.of(
         "nuit:shaders/core/mono_color_skybox.vsh", POSITION,
         "nuit:shaders/core/textured_skybox.vsh", POSITION,
         "nuit:shaders/core/multi_textured_skybox.vsh", POSITION,
         "cirrus:shaders/core/cirrus_aurora.vsh", CIRRUS_POSITION,
-        "cirrus:shaders/core/cirrus_cloud_mask.vsh", CIRRUS_POSITION,
+        CIRRUS_MASK_SHADER, CIRRUS_POSITION,
         "cirrus:shaders/core/cirrus_lightning_sky.vsh", CIRRUS_POSITION,
         "cirrus:shaders/core/cirrus_milky_way.vsh", CIRRUS_POSITION,
         "cirrus:shaders/core/cirrus_stars.vsh", "gl_Position = ProjMat * ModelViewMat * vec4(expandedPosition, 1.0);"
@@ -454,16 +455,19 @@ public final class SkyFarPlane {
             return source;
         }
         PATCHED.add(id);
+        boolean mask = CIRRUS_MASK_SHADER.equals(id);
         //? if >= 26.3 {
         return source.replace(position, position
-            + "\n#ifdef RENDERPEARL_DEPTH_IS_ZERO_TO_ONE" + depth("1e-6 * gl_Position.w", "0.0")
-            + "\n#else" + depth("(2e-6 - 1.0) * gl_Position.w", "-gl_Position.w")
+            + "\n#ifdef RENDERPEARL_DEPTH_IS_ZERO_TO_ONE" + depth(mask ? "5e-7 * gl_Position.w" : "1e-6 * gl_Position.w", "0.0")
+            + "\n#else" + depth(mask ? "(1e-6 - 1.0) * gl_Position.w" : "(2e-6 - 1.0) * gl_Position.w", "-gl_Position.w")
             + "\n#endif");
         //?} else if >= 26.2 {
         /*boolean zeroToOne = RenderSystem.getDevice().getDeviceInfo().isZZeroToOne();
-        return source.replace(position, position + (zeroToOne ? depth("1e-6 * gl_Position.w", "0.0") : depth("(2e-6 - 1.0) * gl_Position.w", "-gl_Position.w")));
+        return source.replace(position, position + (zeroToOne
+            ? depth(mask ? "5e-7 * gl_Position.w" : "1e-6 * gl_Position.w", "0.0")
+            : depth(mask ? "(1e-6 - 1.0) * gl_Position.w" : "(2e-6 - 1.0) * gl_Position.w", "-gl_Position.w")));
         *///?} else {
-        /*return source.replace(position, position + depth("(1.0 - 2e-6) * gl_Position.w", "gl_Position.w"));
+        /*return source.replace(position, position + depth(mask ? "(1.0 - 1e-6) * gl_Position.w" : "(1.0 - 2e-6) * gl_Position.w", "gl_Position.w"));
         *///?}
     }
 
