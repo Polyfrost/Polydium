@@ -18,11 +18,16 @@ import net.minecraft.world.level.chunk.PalettedContainer;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
+import org.polyfrost.polydium.mixin.client.perf.EntityCollideShapesInvoker;
+
 import java.lang.invoke.VarHandle;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class ParticleAirCollision {
     private static final double EPSILON = 1.0E-7;
@@ -33,9 +38,9 @@ public final class ParticleAirCollision {
     private ParticleAirCollision() {
     }
 
-    public static boolean cannotCollide(Level level, CollisionContext context, AABB box, Vec3 movement, Memo memo) {
+    public static Vec3 collide(Level level, CollisionContext context, AABB box, Vec3 movement, Memo memo) {
         if (level.isDebug())
-            return false;
+            return null;
         double dx = movement.x, dy = movement.y, dz = movement.z;
         int minX = Mth.floor(box.minX + Math.min(dx, 0.0) - EPSILON) - 1;
         int maxX = Mth.floor(box.maxX + Math.max(dx, 0.0) + EPSILON) + 1;
@@ -45,13 +50,15 @@ public final class ParticleAirCollision {
         int maxZ = Mth.floor(box.maxZ + Math.max(dz, 0.0) + EPSILON) + 1;
         ClientChunkCache clientChunks = level instanceof ClientLevel clientLevel ? clientLevel.getChunkSource() : null;
         if (memo != null && memo.matches(minX, minY, minZ, maxX, maxY, maxZ))
-            return true;
+            return movement;
         LevelChunkSection only = null;
         PalettedContainer<BlockState> onlyStates = null;
         int onlyVersion = 0;
         boolean memoizable = memo != null && clientChunks != null;
         BlockPos.MutableBlockPos pos = null;
         AABB swept = null;
+        VoxelShape sweptShape = null;
+        List<VoxelShape> shapes = null;
 
         int maxChunkX = SectionPos.blockToSectionCoord(maxX);
         int maxChunkZ = SectionPos.blockToSectionCoord(maxZ);
@@ -63,7 +70,7 @@ public final class ParticleAirCollision {
                     continue;
                 }
                 if (!(getter instanceof ChunkAccess chunk))
-                    return false;
+                    return null;
 
                 int fromX = Math.max(minX, chunkX << 4), toX = Math.min(maxX, (chunkX << 4) + 15);
                 int fromZ = Math.max(minZ, chunkZ << 4), toZ = Math.min(maxZ, (chunkZ << 4) + 15);
@@ -112,17 +119,30 @@ public final class ParticleAirCollision {
                                 //?} else {
                                 /*VoxelShape shape = state.getCollisionShape(level, pos, context);
                                 *///?}
-                                if (mayCollide(shape, swept, x, y, z))
-                                    return false;
+                                if (!mayCollide(shape, swept, x, y, z))
+                                    continue;
+                                boolean full = shape == Shapes.block();
+                                shape = shape.move(x, y, z);
+                                if (!full) {
+                                    if (sweptShape == null)
+                                        sweptShape = Shapes.create(swept);
+                                    if (!Shapes.joinIsNotEmpty(shape, sweptShape, BooleanOp.AND))
+                                        continue;
+                                }
+                                if (shapes == null)
+                                    shapes = new ArrayList<>(4);
+                                shapes.add(shape);
                             }
                         }
                     }
                 }
             }
         }
+        if (shapes != null)
+            return EntityCollideShapesInvoker.polydium$collideWithShapes(movement, box, shapes);
         if (memoizable && only != null && pos == null && onlyVersion >= 0)
             memo.remember(only, onlyStates, onlyVersion, minX, minY, minZ, maxX, maxY, maxZ);
-        return true;
+        return movement;
     }
 
     private static BlockGetter chunkAt(Level level, ClientChunkCache clientChunks, int chunkX, int chunkZ) {

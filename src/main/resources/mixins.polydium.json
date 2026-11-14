@@ -101,6 +101,8 @@
     //? if >= 1.21.1
     "client.perf.MixinParticleAirCollision",
     //? if >= 1.21.1
+    "client.perf.EntityCollideShapesInvoker",
+    //? if >= 1.21.1
     "client.perf.MixinParticleCollisionReach",
     //? if >= 1.21.1
     "client.perf.MixinParticleCollisionReachSection",

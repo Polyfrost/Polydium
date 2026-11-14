@@ -38,14 +38,15 @@ public abstract class MixinParticleAirCollision {
         ParticleAirCollision.Memo memo = this.polydium$airMemo;
         if (memo == null)
             this.polydium$airMemo = memo = new ParticleAirCollision.Memo();
+        Vec3 resolved;
         if (colliders.isEmpty()
             //? if >= 26.2 {
-            && ParticleAirCollision.cannotCollide(level, context, box, movement, memo)
+            && (resolved = ParticleAirCollision.collide(level, context, box, movement, memo)) != null
             //?} else {
-            /*&& context == null && ParticleAirCollision.cannotCollide(level, CollisionContext.empty(), box, movement, memo)
+            /*&& context == null && (resolved = ParticleAirCollision.collide(level, CollisionContext.empty(), box, movement, memo)) != null
             *///?}
         ) {
-            return movement;
+            return resolved;
         }
         return original.call(context, movement, box, level, colliders);
     }
