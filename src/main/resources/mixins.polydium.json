@@ -232,6 +232,11 @@
     //? if >= 26.3
     "client.perf.iris.MixinIrisRenderingPipeline",
     "client.perf.iris.MixinIrisTimeUniforms",
+    //? if >= 1.21.11 && < 26.2 {
+    /*"client.perf.iris.BufferSourceAccessor",
+    "client.perf.iris.MixinIrisShadowOutlineDrop",
+    "client.perf.iris.OutlineBufferSourceAccessor",
+    *///?}
     "client.perf.iris.MixinLevelRenderer",
     //? if >= 1.21.4
     "client.perf.iris.MixinSkyRenderer",

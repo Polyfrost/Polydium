@@ -251,6 +251,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("ParticleLightBatch", new String[]{"ParticleLightDrain", "ParticleLightSourceInvoker", "ParticleLevelAccessor"}),
             Map.entry("ParticleCoreAsyncThreshold", new String[]{"ParticleSoundClientThread"}),
             Map.entry("PreparedFrameRecover", new String[]{"PreparedFrameAccessor", "StagedVertexBufferAccessor"}),
+            Map.entry("IrisShadowOutlineDrop", new String[]{"BufferSourceAccessor", "OutlineBufferSourceAccessor"}),
             //? if < 1.21.10 {
             /*Map.entry("OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency", "OpaqueParticleRenderOrder"}),
             *///?} else {
