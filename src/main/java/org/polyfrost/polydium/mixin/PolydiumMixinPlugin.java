@@ -443,6 +443,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".MixinLeafCullScratchPos") && !Mods.loaded("cull-fewer-leaves"))
             return false;
 
+        if (mixinClassName.contains(".lambdabettergrass.") && !Mods.loaded("lambdabettergrass"))
+            return false;
+
         if (mixinClassName.endsWith(".MixinExpandedCylindricalGate") && !Mods.loaded("sodium-extra"))
             return false;
 
