@@ -131,6 +131,8 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("VulkanDescriptorWrite", new String[]{"vitrail"})
     );
 
+    private static final boolean GPU_PROFILER = Boolean.getBoolean("polydium.gpuProfiler");
+
     private static final String[] OPT_IN = {"UnfocusedFullscreenThrottle"};
 
     private static boolean sodiumVulkanWarned;
@@ -389,6 +391,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (!GPU_PROFILER && (mixinClassName.contains(".gpuprofile.") || mixinClassName.contains("MixinGpuProfile")))
+            return false;
+
         if (isDisabled(mixinClassName))
             return false;
 

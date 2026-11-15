@@ -12,6 +12,7 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.KHRSwapchain;
 import org.lwjgl.vulkan.VkPresentInfoKHR;
 import org.lwjgl.vulkan.VkQueue;
+import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
 
 import java.lang.management.ManagementFactory;
@@ -104,7 +105,7 @@ public final class PresentThread {
 
         drain();
 
-        handedFrame = GpuProfiler.presentHandedOff();
+        handedFrame = GpuProfileFlag.ENABLED ? GpuProfiler.presentHandedOff() : -1L;
 
         if (!FramePath.frameUsesWorker()) {
             long wallStart = System.nanoTime();
@@ -149,10 +150,11 @@ public final class PresentThread {
             presentInfo.pSwapchains(stack.longs(swapchain));
             presentInfo.pImageIndices(stack.ints(imageIndex));
 
-            long start  = GpuProfiler.presentStart();
+            long start  = GpuProfileFlag.ENABLED ? GpuProfiler.presentStart() : 0L;
             int  result = KHRSwapchain.vkQueuePresentKHR(queue, presentInfo);
 
-            GpuProfiler.presentWait(start, true, handedFrame);
+            if (GpuProfileFlag.ENABLED)
+                GpuProfiler.presentWait(start, true, handedFrame);
 
             return result;
         }

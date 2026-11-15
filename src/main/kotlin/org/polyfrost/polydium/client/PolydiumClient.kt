@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import org.polyfrost.polydium.client.perf.IrisOverrideSweep
 import org.polyfrost.polydium.client.perf.PerfClock
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileCommand
+import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag
 //? if >= 1.21.11 && < 26.2
 /*import org.polyfrost.polydium.vulkan.IrisVulkan*/
 
@@ -19,7 +20,7 @@ class PolydiumClient : ClientModInitializer {
         }
 
         PolydiumConfig.preload()
-        GpuProfileCommand.register()
+        if (GpuProfileFlag.ENABLED) GpuProfileCommand.register()
         //? if >= 1.21.11 && < 26.2
         /*IrisVulkan.init()*/
     }

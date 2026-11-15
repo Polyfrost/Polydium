@@ -2,6 +2,7 @@ package org.polyfrost.polydium.vulkan;
 
 import java.util.function.Supplier;
 import org.polyfrost.polydium.client.PolydiumToggles;
+import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
@@ -365,7 +366,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
 
       vkRenderArea.extent().set(descriptor.renderArea.width(), descriptor.renderArea.height());
       vkRenderArea.offset().set(descriptor.renderArea.x(), descriptor.renderArea.y());
-      boolean profiled = GpuProfiler.recording;
+      boolean profiled = GpuProfileFlag.ENABLED && GpuProfiler.recording;
       if (profiled) {
         GpuProfiler.pass(descriptor.label());
         GpuProfiler.beginPass(this.commandBuffer());

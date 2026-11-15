@@ -1,6 +1,7 @@
 package org.polyfrost.polydium.vulkan;
 
 import org.polyfrost.polydium.client.perf.ImmediateDrawRing;
+import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
 import org.polyfrost.polydium.client.perf.VulkanDynamicState;
 import org.polyfrost.polydium.vulkan.compat.RenderArea;
@@ -85,7 +86,7 @@ public class VulkanRenderPass implements RenderPassBackend {
     this.outputHeight = outputHeight;
     this.hasDepth = hasDepth;
     this.label = label;
-    if (GpuProfiler.recording)
+    if (GpuProfileFlag.ENABLED && GpuProfiler.recording)
       GpuProfiler.pass(label);
     MemoryStack stack = MemoryStack.stackPush();
 
@@ -146,7 +147,7 @@ public class VulkanRenderPass implements RenderPassBackend {
       if (this.pipeline != previous) {
         this.anyDescriptorDirty = true;
       }
-      if (GpuProfiler.recording)
+      if (GpuProfileFlag.ENABLED && GpuProfiler.recording)
         GpuProfiler.pipeline(pipeline, p -> p.getLocation().toString());
       VK12.vkCmdBindPipeline(this.commandBuffer(), 0, this.hasDepth ? this.pipeline.withDepthPipeline() : this.pipeline.withoutDepthPipeline());
     }
@@ -272,7 +273,7 @@ public class VulkanRenderPass implements RenderPassBackend {
   public void drawIndexed(final int indexCount, final int instanceCount, final int firstIndex, final int vertexOffset, final int firstInstance) {
     if (this.pipeline != null && this.pipeline.isValid()) {
       this.pushDescriptors();
-      boolean profiled = GpuProfiler.recording;
+      boolean profiled = GpuProfileFlag.ENABLED && GpuProfiler.recording;
       if (profiled)
         GpuProfiler.beginDraw(this.commandBuffer, 1);
       VK12.vkCmdDrawIndexed(this.commandBuffer(), indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
@@ -286,7 +287,7 @@ public class VulkanRenderPass implements RenderPassBackend {
   public void multiDrawIndexed(final IntBuffer drawParameters, final int instanceCount, final int firstInstance, final int drawCount) {
     if (this.pipeline != null && this.pipeline.isValid()) {
       this.pushDescriptors();
-      boolean profiled = GpuProfiler.recording;
+      boolean profiled = GpuProfileFlag.ENABLED && GpuProfiler.recording;
       if (profiled)
         GpuProfiler.beginDraw(this.commandBuffer, drawCount);
       EXTMultiDraw.nvkCmdDrawMultiIndexedEXT(
@@ -310,7 +311,7 @@ public class VulkanRenderPass implements RenderPassBackend {
   public void drawIndexedIndirect(final GpuBufferSlice commands, final int drawCount) {
     if (this.pipeline != null && this.pipeline.isValid()) {
       this.pushDescriptors();
-      boolean profiled = GpuProfiler.recording;
+      boolean profiled = GpuProfileFlag.ENABLED && GpuProfiler.recording;
       if (profiled)
         GpuProfiler.beginDraw(this.commandBuffer, drawCount);
       VK12.vkCmdDrawIndexedIndirect(
@@ -331,7 +332,7 @@ public class VulkanRenderPass implements RenderPassBackend {
     final Collection<String> dynamicUniforms,
     final T uniformArgument
   ) {
-    boolean profiled = GpuProfiler.recording;
+    boolean profiled = GpuProfileFlag.ENABLED && GpuProfiler.recording;
     if (profiled)
       GpuProfiler.beginDraw(this.commandBuffer, draws.size());
     multiDrawing = this;
@@ -387,7 +388,7 @@ public class VulkanRenderPass implements RenderPassBackend {
   public void draw(final int vertexCount, final int instanceCount, final int firstVertex, final int firstInstance) {
     if (this.pipeline != null && this.pipeline.isValid()) {
       this.pushDescriptors();
-      boolean profiled = GpuProfiler.recording;
+      boolean profiled = GpuProfileFlag.ENABLED && GpuProfiler.recording;
       if (profiled)
         GpuProfiler.beginDraw(this.commandBuffer, 1);
       VK12.vkCmdDraw(this.commandBuffer(), vertexCount, instanceCount, firstVertex, firstInstance);
@@ -399,7 +400,7 @@ public class VulkanRenderPass implements RenderPassBackend {
   public void multiDraw(final IntBuffer drawParameters, final int instanceCount, final int firstInstance, final int drawCount) {
     if (this.pipeline != null && this.pipeline.isValid()) {
       this.pushDescriptors();
-      boolean profiled = GpuProfiler.recording;
+      boolean profiled = GpuProfileFlag.ENABLED && GpuProfiler.recording;
       if (profiled)
         GpuProfiler.beginDraw(this.commandBuffer, drawCount);
       EXTMultiDraw.nvkCmdDrawMultiEXT(
@@ -419,7 +420,7 @@ public class VulkanRenderPass implements RenderPassBackend {
   public void drawIndirect(final GpuBufferSlice commands, final int drawCount) {
     if (this.pipeline != null && this.pipeline.isValid()) {
       this.pushDescriptors();
-      boolean profiled = GpuProfiler.recording;
+      boolean profiled = GpuProfileFlag.ENABLED && GpuProfiler.recording;
       if (profiled)
         GpuProfiler.beginDraw(this.commandBuffer, drawCount);
       VK12.vkCmdDrawIndirect(this.commandBuffer(), ((VulkanGpuBuffer)commands.buffer()).vkBuffer(), commands.offset(), drawCount, VkDrawIndirectCommand.SIZEOF);
