@@ -46,6 +46,11 @@ class EarlyVulkanTest {
         Files.deleteIfExists(configManagerOptions)
         gameDir.resolve("config/defaultoptions").toFile().deleteRecursively()
         System.clearProperty("polydium.disable")
+        gameDir.resolve("crash-reports").toFile().deleteRecursively()
+        Files.deleteIfExists(gameDir.resolve("logs/2026-11-12-2.log.gz"))
+        Files.deleteIfExists(gameDir.resolve("logs/2026-11-12-3.log.gz"))
+        Files.deleteIfExists(irisConfig)
+        Files.deleteIfExists(gameDir.resolve("logs/debug-2026-11-12-1.log.gz"))
         EarlyVulkan::class.java.getDeclaredField("vulkanAtStartup").apply { isAccessible = true }.set(null, null)
         //? if >= 26.2 {
         EarlyVulkan::class.java.getDeclaredField("irisLoaded").apply { isAccessible = true }.set(null, false)
@@ -384,6 +389,239 @@ class EarlyVulkanTest {
         Files.setLastModifiedTime(marker, FileTime.from(Instant.now().minus(Duration.ofMinutes(1))))
 
         EarlyVulkan.retrySodiumBlockedFailure()
+
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    private val inputCrash = listOf(
+        "Description: Initializing game",
+        "",
+        "java.lang.RuntimeException: Exception while invoking method 'overlay'.",
+        "\tat knot//com.hamarb123.macos_input_fixes.client.ModernFabricReflectionHelper\$MethodImpl.invoke(ModernFabricReflectionHelper.java:454)",
+        "\tat knot//net.minecraft.client.Minecraft.scrollCallback(MinecraftMixin.java:109)",
+        "\tat knot//org.lwjgl.system.JNI.invokeV(JNI.java:1722)",
+        "\tat knot//org.lwjgl.sdl.SDLEvents.SDL_PumpEvents(SDLEvents.java:194)",
+        "\tat knot//com.mojang.blaze3d.platform.SDLEventHandler.flushInputEvents(SDLEventHandler.java:62)",
+        "\tat knot//net.minecraft.client.Minecraft.<init>(Minecraft.java:578)",
+        "Caused by: java.lang.NullPointerException",
+        "\tat java.base/java.lang.invoke.MethodHandle.invokeWithArguments(MethodHandle.java:735)",
+        "\t... 10 more",
+        "",
+        "A detailed walkthrough of the error, its code path and all known details is as follows:",
+        "\tat knot//com.mojang.blaze3d.vulkan.VulkanDevice.submit(VulkanDevice.java:1)",
+    )
+
+    private val vulkanCrash = listOf(
+        "Description: Initializing game",
+        "",
+        "java.lang.IllegalStateException: vkCreateDevice failed",
+        "\tat knot//com.mojang.renderpearl.backend.vulkan.VulkanBackend.createDevice(VulkanBackend.java:80)",
+        "\tat knot//net.minecraft.client.Minecraft.<init>(Minecraft.java:500)",
+        "",
+        "A detailed walkthrough of the error, its code path and all known details is as follows:",
+    )
+
+    @Test
+    fun crashesInsideTheEventPumpAreNotRenderCrashes() {
+        assertFalse(EarlyVulkan.renderCrashReport(inputCrash))
+        assertTrue(EarlyVulkan.renderCrashReport(vulkanCrash))
+        assertFalse(EarlyVulkan.renderCrashReport(listOf(
+            "\tat net.minecraft.client.MouseHandler.onScroll(MouseHandler.java:1)",
+            "\tat org.lwjgl.glfw.GLFWScrollCallbackI.callback(GLFWScrollCallbackI.java:1)",
+            "\tat org.lwjgl.glfw.GLFW.glfwPollEvents(GLFW.java:1)",
+            "\tat com.mojang.blaze3d.systems.RenderSystem.pollEvents(RenderSystem.java:1)",
+        )))
+
+        assertTrue(EarlyVulkan.renderCrashReport(listOf(
+            "\tat com.mojang.blaze3d.platform.Window.defaultErrorCallback(Window.java:1)",
+            "\tat org.lwjgl.glfw.GLFWErrorCallbackI.callback(GLFWErrorCallbackI.java:1)",
+            "\tat org.lwjgl.glfw.GLFW.glfwCreateWindow(GLFW.java:1)",
+        )))
+
+        val pump = StackTraceElement("org.lwjgl.sdl.SDLEvents", "SDL_PumpEvents", null, 0)
+        val handler = StackTraceElement("com.mojang.blaze3d.platform.SDLEventHandler", "flushInputEvents", null, 0)
+        val backend = StackTraceElement("com.mojang.renderpearl.backend.vulkan.VulkanBackend", "createDevice", null, 0)
+        assertFalse(EarlyVulkan.renderCrash(RuntimeException().apply { stackTrace = arrayOf(pump, handler) }))
+        assertTrue(EarlyVulkan.renderCrash(RuntimeException().apply { stackTrace = arrayOf(backend, pump) }))
+    }
+
+    private fun failAfterCrash(report: List<String>): Path {
+        legacyFailure()
+        val file = gameDir.resolve("crash-reports/crash-2026-11-12_13.14.30-client.txt")
+        Files.createDirectories(file.parent)
+        Files.write(file, report)
+        Files.setLastModifiedTime(file, beforeLaunch(Duration.ofMinutes(4)))
+        rotatedLog("2026-11-12-2.log.gz", beforeLaunch(Duration.ofSeconds(40)))
+        Files.setLastModifiedTime(marker, beforeLaunch(Duration.ofSeconds(30)))
+        return file
+    }
+
+    private val launchedAt = ProcessHandle.current().info().startInstant().get()
+
+    private fun beforeLaunch(by: Duration) = FileTime.from(launchedAt.minus(by))
+
+    private fun rotatedLog(name: String, at: FileTime) {
+        val log = gameDir.resolve("logs/$name")
+        Files.createDirectories(log.parent)
+        Files.writeString(log, "")
+        Files.setLastModifiedTime(log, at)
+    }
+
+    @Test
+    fun reportFromAnEarlierLaunchKeepsFailure() {
+        failAfterCrash(inputCrash)
+        rotatedLog("2026-11-12-3.log.gz", beforeLaunch(Duration.ofMinutes(2)))
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun debugLogRotationIsNotAnotherLaunch() {
+        failAfterCrash(inputCrash)
+        rotatedLog("debug-2026-11-12-1.log.gz", beforeLaunch(Duration.ofSeconds(35)))
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.switchPending())
+    }
+
+    @Test
+    fun brokenFileInCrashDirDoesNotStopRecheck() {
+        assumeFalse(System.getProperty("os.name").startsWith("Windows"))
+        failAfterCrash(inputCrash)
+        Files.createSymbolicLink(gameDir.resolve("crash-reports/crash-dangling-client.txt"), gameDir.resolve("missing"))
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.switchPending())
+    }
+
+    @Test
+    fun leftoverIrisConfigWithoutIrisDoesNotBlockRecheck() {
+        failAfterCrash(inputCrash)
+        Files.createDirectories(irisConfig.parent)
+        Files.writeString(irisConfig, "enableShaders=true\nshaderPack=BSL.zip\n")
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.switchPending())
+    }
+
+    @Test
+    fun nonRenderStartupCrashRetriesVulkanOnce() {
+        failAfterCrash(inputCrash)
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.switchPending())
+
+        EarlyVulkan.markFailed("test")
+        EarlyVulkan.setGraphicsApi("default")
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    private fun crashAfterUncleanStart(report: List<String>) {
+        EarlyVulkan.setGraphicsApi("vulkan")
+        Files.write(options, listOf("version:${EarlyVulkan.BACKEND_FIX_VERSION}", "preferredGraphicsBackend:\"vulkan\"", "startedCleanly:false"))
+        Files.setLastModifiedTime(options, FileTime.from(Instant.now().minus(Duration.ofMinutes(1))))
+        val file = gameDir.resolve("crash-reports/crash-2026-11-12_13.14.30-client.txt")
+        Files.createDirectories(file.parent)
+        Files.write(file, report)
+    }
+
+    @Test
+    fun nonRenderCrashFromOlderBuildIsNotAFailedStart() {
+        crashAfterUncleanStart(inputCrash)
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.vulkanAtStartup())
+        assertFalse(EarlyVulkan.failed())
+        assertTrue(Files.readAllLines(options).contains("startedCleanly:true"))
+    }
+
+    @Test
+    fun truncatedReportIsAFailedStart() {
+        crashAfterUncleanStart(listOf("Description: Initializing game", "", "java.lang.NullPointerException"))
+
+        EarlyVulkan()
+
+        assertFalse(EarlyVulkan.vulkanAtStartup())
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun logCompressedAfterFailureStillCountsAsOneLaunch() {
+        failAfterCrash(inputCrash)
+        rotatedLog("2026-11-12-2.log.gz", beforeLaunch(Duration.ofSeconds(10)))
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.switchPending())
+    }
+
+    @Test
+    fun thisLaunchsLogRotationIsNotAnotherLaunch() {
+        failAfterCrash(inputCrash)
+        rotatedLog("2026-11-12-3.log.gz", FileTime.from(launchedAt.plusSeconds(1)))
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.switchPending())
+    }
+
+    @Test
+    fun renderCrashFromOlderBuildIsAFailedStart() {
+        crashAfterUncleanStart(vulkanCrash)
+
+        EarlyVulkan()
+
+        assertFalse(EarlyVulkan.vulkanAtStartup())
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun failureRecordedByThisBuildIsNotRechecked() {
+        failAfterCrash(inputCrash)
+        EarlyVulkan.markFailed("automatic Vulkan switch failed, started on OpenGL")
+        EarlyVulkan.setGraphicsApi("default")
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun renderStartupCrashKeepsFailure() {
+        failAfterCrash(vulkanCrash)
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun nativeCrashAfterReportKeepsFailure() {
+        val report = failAfterCrash(inputCrash)
+        val nativeCrash = report.resolveSibling("hs_err_pid1.log")
+        Files.writeString(nativeCrash, "")
+        Files.setLastModifiedTime(nativeCrash, beforeLaunch(Duration.ofMinutes(2)))
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun crashAfterFailureIsNotRechecked() {
+        val report = failAfterCrash(inputCrash)
+        Files.setLastModifiedTime(report, FileTime.from(Instant.now().plus(Duration.ofMinutes(1))))
+
+        EarlyVulkan()
 
         assertTrue(EarlyVulkan.failed())
     }

@@ -13,9 +13,13 @@ import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class EarlyVulkan implements LanguageAdapter {
@@ -34,6 +38,10 @@ public final class EarlyVulkan implements LanguageAdapter {
 
     private static final Pattern DISCRETE_RADEON = Pattern.compile("radeont? rx(?! ?vega)|radeont? rx vega( 56| 64|$)"
             + "|radeon vii|vega frontier|radeon (ai )?pro (wx? ?\\d{4}|r\\d{4})");
+
+    private static final Pattern LAUNCH_LOG = Pattern.compile("\\d{4}-\\d{2}-\\d{2}-\\d+\\.log\\.gz");
+
+    private static final Pattern STACK_FRAME = Pattern.compile("^\\s+at (?:\\S*//)?([\\w.$]+)\\.([\\w$<>]+)\\(");
 
     private static Boolean vulkanAtStartup;
 
@@ -71,8 +79,8 @@ public final class EarlyVulkan implements LanguageAdapter {
     // "vulkan-failed" = a Vulkan start failed and the backend was reset, not retried until the user picks Vulkan
     // "failed" = the same, written by builds that counted Sodium blocking Vulkan as a failure
     // "done" = checked, but vanilla's backend datafix may have reset it, so 26.2+ retries once
-    // "sodium" = a failure that may have been Sodium blocking Vulkan, decided again once like a fresh install
-    // unless the user picks a backend first
+    // "sodium" = a failure that may have been Sodium blocking Vulkan or a crash outside rendering, decided again
+    // once like a fresh install unless the user picks a backend first
     public static boolean switched() {
         String state = markerState();
         return state != null && !state.equals("no");
@@ -104,8 +112,13 @@ public final class EarlyVulkan implements LanguageAdapter {
             Files.createDirectories(marker().getParent());
             Files.writeString(marker(), "vulkan-failed");
             Files.writeString(marker().resolveSibling("iris-retry"), "");
+            Files.writeString(crashRecheckFile(), "");
         } catch (IOException ignored) {
         }
+    }
+
+    private static Path crashRecheckFile() {
+        return marker().resolveSibling("crash-recheck");
     }
 
     private static Path sodiumRetryFile() {
@@ -187,11 +200,42 @@ public final class EarlyVulkan implements LanguageAdapter {
     public static boolean renderCrash(Throwable t) {
         for (int depth = 0; t != null && depth < 32; t = t.getCause(), depth++)
             for (StackTraceElement frame : t.getStackTrace()) {
-                String cls = frame.getClassName().toLowerCase(Locale.ROOT);
-                if (cls.contains("vulkan") || cls.contains("blaze3d") || cls.contains("renderpearl"))
+                if (eventPump(frame.getClassName(), frame.getMethodName()))
+                    break;
+                if (renderFrame(frame.getClassName()))
                     return true;
             }
         return false;
+    }
+
+    public static boolean renderCrashReport(List<String> report) {
+        boolean belowPump = false;
+        for (String line : report) {
+            if (line.startsWith("A detailed walkthrough"))
+                break;
+            if (line.startsWith("Caused by:")) {
+                belowPump = false;
+                continue;
+            }
+            Matcher frame = STACK_FRAME.matcher(line);
+            if (belowPump || !frame.find())
+                continue;
+            if (eventPump(frame.group(1), frame.group(2)))
+                belowPump = true;
+            else if (renderFrame(frame.group(1)))
+                return true;
+        }
+        return false;
+    }
+
+    private static boolean renderFrame(String className) {
+        String cls = className.toLowerCase(Locale.ROOT);
+        return cls.contains("vulkan") || cls.contains("blaze3d") || cls.contains("renderpearl");
+    }
+
+    private static boolean eventPump(String className, String method) {
+        return className.startsWith("org.lwjgl.sdl.SDLEvents")
+                || className.equals("org.lwjgl.glfw.GLFW") && method.contains("Events");
     }
 
     public static void markStartClean() {
@@ -297,6 +341,8 @@ public final class EarlyVulkan implements LanguageAdapter {
         if (mixinDisabled(MIXIN))
             return;
         carryPackGraphicsApi();
+        cleanNonRenderStartupCrash();
+        recheckStartupFailure();
 
         //? if >= 26.2 {
         boolean irisRetry = irisRetryDue();
@@ -423,17 +469,6 @@ public final class EarlyVulkan implements LanguageAdapter {
         return failed() && irisLoaded && !Files.exists(irisRetryFile()) && !irisShadersOn();
     }
 
-    private static boolean irisShadersOn() {
-        Properties iris = new Properties();
-        try (InputStream in = Files.newInputStream(FabricLoader.getInstance().getConfigDir().resolve("iris.properties"))) {
-            iris.load(in);
-        } catch (IOException e) {
-            return false;
-        }
-        String pack = iris.getProperty("shaderPack", "");
-        return !"false".equals(iris.getProperty("enableShaders")) && !pack.isEmpty() && !"(internal)".equals(pack);
-    }
-
     public static void removeCreatedOptions() {
         List<String> created = createdOptions;
         if (created == null)
@@ -456,6 +491,114 @@ public final class EarlyVulkan implements LanguageAdapter {
             return Boolean.parseBoolean(forced);
         boolean appleArm = System.getProperty("os.name", "").startsWith("Mac") && "aarch64".equals(System.getProperty("os.arch"));
         return appleArm ? Boolean.TRUE : discreteGpu();
+    }
+
+    private static boolean irisShadersOn() {
+        Properties iris = new Properties();
+        try (InputStream in = Files.newInputStream(FabricLoader.getInstance().getConfigDir().resolve("iris.properties"))) {
+            iris.load(in);
+        } catch (IOException e) {
+            return false;
+        }
+        String pack = iris.getProperty("shaderPack", "");
+        return !"false".equals(iris.getProperty("enableShaders")) && !pack.isEmpty() && !"(internal)".equals(pack);
+    }
+
+    private static void cleanNonRenderStartupCrash() throws IOException {
+        Path options = FabricLoader.getInstance().getGameDir().resolve("options.txt");
+        Instant startedAt = modified(options);
+        if (startedAt == null || !Files.readAllLines(options).contains("startedCleanly:false"))
+            return;
+        Path report = newestReport(startedAt, Instant.MAX);
+        if (report != null && nonRenderStartupCrash(report, Instant.MAX))
+            markStartClean();
+    }
+
+    private static void recheckStartupFailure() throws IOException {
+        Path done = crashRecheckFile();
+        boolean irisShaders = FabricLoader.getInstance().isModLoaded("iris") && irisShadersOn();
+        if (!failed() || !"default".equals(graphicsApi()) || Files.exists(done) || irisShaders)
+            return;
+        Files.writeString(done, "");
+        Instant failedAt = Files.getLastModifiedTime(marker()).toInstant();
+        Path report = newestReport(Instant.MIN, failedAt);
+        if (report == null)
+            return;
+        Instant from = modified(report);
+        Instant launchedAt = ProcessHandle.current().info().startInstant().orElse(Instant.MAX);
+        Instant rotatedBy = Collections.min(List.of(failedAt.plus(Duration.ofMinutes(1)), launchedAt));
+        long launches = files(logDirs(), "", ".log.gz").stream()
+                .filter(file -> LAUNCH_LOG.matcher(file.getFileName().toString()).matches())
+                .map(EarlyVulkan::modified)
+                .filter(at -> at != null && at.isAfter(from) && at.isBefore(rotatedBy)).count();
+        if (launches != 1 || !nonRenderStartupCrash(report, failedAt))
+            return;
+        LoggerFactory.getLogger("polydium/vulkan").info("Retrying Vulkan: {} was not a render crash", report.getFileName());
+        Files.writeString(marker(), "sodium");
+    }
+
+    private static Path newestReport(Instant after, Instant before) {
+        Path report = null;
+        Instant reportAt = after;
+        for (Path file : files(crashDirs(), "crash-", "-client.txt")) {
+            Instant at = modified(file);
+            if (at != null && at.isBefore(before) && at.isAfter(reportAt)) {
+                report = file;
+                reportAt = at;
+            }
+        }
+        return report;
+    }
+
+    private static boolean nonRenderStartupCrash(Path report, Instant until) throws IOException {
+        Instant reportAt = modified(report);
+        if (reportAt == null || files(crashDirs(), "hs_err_pid", ".log").stream().map(EarlyVulkan::modified)
+                .anyMatch(at -> at != null && at.isAfter(reportAt) && at.isBefore(until)))
+            return false;
+        List<String> lines = Files.readAllLines(report);
+        int walkthrough = lines.indexOf("A detailed walkthrough of the error, its code path and all known details is as follows:");
+        if (walkthrough < 0 || lines.subList(0, walkthrough).stream().noneMatch(line -> STACK_FRAME.matcher(line).find()))
+            return false;
+        boolean startup = lines.stream().anyMatch(line -> line.equals("Description: Initializing game") || line.contains("net.minecraft.client.Minecraft.<init>"));
+        return startup && !renderCrashReport(lines);
+    }
+
+    private static List<Path> files(Set<Path> dirs, String prefix, String suffix) {
+        List<Path> found = new ArrayList<>();
+        for (Path dir : dirs)
+            try (var files = Files.list(dir)) {
+                files.filter(file -> {
+                    String name = file.getFileName().toString();
+                    return name.startsWith(prefix) && name.endsWith(suffix);
+                }).forEach(found::add);
+            } catch (IOException | RuntimeException ignored) {
+            }
+        return found;
+    }
+
+    private static Instant modified(Path file) {
+        try {
+            return Files.getLastModifiedTime(file).toInstant();
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    private static Set<Path> logDirs() {
+        Set<Path> dirs = new LinkedHashSet<>();
+        for (Path root : List.of(FabricLoader.getInstance().getGameDir(), Path.of("")))
+            dirs.add(root.toAbsolutePath().normalize().resolve("logs"));
+        return dirs;
+    }
+
+    private static Set<Path> crashDirs() {
+        Set<Path> dirs = new LinkedHashSet<>();
+        for (Path root : List.of(FabricLoader.getInstance().getGameDir(), Path.of(""))) {
+            root = root.toAbsolutePath().normalize();
+            dirs.add(root.resolve("crash-reports"));
+            dirs.add(root);
+        }
+        return dirs;
     }
     //?}
 
