@@ -557,7 +557,48 @@ class EarlyVulkanTest {
     @Test
     fun logCompressedAfterFailureStillCountsAsOneLaunch() {
         failAfterCrash(inputCrash)
-        rotatedLog("2026-11-12-2.log.gz", beforeLaunch(Duration.ofSeconds(10)))
+        rotatedLog("2026-11-12-2.log.gz", beforeLaunch(Duration.ofSeconds(27)))
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.switchPending())
+    }
+
+    @Test
+    fun failureFromBuildWithOldRecheckFileIsNotRechecked() {
+        failAfterCrash(inputCrash)
+        val old = polydiumDir.resolve("crash-recheck")
+        Files.writeString(old, "")
+        Files.setLastModifiedTime(old, FileTime.from(Files.getLastModifiedTime(marker).toInstant().plusSeconds(2)))
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun failureMarksOldRecheckFileForDowngrades() {
+        EarlyVulkan.markFailed("test")
+
+        assertTrue(Files.exists(polydiumDir.resolve("crash-recheck")))
+    }
+
+    @Test
+    fun missedOldRecheckRunsAgain() {
+        failAfterCrash(inputCrash)
+        val old = polydiumDir.resolve("crash-recheck")
+        Files.writeString(old, "")
+        Files.setLastModifiedTime(old, beforeLaunch(Duration.ofSeconds(5)))
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.switchPending())
+    }
+
+    @Test
+    fun quickRelaunchAfterFailureIsNotAnotherLaunch() {
+        failAfterCrash(inputCrash)
+        rotatedLog("2026-11-12-3.log.gz", beforeLaunch(Duration.ofSeconds(20)))
 
         EarlyVulkan()
 

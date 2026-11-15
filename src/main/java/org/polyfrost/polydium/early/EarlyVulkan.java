@@ -113,12 +113,13 @@ public final class EarlyVulkan implements LanguageAdapter {
             Files.writeString(marker(), "vulkan-failed");
             Files.writeString(marker().resolveSibling("iris-retry"), "");
             Files.writeString(crashRecheckFile(), "");
+            Files.writeString(marker().resolveSibling("crash-recheck"), "");
         } catch (IOException ignored) {
         }
     }
 
     private static Path crashRecheckFile() {
-        return marker().resolveSibling("crash-recheck");
+        return marker().resolveSibling("crash-recheck-2");
     }
 
     private static Path sodiumRetryFile() {
@@ -521,12 +522,15 @@ public final class EarlyVulkan implements LanguageAdapter {
             return;
         Files.writeString(done, "");
         Instant failedAt = Files.getLastModifiedTime(marker()).toInstant();
+        Instant legacyRecheck = modified(marker().resolveSibling("crash-recheck"));
+        if (legacyRecheck != null && Duration.between(failedAt, legacyRecheck).abs().compareTo(Duration.ofSeconds(5)) < 0)
+            return;
         Path report = newestReport(Instant.MIN, failedAt);
         if (report == null)
             return;
         Instant from = modified(report);
         Instant launchedAt = ProcessHandle.current().info().startInstant().orElse(Instant.MAX);
-        Instant rotatedBy = Collections.min(List.of(failedAt.plus(Duration.ofMinutes(1)), launchedAt));
+        Instant rotatedBy = Collections.min(List.of(failedAt.plus(Duration.ofSeconds(5)), launchedAt));
         long launches = files(logDirs(), "", ".log.gz").stream()
                 .filter(file -> LAUNCH_LOG.matcher(file.getFileName().toString()).matches())
                 .map(EarlyVulkan::modified)
