@@ -37,6 +37,12 @@
     //? if >= 1.21.1
     "client.perf.MixinPaneCapCull",
     "client.perf.CameraNearPlaneAccessor",
+    "client.perf.MixinSectionAirCount",
+    "client.perf.MixinSpriteMipUpscale",
+    "client.perf.SpriteContentsAccessor",
+    "client.perf.MixinSpriteContentsUpscale",
+    //? if >= 1.21.11
+    "client.perf.MixinItemModelUpscale",
     //? if >= 1.21.8
     "client.perf.ItemBoundsLayerAccessor",
     //? if >= 1.21.10
@@ -798,6 +804,10 @@
     "client.perf.MixinBlockEntityLightCache",
     //? if >= 1.21.10
     "client.perf.MixinEntityCullingBlockEntityBox",
+    //? if >= 1.21.10
+    "client.perf.MixinEntityCullingPrefetch",
+    //? if >= 1.21.10
+    "client.perf.MixinEntityCullingPrefetchChunk",
     "client.perf.MixinBlockEntityLightCacheChunks",
     "client.perf.MixinBlockEntityLightCacheCombiner",
     "client.perf.MixinBlockEntityLightCacheHolder",
@@ -858,6 +868,7 @@
     "client.perf.wwaypoints.MixinClientDimensionUtils",
     "client.perf.wwaypoints.MixinHideWaypointCycle",
     "client.perf.punchy.MixinPunchyBlacklistCache",
+    "client.perf.tiertagger.MixinTierTaggerModeCache",
     "client.perf.gammautils.MixinGammaOptionGate",
     "client.perf.lambdynlights.MixinDynamicLightOptimisticRead",
     "client.perf.lambdynlights.MixinLightSourceSetRemove",
@@ -870,6 +881,7 @@
     "client.perf.scalablelux.MixinClientLightBudget",
     "client.perf.scalablelux.MixinClientLightBudgetTick",
     "client.perf.scalablelux.MixinChunkLoadDirtyOnce",
+    "client.perf.sodiumextra.MixinExpandedCylindricalGate",
     "client.perf.scalablelux.MixinLightNibbleView",
     "client.perf.sodium.MixinClonedLightView",
     "client.perf.particle_core.MixinParticleCoreFinalizeCycle",

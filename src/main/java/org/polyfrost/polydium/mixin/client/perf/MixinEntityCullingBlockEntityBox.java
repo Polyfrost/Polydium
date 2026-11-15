@@ -30,19 +30,17 @@ public abstract class MixinEntityCullingBlockEntityBox {
     public abstract <E extends BlockEntity, S extends BlockEntityRenderState> BlockEntityRenderer<E, S> getRenderer(E blockEntity);
 
     @Unique
-    private int polydium$rendererEpoch = 1;
-    @Unique
     private BlockEntity polydium$cullTarget;
 
     @Inject(method = "onResourceManagerReload", at = @At("RETURN"))
     private void polydium$invalidateCullBoxes(CallbackInfo ci) {
-        this.polydium$rendererEpoch++;
+        BlockEntityCullBox.RENDERER_EPOCH.incrementAndGet();
     }
 
     @TargetHandler(mixin = POLYDIUM$MIXIN, name = "tryExtractRenderState")
     @WrapOperation(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = "Ldev/tr7zw/entityculling/EntityCullingModBase;setupAABB(Lnet/minecraft/world/level/block/entity/BlockEntity;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/phys/AABB;"), require = 0, expect = 0)
     private AABB polydium$inline$cachedBox(@Coerce Object mod, BlockEntity blockEntity, BlockPos pos, Operation<AABB> original) {
-        AABB cached = ((BlockEntityCullBox) blockEntity).polydium$cullBox(this.polydium$rendererEpoch);
+        AABB cached = ((BlockEntityCullBox) blockEntity).polydium$cullBox(BlockEntityCullBox.RENDERER_EPOCH.get());
         this.polydium$cullTarget = cached == null ? blockEntity : null;
         return cached != null ? cached : original.call(mod, blockEntity, pos);
     }
@@ -60,9 +58,10 @@ public abstract class MixinEntityCullingBlockEntityBox {
         if (blockEntity != null) {
             this.polydium$cullTarget = null;
             BlockEntityCullBox holder = (BlockEntityCullBox) blockEntity;
-            if (holder.polydium$cullBoxEpoch() != this.polydium$rendererEpoch) {
+            int epoch = BlockEntityCullBox.RENDERER_EPOCH.get();
+            if (holder.polydium$cullBoxEpoch() != epoch) {
                 boolean fixed = BlockEntityCullBox.fixedBounds(this.getRenderer(blockEntity).getClass());
-                holder.polydium$setCullBox(fixed ? box : null, this.polydium$rendererEpoch);
+                holder.polydium$setCullBox(fixed ? box : null, epoch);
             }
         }
         return frustum.isVisible(box);
