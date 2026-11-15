@@ -3,7 +3,11 @@ package org.polyfrost.polydium.client.perf;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public interface BlockEntityCullBox {
+    AtomicInteger RENDERER_EPOCH = new AtomicInteger(1);
+
     ClassValue<Boolean> FIXED_BOUNDS = new ClassValue<>() {
         @Override
         protected Boolean computeValue(Class<?> renderer) {

@@ -252,10 +252,13 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("OcclusionCull", new String[]{"OcclusionRegion", "OcclusionListAccessor"}),
             Map.entry("ImmediateDrawRing", new String[]{"ImmediateDrawRingSeparate", "ImmediateDrawRingEmulated", "ImmediateDrawRingFrame", "ImmediateDrawRingClose"}),
             Map.entry("EntityCullingBlockEntityBox", new String[]{"MixinBlockEntityCullBox"}),
+            Map.entry("EntityCullingPrefetch", new String[]{"EntityCullingBlockEntityBox", "MixinBlockEntityCullBox", "EntityCullingPrefetchChunk"}),
             Map.entry("ParticleLightBatch", new String[]{"ParticleLightDrain", "ParticleLightSourceInvoker", "ParticleLevelAccessor"}),
             Map.entry("ParticleCoreAsyncThreshold", new String[]{"ParticleSoundClientThread"}),
             Map.entry("PreparedFrameRecover", new String[]{"PreparedFrameAccessor", "StagedVertexBufferAccessor"}),
             Map.entry("IrisShadowOutlineDrop", new String[]{"BufferSourceAccessor", "OutlineBufferSourceAccessor"}),
+            Map.entry("SpriteMipUpscale", new String[]{"SpriteContentsAccessor", "SpriteContentsUpscale"}),
+            Map.entry("ItemModelUpscale", new String[]{"SpriteContentsUpscale"}),
             //? if < 1.21.10 {
             /*Map.entry("OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency", "OpaqueParticleRenderOrder"}),
             *///?} else {
@@ -440,6 +443,12 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".MixinLeafCullScratchPos") && !Mods.loaded("cull-fewer-leaves"))
             return false;
 
+        if (mixinClassName.endsWith(".MixinExpandedCylindricalGate") && !Mods.loaded("sodium-extra"))
+            return false;
+
+        if (mixinClassName.endsWith(".MixinTierTaggerModeCache") && !Mods.loaded("tiertagger") && !Mods.loaded("tier-tagger"))
+            return false;
+
         if ((mixinClassName.endsWith(".MixinClientLightBudget") || mixinClassName.endsWith(".MixinClientLightBudgetTick") || mixinClassName.endsWith(".MixinChunkLoadDirtyOnce")) && !Mods.loaded("scalablelux"))
             return false;
 
@@ -468,7 +477,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".MixinReplayEntityTickets") && !Mods.loaded("flashback"))
             return false;
 
-        if ((mixinClassName.endsWith(".MixinEntityCullingBlockEntityBox") || mixinClassName.endsWith(".MixinBlockEntityCullBox")) && !Mods.loaded("entityculling"))
+        if ((mixinClassName.endsWith(".MixinEntityCullingBlockEntityBox") || mixinClassName.endsWith(".MixinBlockEntityCullBox") || mixinClassName.contains(".MixinEntityCullingPrefetch")) && !Mods.loaded("entityculling"))
             return false;
 
         if (mixinClassName.endsWith(".MixinBlockModelHookPrecheck") && !Mods.loaded("obe") && !Mods.loaded("overflowanimations"))
@@ -646,6 +655,13 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             for (MethodNode method : targetClass.methods)
                 if (method.name.endsWith("$postChunkLoadHook"))
                     chunkLoadDirtyOnce(targetClass, method);
+            return;
+        }
+
+        if (mixinClassName.endsWith(".MixinExpandedCylindricalGate")) {
+            for (MethodNode method : targetClass.methods)
+                if (method.name.equals("processQueue"))
+                    gateExpandedCylindricalTraversal(targetClass, method);
             return;
         }
 
@@ -1490,6 +1506,52 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
                 method.instructions.remove(flag);
                 return;
             }
+        }
+    }
+
+    public static void gateExpandedCylindricalTraversal(ClassNode owner, MethodNode method) {
+        String fog = "me/flashyreese/mods/sodiumextra/client/fog/FogDistanceHelper";
+        for (AbstractInsnNode insn : method.instructions.toArray()) {
+            if (!(insn instanceof MethodInsnNode handler) || !handler.owner.equals(owner.name) || !handler.name.endsWith("allowExpandedCylindricalVerticalTraversal")
+                    || !handler.desc.equals("(Lorg/spongepowered/asm/mixin/injection/invoke/arg/Args;)V"))
+                continue;
+            AbstractInsnNode pack = handler.getPrevious();
+            while (pack instanceof InsnNode || pack instanceof VarInsnNode)
+                pack = pack.getPrevious();
+            if (!(pack instanceof MethodInsnNode of) || of.getOpcode() != Opcodes.INVOKESTATIC || !of.name.equals("of"))
+                continue;
+            AbstractInsnNode next = handler.getNext();
+            while (next instanceof InsnNode || next instanceof MethodInsnNode call && call.owner.equals(of.owner))
+                next = next.getNext();
+            if (!(next instanceof MethodInsnNode neighbors) || !neighbors.name.equals("visitNeighbors")
+                    || !Arrays.equals(Type.getArgumentTypes(neighbors.desc), Type.getArgumentTypes(of.desc)))
+                continue;
+
+            LabelNode plain = new LabelNode();
+            InsnList gate = new InsnList();
+            if (handler.getOpcode() == Opcodes.INVOKESTATIC) {
+                Type[] params = Type.getArgumentTypes(method.desc);
+                if ((method.access & Opcodes.ACC_STATIC) == 0 || params.length < 3 || !params[2].equals(Type.FLOAT_TYPE))
+                    continue;
+                gate.add(new VarInsnNode(Opcodes.FLOAD, 2));
+                gate.add(new MethodInsnNode(Opcodes.INVOKESTATIC, fog, "isExpandedCylindricalCullDistance", "(F)Z", false));
+                gate.add(new JumpInsnNode(Opcodes.IFEQ, plain));
+            } else {
+                String[] distances = {"searchDistanceRegular", "searchDistanceLocal"};
+                if ((method.access & Opcodes.ACC_STATIC) != 0 || !Arrays.stream(distances).allMatch(name -> owner.fields.stream().anyMatch(field -> field.name.equals(name) && field.desc.equals("F"))))
+                    continue;
+                LabelNode run = new LabelNode();
+                for (String name : distances) {
+                    gate.add(new VarInsnNode(Opcodes.ALOAD, 0));
+                    gate.add(new FieldInsnNode(Opcodes.GETFIELD, owner.name, name, "F"));
+                    gate.add(new MethodInsnNode(Opcodes.INVOKESTATIC, fog, "isExpandedCylindricalCullDistance", "(F)Z", false));
+                    gate.add(new JumpInsnNode(Opcodes.IFNE, run));
+                }
+                gate.add(new JumpInsnNode(Opcodes.GOTO, plain));
+                gate.add(run);
+            }
+            method.instructions.insertBefore(of, gate);
+            method.instructions.insertBefore(neighbors, plain);
         }
     }
 
