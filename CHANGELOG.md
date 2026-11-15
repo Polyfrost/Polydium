@@ -1,2 +1,2 @@
-## 1.4.11
-- Fix Vulkan reverting after unrelated crash
+## 1.4.12
+- Mirror Argentum's FPS limit format
