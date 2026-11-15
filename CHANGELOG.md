@@ -1,12 +1,3 @@
-## 1.4.9
-- Improved particle performance with Particle Core: more vanilla particles now tick off the main thread on 1.21.10+
-- Improved particle collision performance on 1.21.1+
-- Improved Flashback replay performance by not loading chunks for entities far from the player on 26.1+
-- Fixed a crash on the first frame with Vulkan on 1.21.11 and 26.1.x when using an unsupported Sodium version; Polydium now stays on OpenGL and logs a warning
-- Fixed the Vulkan/OpenGL choice being reset when switching between game versions that share one game directory (e.g. OneClient)
-- Fixed the game breaking every frame with Vulkan after a mod left a render pass open, including during Flashback exports
-- Fixed hitboxes and block outlines turning into huge triangles with Vulkan on 1.21.11 on AMD GPUs
-- Fixed "PreparedFrame already in use" errors every frame after a crash-recovery mod caught a render error on 26.2+
-- Fixed a crash with Iris shaders when glowing entities are visible to the shadow pass on 1.21.11 and 26.1.x
-- Vulkan is now unavailable on 1.21.11 with CatLean installed, as it only supports OpenGL
-- Fixed a crash when another mod queried Iris' config on the Vulkan backend
+## 1.4.10
+- Improve FPS with Tier Tagger, Sodium Extra, and Entity Culling
+- Fix Vulkan not being able to find user's GPU sometimes
