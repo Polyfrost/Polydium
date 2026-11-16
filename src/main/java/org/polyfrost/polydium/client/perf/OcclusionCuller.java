@@ -809,7 +809,8 @@ public final class OcclusionCuller {
         Arrays.fill(target, Float.POSITIVE_INFINITY);
 
         for (int y = 0; y < HEIGHT; y ++) {
-            float ndcY = (y + 0.5F) / HEIGHT * 2.0F - 1.0F;
+            float ndcY     = (y + 0.5F) / HEIGHT * 2.0F - 1.0F;
+            float rowScale = inverseY * ndcY + inverseW;
 
             for (int x = 0; x < WIDTH; x ++) {
                 int   index = y * WIDTH + x;
@@ -822,25 +823,38 @@ public final class OcclusionCuller {
                 }
 
                 float ndcX  = (x + 0.5F) / WIDTH * 2.0F - 1.0F;
-                float scale = inverseX * ndcX + inverseY * ndcY + inverseZ * depth + inverseW;
+                float scale = inverseX * ndcX + inverseZ * depth + rowScale;
 
                 if (scale <= 0.0F)
                     continue;
 
-                float w     = 1.0F / scale;
-                float clipW = w - shiftW;
+                // Equals clipW * scale, so a single reciprocal projects x, y and depth.
+                float clipScale = 1.0F - shiftW * scale;
 
-                if (clipW <= NEAR)
+                if (clipScale <= NEAR * scale)
                     continue;
 
-                float inverseClipW = 1.0F / clipW;
-                float screenX      = ((ndcX * w - shiftX) * inverseClipW * 0.5F + 0.5F) * WIDTH;
-                float screenY      = ((ndcY * w - shiftY) * inverseClipW * 0.5F + 0.5F) * HEIGHT;
-                float moved        = (depth * w - shiftZ) * inverseClipW;
-                int   minX         = Math.max((int) Math.floor(screenX - 0.5F), 0);
-                int   minY         = Math.max((int) Math.floor(screenY - 0.5F), 0);
-                int   maxX         = Math.min((int) Math.ceil(screenX + 0.5F) - 1, WIDTH - 1);
-                int   maxY         = Math.min((int) Math.ceil(screenY + 0.5F) - 1, HEIGHT - 1);
+                float inverseClip = 1.0F / clipScale;
+                float pixelX      = ((ndcX - shiftX * scale) * inverseClip * 0.5F + 0.5F) * WIDTH - 0.5F;
+                float pixelY      = ((ndcY - shiftY * scale) * inverseClip * 0.5F + 0.5F) * HEIGHT - 0.5F;
+
+                if (!(pixelX > -1.0F && pixelX < WIDTH && pixelY > -1.0F && pixelY < HEIGHT))
+                    continue;
+
+                float moved = (depth - shiftZ * scale) * inverseClip;
+                int   floorX = (int) pixelX;
+                int   floorY = (int) pixelY;
+
+                if (pixelX < floorX)
+                    floorX --;
+
+                if (pixelY < floorY)
+                    floorY --;
+
+                int minX = Math.max(floorX, 0);
+                int minY = Math.max(floorY, 0);
+                int maxX = Math.min(pixelX > floorX ? floorX + 1 : floorX, WIDTH - 1);
+                int maxY = Math.min(pixelY > floorY ? floorY + 1 : floorY, HEIGHT - 1);
 
                 for (int targetY = minY; targetY <= maxY; targetY ++) {
                     for (int targetX = minX; targetX <= maxX; targetX ++)
