@@ -25,7 +25,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-// this cancels getBuffer at its head, so it has to apply after other mods' injectors there, such as Vitrail's projection capture
 //? if >= 26.1 {
 @Mixin(value = ProjectionMatrixBuffer.class, priority = 1100)
 //?} else {
@@ -51,7 +50,11 @@ public abstract class MixinLevelProjectionRing implements LevelProjectionRing {
         this.polydium$level = true;
     }
 
-    @Inject(method = "getBuffer(Lorg/joml/Matrix4f;)Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;", at = @At("HEAD"), cancellable = true)
+    //? if >= 26.1 {
+    @Inject(method = "writeBuffer", at = @At("HEAD"), cancellable = true)
+    //?} else {
+    /*@Inject(method = "getBuffer(Lorg/joml/Matrix4f;)Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;", at = @At("HEAD"), cancellable = true)
+    *///?}
     private void polydium$writeRing(Matrix4f projectionMatrix, CallbackInfoReturnable<GpuBufferSlice> cir) {
         if (!this.polydium$level) {
             return;
