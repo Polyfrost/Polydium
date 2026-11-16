@@ -425,6 +425,12 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".MixinEtfSubmitDataPool") && !Mods.loadedBefore("entity_texture_features", "7.2.7"))
             return false;
 
+        if (mixinClassName.contains(".perf.etf.") && (!Mods.loaded("entity_texture_features") || Mods.loadedBefore("entity_texture_features", "7.2.0")))
+            return false;
+
+        if (mixinClassName.contains(".perf.emf.") && (!Mods.loaded("entity_model_features") || Mods.loadedBefore("entity_model_features", "3.3.0")))
+            return false;
+
         if (mixinClassName.endsWith(".MixinGammaOptionGate") && !Mods.loaded("gammautils"))
             return false;
 
@@ -538,7 +544,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (Mods.loaded("iris"))
             syncIrisBackend();
         //?}
-        if (!isDisabled("OperationInliner") && (Mods.loaded("particle_core") || Mods.loaded("mountopacity") || Mods.loaded("overflowparticles") || Mods.loaded("lambdynlights") || Mods.loaded("obe") || Mods.loaded("entityculling")))
+        if (!isDisabled("OperationInliner") && (Mods.loaded("particle_core") || Mods.loaded("mountopacity") || Mods.loaded("overflowparticles") || Mods.loaded("lambdynlights") || Mods.loaded("obe") || Mods.loaded("entityculling") || Mods.loaded("entity_model_features")))
             MixinInternals.registerExtension(new OperationInliner("particle_core", "mountopacity", "overflowparticles", "obe", "inline"));
         if (!isDisabled("LocalRefHoister") && Mods.loaded("sodium"))
             MixinInternals.registerExtension(new LocalRefHoister());
