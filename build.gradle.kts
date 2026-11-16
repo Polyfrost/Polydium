@@ -314,14 +314,6 @@ tasks.matching { it.name == "publishModrinth" }.configureEach {
 
 val modJar = extensions.getByType<LoomCompatProjectExtension>().modJar
 
-val gpuBoosterStub = tasks.register<Jar>("gpuBoosterStubJar") {
-    from(rootProject.file("src/gpu-booster-stub"))
-    archiveFileName = "gpu-booster-stub.jar"
-    destinationDirectory = layout.buildDirectory.dir("gpu-booster-stub")
-}
-modJar.configure { NestJarsAction.addToTask(this, files(gpuBoosterStub)) }
-dependencies { runtimeOnly(files(gpuBoosterStub)) }
-
 publishMods {
     file = modJar.flatMap { it.archiveFile }
 
