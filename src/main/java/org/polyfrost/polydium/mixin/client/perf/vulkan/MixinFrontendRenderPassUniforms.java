@@ -87,6 +87,12 @@ public abstract class MixinFrontendRenderPassUniforms implements TextureList.Bin
     private byte polydium$backendKind;
 
     @Unique
+    private boolean polydium$settingPipeline;
+
+    @Unique
+    private CompiledRenderPipeline polydium$requestedPipeline;
+
+    @Unique
     private boolean polydium$tracksBackend() {
         byte kind = this.polydium$backendKind;
         if (kind == 0) {
@@ -119,12 +125,19 @@ public abstract class MixinFrontendRenderPassUniforms implements TextureList.Bin
     @WrapMethod(method = "setPipeline")
     private void polydium$skipRebind(CompiledRenderPipeline pipeline, Operation<Void> original) {
         boolean tracked = this.polydium$tracksBackend();
-        if (tracked && pipeline != null && pipeline == this.boundPipeline) {
+        if (tracked && pipeline != null && pipeline == this.polydium$requestedPipeline) {
             this.constantsPushed = false;
             return;
         }
-        original.call(pipeline);
-        if (tracked) {
+        this.polydium$requestedPipeline = null;
+        this.polydium$settingPipeline = true;
+        try {
+            original.call(pipeline);
+        } finally {
+            this.polydium$settingPipeline = false;
+        }
+        this.polydium$requestedPipeline = pipeline;
+        if (tracked && pipeline == this.boundPipeline) {
             ((PipelineUniforms) pipeline).polydium$validatedPass(this.polydium$pass());
         }
     }
@@ -171,7 +184,7 @@ public abstract class MixinFrontendRenderPassUniforms implements TextureList.Bin
         at = @At(value = "INVOKE", target = "Ljava/util/HashMap;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
     )
     private Object polydium$compareWithPrevious(Object previous, @Local(argsOnly = true) Object value) {
-        this.polydium$sameValue = value.equals(previous) && this.polydium$tracksBackend();
+        this.polydium$sameValue = !this.polydium$settingPipeline && value.equals(previous) && this.polydium$tracksBackend();
         return previous;
     }
 
