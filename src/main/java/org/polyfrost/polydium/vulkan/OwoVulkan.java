@@ -11,22 +11,18 @@ import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.client.gui.render.TextureSetup;
 import org.lwjgl.glfw.GLFW;
+import org.polyfrost.polydium.mixin.client.perf.vulkan.backport.GuiRendererDrawAccessor;
 import org.polyfrost.polydium.vulkan.compat.GpuSurface;
 import org.polyfrost.polydium.vulkan.compat.SurfaceException;
 import org.slf4j.Logger;
 
 public final class OwoVulkan {
-  private static final MethodHandle TEXTURE_SETUP;
   private static final MethodHandle BLUR_SETUP_OF;
   private static final MethodHandle INPUT;
 
   static {
     try {
       MethodHandles.Lookup lookup = MethodHandles.lookup();
-      Class<?> draw = Class.forName("net.minecraft.client.gui.render.GuiRenderer$Draw");
-      TEXTURE_SETUP = MethodHandles.privateLookupIn(draw, lookup)
-        .findVirtual(draw, "textureSetup", MethodType.methodType(TextureSetup.class))
-        .asType(MethodType.methodType(TextureSetup.class, Object.class));
       Class<?> blur = Class.forName("io.wispforest.owo.ui.renderstate.BlurQuadElementRenderState");
       BLUR_SETUP_OF = lookup.findStatic(blur, "getBlurSetupOf", MethodType.methodType(Class.forName(blur.getName() + "$BlurSetup"), TextureSetup.class))
         .asType(MethodType.methodType(Object.class, TextureSetup.class));
@@ -41,7 +37,7 @@ public final class OwoVulkan {
 
   public static boolean isBlur(Object draw) {
     try {
-      return BLUR_SETUP_OF.invokeExact((TextureSetup) TEXTURE_SETUP.invokeExact(draw)) != null;
+      return BLUR_SETUP_OF.invokeExact(((GuiRendererDrawAccessor) draw).polydium$textureSetup()) != null;
     } catch (Throwable t) {
       throw new IllegalStateException(t);
     }
