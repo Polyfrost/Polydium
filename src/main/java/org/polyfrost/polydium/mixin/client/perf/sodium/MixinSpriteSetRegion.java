@@ -1,6 +1,5 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
-import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 //? if < 26.1 {
 /*import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 *///?}
@@ -10,7 +9,6 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
 //? if >= 26.1 {
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -26,33 +24,18 @@ public abstract class MixinSpriteSetRegion implements SpriteSet.Access {
     /*@Shadow @Final private RenderSection[] sections;
     *///?}
 
-    @Unique
-    private TextureAtlasSprite[] polydium$sprites;
-
     @Override
-    public TextureAtlasSprite[] polydium$uniqueSprites() {
-        TextureAtlasSprite[] unique = this.polydium$sprites;
-        if (unique == null) {
-            ReferenceOpenHashSet<TextureAtlasSprite> set = new ReferenceOpenHashSet<>();
-            //? if >= 26.1 {
-            for (TextureAtlasSprite[] sprites : this.animatedSprites) {
-                SpriteSet.add(set, sprites);
-            }
-            //?} else {
-            /*for (RenderSection section : this.sections) {
-                if (section != null) {
-                    SpriteSet.add(set, section.getAnimatedSprites());
-                }
-            }
-            *///?}
-            this.polydium$sprites = unique = set.toArray(new TextureAtlasSprite[0]);
-        }
-        return unique;
+    public TextureAtlasSprite[] polydium$sectionSprites(int section) {
+        //? if >= 26.1 {
+        return this.animatedSprites[section];
+        //?} else {
+        /*RenderSection render = this.sections[section];
+        return render != null ? render.getAnimatedSprites() : null;
+        *///?}
     }
 
     @Override
     public void polydium$forgetSprites() {
-        this.polydium$sprites = null;
         SpriteSet.invalidate();
     }
 

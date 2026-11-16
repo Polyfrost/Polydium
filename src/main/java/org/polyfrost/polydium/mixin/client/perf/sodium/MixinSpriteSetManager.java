@@ -5,6 +5,7 @@ import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import net.caffeinemc.mods.sodium.api.texture.SpriteUtil;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.ChunkRenderList;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.SortedRenderLists;
+import net.caffeinemc.mods.sodium.client.util.iterator.ByteIterator;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import org.polyfrost.polydium.client.perf.IrisShaders;
 import org.polyfrost.polydium.client.perf.SpriteSet;
@@ -33,17 +34,26 @@ public abstract class MixinSpriteSetManager {
     @Unique
     private int polydium$setGeneration;
     @Unique
+    private SortedRenderLists polydium$lastLists;
+    @Unique
+    private int polydium$lastGeneration;
+    @Unique
     private boolean polydium$setUnsupported;
 
     @ModifyExpressionValue(method = "tickVisibleRenders", at = @At(value = "INVOKE", target = "Lnet/caffeinemc/mods/sodium/client/render/chunk/lists/SortedRenderLists;iterator()Ljava/util/Iterator;"), require = 0)
     private Iterator<ChunkRenderList> polydium$markSpriteSet(Iterator<ChunkRenderList> lists) {
-        if (this.polydium$setUnsupported) {
+        if (this.polydium$setUnsupported || IrisShaders.shadowPass()) {
             return lists;
         }
         SortedRenderLists current = this.renderLists;
         int generation = SpriteSet.generation();
         TextureAtlasSprite[] sprites = this.polydium$sprites;
         if (current != this.polydium$setLists || generation != this.polydium$setGeneration) {
+            if (current != this.polydium$lastLists || generation != this.polydium$lastGeneration) {
+                this.polydium$lastLists = current;
+                this.polydium$lastGeneration = generation;
+                return lists;
+            }
             ReferenceOpenHashSet<TextureAtlasSprite> set = this.polydium$spriteSet;
             set.clear();
             while (lists.hasNext()) {
@@ -56,14 +66,17 @@ public abstract class MixinSpriteSetManager {
                     LoggerFactory.getLogger("polydium/perf").debug("SpriteSet stands down: region sprite cache is missing");
                     return current.iterator();
                 }
-                SpriteSet.add(set, region.polydium$uniqueSprites());
+                ByteIterator sections = list.sectionsWithSpritesIterator();
+                if (sections == null) {
+                    continue;
+                }
+                while (sections.hasNext()) {
+                    SpriteSet.add(set, region.polydium$sectionSprites(sections.nextByteAsInt()));
+                }
             }
-            sprites = set.toArray(new TextureAtlasSprite[0]);
-            if (!IrisShaders.shadowPass()) {
-                this.polydium$sprites = sprites;
-                this.polydium$setLists = current;
-                this.polydium$setGeneration = generation;
-            }
+            this.polydium$sprites = sprites = set.toArray(new TextureAtlasSprite[0]);
+            this.polydium$setLists = current;
+            this.polydium$setGeneration = generation;
         }
         for (TextureAtlasSprite sprite : sprites) {
             SpriteUtil.INSTANCE.markSpriteActive(sprite);

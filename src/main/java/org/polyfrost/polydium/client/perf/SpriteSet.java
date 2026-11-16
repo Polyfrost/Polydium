@@ -10,7 +10,7 @@ public final class SpriteSet {
     }
 
     public interface Access {
-        TextureAtlasSprite[] polydium$uniqueSprites();
+        TextureAtlasSprite[] polydium$sectionSprites(int section);
 
         void polydium$forgetSprites();
     }
