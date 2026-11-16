@@ -110,7 +110,7 @@ public final class EtfStateReuse {
             for (Class<?> owner = type; owner != Object.class; owner = owner.getSuperclass()) {
                 MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(owner, MethodHandles.lookup());
                 for (Field field : owner.getDeclaredFields()) {
-                    if ((field.getModifiers() & (Modifier.STATIC | Modifier.FINAL)) != 0)
+                    if ((field.getModifiers() & (Modifier.STATIC | Modifier.FINAL)) != 0 || field.getName().startsWith("polydium$"))
                         continue;
                     MethodHandle copy = MethodHandles.filterArguments(lookup.unreflectSetter(field), 1, lookup.unreflectGetter(field));
                     copyAll = MethodHandles.foldArguments(copy.asType(copyType), copyAll);

@@ -1,8 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -22,6 +20,7 @@ import org.spongepowered.asm.mixin.injection.At;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 @Mixin(ModelPart.class)
@@ -30,23 +29,36 @@ public abstract class MixinModelCubeWrites {
     @Final
     private Map<String, ModelPart> children;
 
-    @WrapOperation(
+    @ModifyExpressionValue(
             method = "compile",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/geom/ModelPart$Cube;compile(Lcom/mojang/blaze3d/vertex/PoseStack$Pose;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V"),
+            at = @At(value = "FIELD", target = "Lnet/minecraft/client/model/geom/ModelPart;cubes:Ljava/util/List;"),
             require = 0,
             expect = 0
     )
-    private void polydium$writeCuboid(ModelPart.Cube cube, PoseStack.Pose pose, VertexConsumer builder, int lightCoords, int overlayCoords, int color,
-                                      Operation<Void> original) {
-        if (SodiumModelParts.CUBOIDS && cube.getClass() == ModelPart.Cube.class) {
-            VertexBufferWriter writer = VertexBufferWriter.tryOf(builder/*? if < 1.21.4 {*//*, EntityVertex.FORMAT*//*?}*/);
-            ModelCuboid cuboid = SodiumModelParts.cuboid(cube);
-            if (writer != null && cuboid != null) {
-                EntityRenderer.renderCuboid(pose, writer, cuboid, lightCoords, overlayCoords, ColorARGB.toABGR(color));
-                return;
+    private List<ModelPart.Cube> polydium$writeCuboids(List<ModelPart.Cube> cubes,
+                                                      @Local(argsOnly = true) PoseStack.Pose pose,
+                                                      @Local(argsOnly = true) VertexConsumer builder,
+                                                      @Local(argsOnly = true, ordinal = 0) int lightCoords,
+                                                      @Local(argsOnly = true, ordinal = 1) int overlayCoords,
+                                                      @Local(argsOnly = true, ordinal = 2) int color) {
+        if (!SodiumModelParts.CUBOIDS) {
+            return cubes;
+        }
+        VertexBufferWriter writer = VertexBufferWriter.tryOf(builder/*? if < 1.21.4 {*//*, EntityVertex.FORMAT*//*?}*/);
+        if (writer == null) {
+            return cubes;
+        }
+        int abgr = ColorARGB.toABGR(color);
+        for (int i = 0, n = cubes.size(); i < n; i++) {
+            ModelPart.Cube cube = cubes.get(i);
+            ModelCuboid cuboid = cube.getClass() == ModelPart.Cube.class ? SodiumModelParts.cuboid(cube) : null;
+            if (cuboid != null) {
+                EntityRenderer.renderCuboid(pose, writer, cuboid, lightCoords, overlayCoords, abgr);
+            } else {
+                cube.compile(pose, builder, lightCoords, overlayCoords, color);
             }
         }
-        original.call(cube, pose, builder, lightCoords, overlayCoords, color);
+        return Collections.emptyList();
     }
 
     @ModifyExpressionValue(
