@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -49,6 +50,8 @@ public final class EarlyVulkan implements LanguageAdapter {
     private static List<String> createdOptions;
 
     public static boolean vanillaOpenGl;
+
+    public static boolean glLoadCrashed;
 
     private static boolean irisLoaded = FabricLoader.getInstance().isModLoaded("iris");
     //?}
@@ -344,6 +347,8 @@ public final class EarlyVulkan implements LanguageAdapter {
         carryPackGraphicsApi();
         cleanNonRenderStartupCrash();
         recheckStartupFailure();
+        //? if >= 26.2
+        glLoadCrashed = glLoadCrash();
 
         //? if >= 26.2 {
         boolean irisRetry = irisRetryDue();
@@ -514,6 +519,22 @@ public final class EarlyVulkan implements LanguageAdapter {
         if (report != null && nonRenderStartupCrash(report, Instant.MAX))
             markStartClean();
     }
+
+    //? if >= 26.2 {
+    private static boolean glLoadCrash() throws IOException {
+        Path options = FabricLoader.getInstance().getGameDir().resolve("options.txt");
+        Instant startedAt = modified(options);
+        if (startedAt == null || !Files.readAllLines(options).contains("startedCleanly:false"))
+            return false;
+        for (Path file : files(crashDirs(), "hs_err_pid", ".log")) {
+            Instant at = modified(file);
+            if (at != null && !at.isBefore(startedAt)
+                    && new String(Files.readAllBytes(file), StandardCharsets.ISO_8859_1).contains("SDL_GL_LoadLibrary"))
+                return true;
+        }
+        return false;
+    }
+    //?}
 
     private static void recheckStartupFailure() throws IOException {
         Path done = crashRecheckFile();
