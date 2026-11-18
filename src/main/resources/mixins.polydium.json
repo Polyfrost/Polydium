@@ -890,6 +890,7 @@
     "client.perf.skinlayers.MixinSkinTextureNoPackProbe",
     "client.perf.scalablelux.MixinClientLightBudget",
     "client.perf.scalablelux.MixinClientLightBudgetTick",
+    "client.perf.scalablelux.MixinClientLightBudgetFlush",
     "client.perf.scalablelux.MixinSkyLightSourcesFallback",
     "client.perf.scalablelux.MixinSkyLightSourcesUpdate",
     "client.perf.scalablelux.ChunkSkyLightSourcesAccessor",

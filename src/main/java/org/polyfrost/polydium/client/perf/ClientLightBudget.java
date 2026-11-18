@@ -7,8 +7,9 @@ public final class ClientLightBudget {
     private static final long MAX_DELAY_NS = 50_000_000L;
 
     private static long start, deferredSince;
-    private static boolean deferred, tickFrame;
+    private static boolean deferred, tickFrame, flushing;
     public static boolean ticked;
+    public static boolean flush;
 
     private ClientLightBudget() {
     }
@@ -18,6 +19,8 @@ public final class ClientLightBudget {
             return;
         }
         start = System.nanoTime();
+        flushing = flush;
+        flush = false;
         tickFrame = ticked && PolydiumToggles.clientLightBudget;
         ticked = false;
         if (!deferred) {
@@ -27,7 +30,7 @@ public final class ClientLightBudget {
     }
 
     public static boolean takeNext(boolean client) {
-        if (!client || !PolydiumToggles.clientLightBudget) {
+        if (!client || flushing || !PolydiumToggles.clientLightBudget) {
             return true;
         }
         long now = System.nanoTime();
