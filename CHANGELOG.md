@@ -1,6 +1,4 @@
-## 1.4.16
-- Fixed Distant Horizons compatibility
-- Fixed owo-lib compatibility on 1.21.11 to 26.1.2 with Vulkan
-
-## 1.4.15
-- Fixed not being able to use Polydium with mods that declare themselves incompatible with GPU Booster
+## 1.4.17
+- Fix block break particles being dark
+- Rebuild sky light sources dropped by ScalableLux
+- Fix Sodium visible chunk count crash without a level
