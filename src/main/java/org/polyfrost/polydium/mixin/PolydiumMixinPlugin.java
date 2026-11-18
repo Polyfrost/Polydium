@@ -523,6 +523,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             return SODIUM_V08 ? !Arrays.asList(SODIUM_VULKAN_09_ONLY).contains(mixinClassName.substring(SODIUM_VULKAN_PACKAGE.length()))
                 : SODIUM_PERF && !mixinClassName.contains("Sodium08");
 
+        if (mixinClassName.endsWith(".MixinSodiumVisibleChunkCount"))
+            return Mods.loaded("sodium");
+
         if (!mixinClassName.startsWith(SODIUM_PERF_PACKAGE))
             return true;
 

@@ -293,6 +293,7 @@
     "client.perf.sodium.MixinSkinLayersBatchWrite",
     "client.perf.sodium.MixinTransitionVertexWrite",
     "client.perf.sodium.MixinParticleSectionCull",
+    "client.perf.sodium.MixinSodiumVisibleChunkCount",
     "client.perf.sodium.MixinParticleSectionTick",
     //? if >= 26.2
     "client.perf.sodium.MixinIndirectTerrainDraws",
