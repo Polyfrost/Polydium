@@ -875,6 +875,8 @@
     //"client.perf.MixinSinglePassTextShadowOutput",
     "client.perf.wwaypoints.MixinClientDimensionUtils",
     "client.perf.wwaypoints.MixinHideWaypointCycle",
+    "client.perf.wwaypoints.MixinSharingContextResolver",
+    "client.perf.wwaypoints.MixinEssentialSharingContextResolver",
     "client.perf.punchy.MixinPunchyBlacklistCache",
     "client.perf.tiertagger.MixinTierTaggerModeCache",
     "client.perf.gammautils.MixinGammaOptionGate",
