@@ -1,18 +1,14 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
 //? if >= 26.2 {
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.renderpearl.api.device.GpuDevice;
 import net.minecraft.CrashReport;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.OptionInstance;
 import net.minecraft.client.Options;
 import net.minecraft.client.PreferredGraphicsApi;
 import net.minecraft.client.main.GameConfig;
 import org.polyfrost.polydium.early.EarlyVulkan;
-import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -56,17 +52,10 @@ public abstract class MixinAutoVulkan {
         EarlyVulkan.markFailed("last game startup did not finish");
     }
 
-    @WrapOperation(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;set(Ljava/lang/Object;)V", ordinal = 0), slice = @Slice(
+    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;set(Ljava/lang/Object;)V", ordinal = 0), slice = @Slice(
         from = @At(value = "CONSTANT", args = "stringValue=Detected unexpected shutdown during last game startup: forcing preferred graphics API to OpenGL")))
-    private void polydium$markVanillaOpenGl(OptionInstance<Object> option, Object value, Operation<Void> original) {
-        if (EarlyVulkan.glLoadCrashed && !EarlyVulkan.failed()) {
-            LoggerFactory.getLogger("polydium/vulkan").warn("Last startup crashed loading the OpenGL driver: switching to Vulkan");
-            original.call(option, PreferredGraphicsApi.VULKAN);
-            this.options.save();
-            return;
-        }
+    private void polydium$markVanillaOpenGl(CallbackInfo ci) {
         EarlyVulkan.vanillaOpenGl = true;
-        original.call(option, value);
     }
 
     @Inject(method = "saveReport(Ljava/io/File;Lnet/minecraft/CrashReport;I)I", at = @At("HEAD"))
