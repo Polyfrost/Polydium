@@ -458,7 +458,10 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".MixinTierTaggerModeCache") && !Mods.loaded("tiertagger") && !Mods.loaded("tier-tagger"))
             return false;
 
-        if ((mixinClassName.endsWith(".MixinClientLightBudget") || mixinClassName.endsWith(".MixinClientLightBudgetTick") || mixinClassName.endsWith(".MixinChunkLoadDirtyOnce")) && !Mods.loaded("scalablelux"))
+        if (mixinClassName.endsWith(".MixinSkyLightSourcesUpdate") && !Mods.loadedBefore("scalablelux", "0.3.0-alpha"))
+            return false;
+
+        if ((mixinClassName.endsWith(".MixinClientLightBudget") || mixinClassName.endsWith(".MixinClientLightBudgetTick") || mixinClassName.endsWith(".MixinSkyLightSourcesFallback") || mixinClassName.endsWith(".MixinChunkLoadDirtyOnce")) && !Mods.loaded("scalablelux"))
             return false;
 
         if ((mixinClassName.endsWith(".MixinLightNibbleView") || mixinClassName.endsWith(".MixinClonedLightView")) && !Mods.loaded("scalablelux"))
