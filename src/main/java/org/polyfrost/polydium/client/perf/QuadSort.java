@@ -68,11 +68,27 @@ public final class QuadSort {
         return order;
     }
 
-    private static int[] advance(long currentFrame) {
-        if (currentFrame != frame) {
-            frame = currentFrame;
-            next = 0;
+    public static void startFrame(long currentFrame) {
+        if (currentFrame == frame) {
+            return;
         }
+        if (next == 0) {
+            if (!PREVIOUS.isEmpty()) {
+                PREVIOUS.clear();
+                PREVIOUS.trimToSize();
+            }
+            if (sharedKeys.length != 0) {
+                sharedKeys = new int[0];
+            }
+        } else if (next < PREVIOUS.size()) {
+            PREVIOUS.subList(next, PREVIOUS.size()).clear();
+        }
+        frame = currentFrame;
+        next = 0;
+    }
+
+    private static int[] advance(long currentFrame) {
+        startFrame(currentFrame);
         slot = next++;
         return null;
     }
