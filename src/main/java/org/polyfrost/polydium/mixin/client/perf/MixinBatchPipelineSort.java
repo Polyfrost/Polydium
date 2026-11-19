@@ -21,7 +21,10 @@ public class MixinBatchPipelineSort {
         if (batches.size() < 2 || IrisShaders.packInUse()) {
             return original.call(batches);
         }
-        List<Object> ordered = new ArrayList<>(batches.entrySet());
+        List<Object> ordered = new ArrayList<>(batches.size());
+        for (Map.Entry<Object, Object> entry : batches.entrySet()) {
+            ordered.add(entry);
+        }
         BatchOrder.sortRuns(ordered, BatchOrder.OPAQUE, BatchOrder.BY_PIPELINE);
         ordered.replaceAll(entry -> ((Map.Entry<?, ?>) entry).getValue());
         return ordered;
