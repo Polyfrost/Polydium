@@ -160,9 +160,6 @@ dependencies {
 
     val oneconfigVersion = property("deps.oneconfig") as String
     modImplementation("org.polyfrost.oneconfig:$mcVersion-fabric:$oneconfigVersion")
-    for (module in arrayOf("commands", "config", "config-impl", "events", "internal", "notifications", "ui", "utils", "hud")) {
-        implementation("org.polyfrost.oneconfig:$module:$oneconfigVersion")
-    }
 
     optionalProperty("deps.sodium")?.let {
         modCompileOnly("maven.modrinth:sodium:$it") { isTransitive = false }
