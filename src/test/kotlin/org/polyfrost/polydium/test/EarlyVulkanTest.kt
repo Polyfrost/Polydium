@@ -648,6 +648,35 @@ class EarlyVulkanTest {
         assertTrue(EarlyVulkan.failed())
     }
 
+    //? if >= 26.3 {
+    @Test
+    fun glDriverLoadCrashIsDetected() {
+        Files.write(options, listOf("version:${EarlyVulkan.BACKEND_FIX_VERSION}", "startedCleanly:false"))
+        Files.setLastModifiedTime(options, FileTime.from(Instant.now().minus(Duration.ofMinutes(1))))
+        val nativeCrash = gameDir.resolve("crash-reports/hs_err_pid1.log")
+        Files.createDirectories(nativeCrash.parent)
+        Files.writeString(nativeCrash, "j  org.lwjgl.sdl.SDLVideo.nSDL_GL_LoadLibrary(J)Z+6\n")
+        val lastPid = gameDir.resolve("polydium/last-pid")
+        Files.createDirectories(lastPid.parent)
+
+        Files.writeString(lastPid, "1")
+        EarlyVulkan()
+        assertTrue(EarlyVulkan.glLoadCrashed)
+        assertTrue(Files.readAllLines(options).contains("preferredGraphicsBackend:\"vulkan\""))
+        EarlyVulkan()
+        assertTrue(EarlyVulkan.glLoadCrashed)
+
+        Files.writeString(lastPid, "2")
+        EarlyVulkan()
+        assertFalse(EarlyVulkan.glLoadCrashed)
+
+        Files.writeString(lastPid, "1")
+        Files.writeString(nativeCrash, "j  org.lwjgl.vulkan.VK10.vkCreateDevice\n")
+        EarlyVulkan()
+        assertFalse(EarlyVulkan.glLoadCrashed)
+    }
+    //?}
+
     @Test
     fun renderStartupCrashKeepsFailure() {
         failAfterCrash(vulkanCrash)

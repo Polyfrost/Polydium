@@ -7,13 +7,17 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.management.ManagementFactory;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -49,6 +53,8 @@ public final class EarlyVulkan implements LanguageAdapter {
     private static List<String> createdOptions;
 
     public static boolean vanillaOpenGl;
+
+    public static boolean glLoadCrashed;
 
     private static boolean irisLoaded = FabricLoader.getInstance().isModLoaded("iris");
     //?}
@@ -382,6 +388,11 @@ public final class EarlyVulkan implements LanguageAdapter {
         carryPackGraphicsApi();
         cleanNonRenderStartupCrash();
         recheckStartupFailure();
+        //? if >= 26.3 {
+        glLoadCrashed = glLoadCrash();
+        if (glLoadCrashed && !failed())
+            switchAfterGlLoadCrash();
+        //?}
 
         //? if >= 26.2 {
         boolean irisRetry = irisRetryDue();
@@ -553,6 +564,49 @@ public final class EarlyVulkan implements LanguageAdapter {
             markStartClean();
     }
 
+    //? if >= 26.3 {
+    private static boolean glLoadCrash() throws IOException {
+        Path pidFile = marker().resolveSibling("last-pid");
+        String lastPid = Files.exists(pidFile) ? Files.readString(pidFile).trim() : "";
+        String pid = String.valueOf(ProcessHandle.current().pid());
+        if (lastPid.equals(pid))
+            return glLoadCrashed;
+        Files.createDirectories(pidFile.getParent());
+        Files.writeString(pidFile, pid);
+        Path options = FabricLoader.getInstance().getGameDir().resolve("options.txt");
+        Instant startedAt = modified(options);
+        if (lastPid.isEmpty() || startedAt == null || !Files.readAllLines(options).contains("startedCleanly:false"))
+            return false;
+        Set<String> names = new HashSet<>();
+        names.add("hs_err_pid" + lastPid + ".log");
+        Path errorFile = errorFile();
+        if (errorFile != null)
+            names.add(errorFile.getFileName().toString().replace("%p", lastPid).replace("%%", "%"));
+        for (Path file : nativeCrashes()) {
+            Instant at = modified(file);
+            if (names.contains(file.getFileName().toString()) && at != null && !at.isBefore(startedAt)
+                    && new String(Files.readAllBytes(file), StandardCharsets.ISO_8859_1).contains("SDL_GL_LoadLibrary"))
+                return true;
+        }
+        return false;
+    }
+    //?}
+
+    //? if >= 26.3 {
+    private static void switchAfterGlLoadCrash() throws IOException {
+        Path options = FabricLoader.getInstance().getGameDir().resolve("options.txt").toRealPath();
+        List<String> lines = new ArrayList<>(Files.readAllLines(options));
+        int index = -1;
+        for (int i = 0; i < lines.size(); i++)
+            if (lines.get(i).startsWith(KEY))
+                index = i;
+        if (index >= 0 && !lines.get(index).contains("default"))
+            return;
+        LoggerFactory.getLogger("polydium/vulkan").warn("Last startup crashed loading the OpenGL driver: switching to Vulkan");
+        writeBackend(options, lines, index, "vulkan");
+    }
+    //?}
+
     private static void recheckStartupFailure() throws IOException {
         Path done = crashRecheckFile();
         boolean irisShaders = FabricLoader.getInstance().isModLoaded("iris") && irisShadersOn();
@@ -594,7 +648,7 @@ public final class EarlyVulkan implements LanguageAdapter {
 
     private static boolean nonRenderStartupCrash(Path report, Instant until) throws IOException {
         Instant reportAt = modified(report);
-        if (reportAt == null || files(crashDirs(), "hs_err_pid", ".log").stream().map(EarlyVulkan::modified)
+        if (reportAt == null || nativeCrashes().stream().map(EarlyVulkan::modified)
                 .anyMatch(at -> at != null && at.isAfter(reportAt) && at.isBefore(until)))
             return false;
         List<String> lines = Files.readAllLines(report);
@@ -641,6 +695,37 @@ public final class EarlyVulkan implements LanguageAdapter {
             dirs.add(root);
         }
         return dirs;
+    }
+
+    private static List<Path> nativeCrashes() {
+        Set<Path> dirs = crashDirs();
+        Path errorFile = errorFile();
+        if (errorFile != null && errorFile.getParent() != null)
+            dirs.add(errorFile.getParent());
+        Set<Path> found = new LinkedHashSet<>(files(dirs, "hs_err_pid", ".log"));
+        if (errorFile != null) {
+            String name = errorFile.getFileName().toString();
+            int pid = name.indexOf('%');
+            String prefix = pid < 0 ? name : name.substring(0, pid);
+            String suffix = pid < 0 ? "" : name.substring(Math.min(name.length(), name.lastIndexOf('%') + 2));
+            for (Path file : files(dirs, prefix, suffix)) {
+                String fileName = file.getFileName().toString();
+                if (!prefix.isEmpty() || fileName.length() > suffix.length()
+                        && fileName.substring(0, fileName.length() - suffix.length()).chars().allMatch(Character::isDigit))
+                    found.add(file);
+            }
+        }
+        return new ArrayList<>(found);
+    }
+
+    private static Path errorFile() {
+        for (String arg : ManagementFactory.getRuntimeMXBean().getInputArguments())
+            if (arg.startsWith("-XX:ErrorFile="))
+                try {
+                    return Path.of(arg.substring("-XX:ErrorFile=".length())).toAbsolutePath().normalize();
+                } catch (InvalidPathException ignored) {
+                }
+        return null;
     }
     //?}
 
