@@ -4,8 +4,10 @@ package org.polyfrost.polydium.mixin.client.perf.vulkan;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.renderpearl.api.device.GpuBackend;
 import com.mojang.renderpearl.api.device.GpuDevice;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.CrashReport;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
@@ -49,6 +51,16 @@ public abstract class MixinAutoVulkan {
             EarlyVulkan.setGraphicsApi("vulkan");
         EarlyVulkan.finishSwitch();
         return device;
+    }
+
+    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;initRenderer", shift = At.Shift.AFTER))
+    private void polydium$refuseStreamproof(CallbackInfo ci) {
+        if (!FabricLoader.getInstance().isModLoaded("streamproof") || !"Vulkan".equalsIgnoreCase(RenderSystem.getDevice().getDeviceInfo().backendName()))
+            return;
+        this.options.startedCleanly = true;
+        this.options.save();
+        EarlyVulkan.markVulkanStart(false);
+        throw new IllegalStateException(EarlyVulkan.streamproofOnVulkan());
     }
 
     @WrapOperation(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;set(Ljava/lang/Object;)V", ordinal = 0), slice = @Slice(
@@ -107,6 +119,7 @@ public abstract class MixinAutoVulkan {
 //?}
 //? if >= 1.21.11 && < 26.2 {
 /*import com.llamalad7.mixinextras.sugar.Local;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.CrashReport;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
@@ -145,6 +158,16 @@ public abstract class MixinAutoVulkan {
             return;
         }
         EarlyVulkan.finishSwitch();
+    }
+
+    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;initRenderer", shift = At.Shift.AFTER))
+    private void polydium$refuseStreamproof(CallbackInfo ci) {
+        if (!VulkanActive.active || !FabricLoader.getInstance().isModLoaded("streamproof"))
+            return;
+        this.options.startedCleanly = true;
+        this.options.save();
+        EarlyVulkan.markVulkanStart(false);
+        throw new IllegalStateException(EarlyVulkan.streamproofOnVulkan());
     }
 
     @Inject(method = "saveReport(Ljava/io/File;Lnet/minecraft/CrashReport;)I", at = @At("HEAD"))

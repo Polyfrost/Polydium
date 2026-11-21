@@ -297,6 +297,21 @@ public final class EarlyVulkan implements LanguageAdapter {
         return vulkanAtStartup;
     }
 
+    public static String streamproofOnVulkan() {
+        Path gameDir = FabricLoader.getInstance().getGameDir().toAbsolutePath();
+        //? if >= 26.2 {
+        String toOpenGl = "set Graphics Backend to OpenGL in this instance's settings in the OneClient launcher,"
+                + " or change the preferredGraphicsBackend line in " + gameDir.resolve("options.txt")
+                + " to preferredGraphicsBackend:\"opengl\"";
+        //?} else {
+        /*String toOpenGl = "write opengl into " + graphicsApiFile().toAbsolutePath()
+                + " (create the file if it doesn't exist)";
+        *///?}
+        return "Streamproof can't hide overlays from stream capture on Vulkan, so they would show up on stream."
+                + " Switch the graphics API to OpenGL or remove Streamproof from " + gameDir.resolve("mods")
+                + ". To switch to OpenGL, " + toOpenGl + ".";
+    }
+
     private static List<String> modIds() {
         List<String> ids = new ArrayList<>();
         for (ModContainer mod : FabricLoader.getInstance().getAllMods()) {
