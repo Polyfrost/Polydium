@@ -73,6 +73,12 @@ public abstract class MixinAutoVulkan {
         EarlyVulkan.markVulkanStart(false);
     }
 
+    @Inject(method = "onGameLoadFinished", at = @At("HEAD"))
+    private void polydium$restoreDefaultAfterForcedOpenGl(CallbackInfo ci) {
+        if (EarlyVulkan.vanillaOpenGl && this.options.preferredGraphicsBackend().get() == PreferredGraphicsApi.OPENGL)
+            this.options.preferredGraphicsBackend().set(PreferredGraphicsApi.DEFAULT);
+    }
+
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;set(Ljava/lang/Object;)V", ordinal = 0), slice = @Slice(
         from = @At(value = "CONSTANT", args = "stringValue=Detected unexpected shutdown during last game startup: forcing preferred graphics API to OpenGL")))
     private void polydium$markVanillaOpenGl(CallbackInfo ci) {
