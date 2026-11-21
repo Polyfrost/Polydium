@@ -302,10 +302,21 @@ class EarlyVulkanTest {
         Files.writeString(yosbrOptions, "version:${EarlyVulkan.BACKEND_FIX_VERSION}\nstartedCleanly:false\n")
         Files.writeString(options, "version:${EarlyVulkan.BACKEND_FIX_VERSION}\nfov:1.0\nstartedCleanly:false\n")
         EarlyVulkan.setGraphicsApi("vulkan")
+        EarlyVulkan.markVulkanStart(true)
 
         assertFalse(EarlyVulkan.vulkanAtStartup())
         assertTrue(EarlyVulkan.failed())
         assertEquals("default", EarlyVulkan.graphicsApi())
+    }
+
+    @Test
+    fun uncleanStartOfAnotherBackendKeepsVulkan() {
+        Files.writeString(options, "version:${EarlyVulkan.BACKEND_FIX_VERSION}\nfov:1.0\nstartedCleanly:false\n")
+        EarlyVulkan.setGraphicsApi("vulkan")
+
+        assertFalse(EarlyVulkan.vulkanAtStartup())
+        assertFalse(EarlyVulkan.failed())
+        assertEquals("vulkan", EarlyVulkan.graphicsApi())
     }
 
     @Test
@@ -526,6 +537,7 @@ class EarlyVulkanTest {
 
     private fun crashAfterUncleanStart(report: List<String>) {
         EarlyVulkan.setGraphicsApi("vulkan")
+        EarlyVulkan.markVulkanStart(true)
         Files.write(options, listOf("version:${EarlyVulkan.BACKEND_FIX_VERSION}", "preferredGraphicsBackend:\"vulkan\"", "startedCleanly:false"))
         Files.setLastModifiedTime(options, FileTime.from(Instant.now().minus(Duration.ofMinutes(1))))
         val file = gameDir.resolve("crash-reports/crash-2026-11-12_13.14.30-client.txt")

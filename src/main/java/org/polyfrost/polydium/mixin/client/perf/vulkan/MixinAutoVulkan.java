@@ -1,14 +1,19 @@
 package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
 //? if >= 26.2 {
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.renderpearl.api.device.GpuBackend;
 import com.mojang.renderpearl.api.device.GpuDevice;
 import net.minecraft.CrashReport;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.OptionInstance;
 import net.minecraft.client.Options;
 import net.minecraft.client.PreferredGraphicsApi;
 import net.minecraft.client.main.GameConfig;
 import org.polyfrost.polydium.early.EarlyVulkan;
+import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -46,10 +51,26 @@ public abstract class MixinAutoVulkan {
         return device;
     }
 
-    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;set(Ljava/lang/Object;)V", ordinal = 0), slice = @Slice(
+    @WrapOperation(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;set(Ljava/lang/Object;)V", ordinal = 0), slice = @Slice(
         from = @At(value = "CONSTANT", args = "stringValue=Detected unexpected shutdown during last game startup: resetting preferred graphics API to Default")))
-    private void polydium$markVanillaReset(CallbackInfo ci) {
+    private void polydium$markVanillaReset(OptionInstance<Object> option, Object value, Operation<Void> original) {
+        if (!EarlyVulkan.vulkanStartUnfinished()) {
+            LoggerFactory.getLogger("polydium/vulkan").info("Keeping Vulkan: the unfinished startup was not a Vulkan start");
+            return;
+        }
         EarlyVulkan.markFailed("last game startup did not finish");
+        original.call(option, value);
+    }
+
+    @WrapOperation(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/PreferredGraphicsApi;getBackendsToTry()[Lcom/mojang/renderpearl/api/device/GpuBackend;"))
+    private GpuBackend[] polydium$markVulkanStart(PreferredGraphicsApi api, Operation<GpuBackend[]> original) {
+        EarlyVulkan.markVulkanStart(api == PreferredGraphicsApi.VULKAN);
+        return original.call(api);
+    }
+
+    @Inject(method = "onGameLoadFinished", at = @At("TAIL"))
+    private void polydium$finishVulkanStart(CallbackInfo ci) {
+        EarlyVulkan.markVulkanStart(false);
     }
 
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;set(Ljava/lang/Object;)V", ordinal = 0), slice = @Slice(
@@ -73,6 +94,7 @@ public abstract class MixinAutoVulkan {
         if (!this.gameLoadFinished && this.options != null) {
             this.options.startedCleanly = true;
             this.options.save();
+            EarlyVulkan.markVulkanStart(false);
         }
     }
 }
@@ -129,11 +151,17 @@ public abstract class MixinAutoVulkan {
         EarlyVulkan.markStartClean();
     }
 
+    @Inject(method = "onGameLoadFinished", at = @At("TAIL"))
+    private void polydium$finishVulkanStart(CallbackInfo ci) {
+        EarlyVulkan.markVulkanStart(false);
+    }
+
     @Inject(method = "stop", at = @At("HEAD"))
     private void polydium$keepVulkanOnLoadingClose(CallbackInfo ci) {
         if (!this.gameLoadFinished && this.options != null) {
             this.options.startedCleanly = true;
             this.options.save();
+            EarlyVulkan.markVulkanStart(false);
         }
     }
 }

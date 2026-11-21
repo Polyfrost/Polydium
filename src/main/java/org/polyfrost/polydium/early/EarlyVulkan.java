@@ -239,7 +239,28 @@ public final class EarlyVulkan implements LanguageAdapter {
                 || className.equals("org.lwjgl.glfw.GLFW") && method.contains("Events");
     }
 
+    private static Path vulkanStartFile() {
+        return FabricLoader.getInstance().getGameDir().resolve("polydium").resolve("vulkan-start");
+    }
+
+    public static boolean vulkanStartUnfinished() {
+        return Files.exists(vulkanStartFile());
+    }
+
+    public static void markVulkanStart(boolean vulkan) {
+        try {
+            if (!vulkan) {
+                Files.deleteIfExists(vulkanStartFile());
+                return;
+            }
+            Files.createDirectories(vulkanStartFile().getParent());
+            Files.writeString(vulkanStartFile(), "");
+        } catch (IOException ignored) {
+        }
+    }
+
     public static void markStartClean() {
+        markVulkanStart(false);
         try {
             Path options = FabricLoader.getInstance().getGameDir().resolve("options.txt");
             List<String> lines = Files.readAllLines(options);
@@ -265,11 +286,13 @@ public final class EarlyVulkan implements LanguageAdapter {
                 startFailed = unclean && exists && !lines.equals(packOptions());
             } catch (IOException ignored) {
             }
-            if (vulkan && startFailed) {
+            if (vulkan && startFailed && vulkanStartUnfinished()) {
                 markFailed("last game startup did not finish");
                 setGraphicsApi("default");
             }
             vulkanAtStartup = vulkan && !unclean;
+            if (vulkanAtStartup)
+                markVulkanStart(true);
         }
         return vulkanAtStartup;
     }
