@@ -17,6 +17,10 @@ public final class MainPassSwap {
         reopened = pass;
     }
 
+    public static RenderPass peek() {
+        return reopened;
+    }
+
     public static RenderPass take() {
         RenderPass pass = reopened;
 

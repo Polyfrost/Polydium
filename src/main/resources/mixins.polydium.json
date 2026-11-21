@@ -83,6 +83,8 @@
     "client.perf.MixinGlowSpectatorCache",
     //? if >= 26.3
     "client.perf.MixinWindowMinimizedPoll",
+    //? if >= 26.3
+    "client.perf.MixinMainPassExpose",
     //? if < 26.3
     //"client.perf.MixinUnboundKeyPoll",
     //? if >= 1.21.8
