@@ -22,6 +22,7 @@ import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
+import org.joml.Vector3f;
 import org.polyfrost.polydium.client.perf.DebugLineClip;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -42,6 +43,9 @@ public abstract class MixinDebugLineFastPath {
 
     @Unique
     private final float[] polydium$line = new float[6];
+
+    @Unique
+    private final Vector3f polydium$normal = new Vector3f();
 
     @Shadow
     @Final
@@ -114,8 +118,9 @@ public abstract class MixinDebugLineFastPath {
             float normalY = p[4] - p[1];
             float normalZ = p[5] - p[2];
             if (plain && DebugLineClip.identityExact(p)) {
-                builder.addVertex(p[0], p[1], p[2]).setNormal(pose, normalX, normalY, normalZ).setColor(color).setLineWidth(width);
-                builder.addVertex(p[3], p[4], p[5]).setNormal(pose, normalX, normalY, normalZ).setColor(color).setLineWidth(width);
+                Vector3f normal = pose.transformNormal(normalX, normalY, normalZ, this.polydium$normal);
+                builder.addVertex(p[0], p[1], p[2]).setNormal(normal.x, normal.y, normal.z).setColor(color).setLineWidth(width);
+                builder.addVertex(p[3], p[4], p[5]).setNormal(normal.x, normal.y, normal.z).setColor(color).setLineWidth(width);
             } else {
                 builder.addVertex(pose, p[0], p[1], p[2]).setNormal(pose, normalX, normalY, normalZ).setColor(color).setLineWidth(width);
                 builder.addVertex(pose, p[3], p[4], p[5]).setNormal(pose, normalX, normalY, normalZ).setColor(color).setLineWidth(width);
