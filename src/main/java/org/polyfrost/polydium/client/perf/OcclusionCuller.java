@@ -13,6 +13,7 @@ import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.stream.IntStream;
 import net.caffeinemc.mods.sodium.client.render.chunk.ChunkRenderMatrices;
 import net.caffeinemc.mods.sodium.client.render.chunk.LocalSectionIndex;
 import net.caffeinemc.mods.sodium.client.render.chunk.lists.ChunkRenderList;
@@ -61,6 +62,9 @@ public final class OcclusionCuller {
     private static final int[]                              LEVEL_WIDTHS    = levelWidths();
     private static final float[]                            MATRIX          = new float[16];
     private static final float[]                            TESTED_DEPTH    = new float[WIDTH * HEIGHT];
+    private static final float[]                            NDC_X           = ndcColumns();
+    private static final int                                REPROJECT_BANDS = Math.clamp(Runtime.getRuntime().availableProcessors() / 2, 1, 4);
+    private static final float[][]                          BAND_DEPTH      = bandDepths();
     private static final float[]                            TESTED_MATRIX   = new float[16];
     private static final float[]                            CORNER_OFFSETS  = new float[CORNER_SLOTS * CORNER_FLOATS];
     private static final int[]                              CORNER_SIZES    = new int[CORNER_SLOTS];
@@ -93,6 +97,8 @@ public final class OcclusionCuller {
     private static double  testedX;
     private static double  testedY;
     private static double  testedZ;
+    private static float   reprojectShiftX, reprojectShiftY, reprojectShiftZ, reprojectShiftW;
+    private static float   reprojectInverseX, reprojectInverseY, reprojectInverseZ, reprojectInverseW;
     private static double  sourceX;
     private static double  sourceY;
     private static double  sourceZ;
@@ -589,7 +595,7 @@ public final class OcclusionCuller {
             long[]          hidden    = occlusion.polydium$getHiddenSections();
             long            bit       = 1L << section;
 
-            if ((occlusion.polydium$getTestedSections()[section >>> 6] & bit) == 0L || (hidden[section >>> 6] & bit) != 0L || !isOccluded(region, section))
+            if ((occlusion.polydium$getTestedSections()[section >>> 6] & bit) == 0L || (hidden[section >>> 6] & bit) != 0L || !isOccluded(region, section, false))
                 continue;
 
             hidden[section >>> 6] |= bit;
@@ -636,7 +642,8 @@ public final class OcclusionCuller {
             HIDDEN[word] = current[word] & KEPT[word];
         }
 
-        ByteIterator sections = list.sectionsWithGeometryIterator(false);
+        ByteIterator sections        = list.sectionsWithGeometryIterator(false);
+        boolean      regionOccluded  = isUnionOccluded(region, listed);
 
         System.arraycopy(listed, 0, tested, 0, MASK_WORDS);
         occlusion.polydium$setTestedGeneration(testGeneration);
@@ -645,7 +652,7 @@ public final class OcclusionCuller {
             while (sections.hasNext()) {
                 int section = sections.nextByteAsInt();
 
-                if ((KEPT[section >>> 6] >>> section & 1L) == 0L && isOccluded(region, section))
+                if ((KEPT[section >>> 6] >>> section & 1L) == 0L && isOccluded(region, section, regionOccluded))
                     HIDDEN[section >>> 6] |= 1L << section;
             }
         }
@@ -669,7 +676,7 @@ public final class OcclusionCuller {
         return Long.bitCount(mask[0]) + Long.bitCount(mask[1]) + Long.bitCount(mask[2]) + Long.bitCount(mask[3]);
     }
 
-    private static boolean isOccluded(RenderRegion region, int section) {
+    private static boolean isOccluded(RenderRegion region, int section, boolean regionOccluded) {
         long changedAt = ((RegionOcclusion) region).polydium$getChangedAt()[section];
 
         if (changedAt >= testedSequence) {
@@ -677,6 +684,9 @@ public final class OcclusionCuller {
             UNTESTED_SECTIONS.add(section);
             return false;
         }
+
+        if (regionOccluded)
+            return true;
 
         double originX = SectionPos.sectionToBlockCoord(region.getChunkX() + LocalSectionIndex.unpackX(section)) - testedX;
         double originY = SectionPos.sectionToBlockCoord(region.getChunkY() + LocalSectionIndex.unpackY(section)) - testedY;
@@ -688,6 +698,78 @@ public final class OcclusionCuller {
             bounds = SectionBounds.FULL;
 
         return isBoxOccluded((float) originX, (float) originY, (float) originZ, bounds);
+    }
+
+    private static boolean isUnionOccluded(RenderRegion region, long[] listed) {
+        RegionOcclusion occlusion = (RegionOcclusion) region;
+        long[]          changedAt = occlusion.polydium$getChangedAt();
+        long[]          allBounds = occlusion.polydium$getSectionBounds();
+        float           minX      = Float.POSITIVE_INFINITY;
+        float           minY      = Float.POSITIVE_INFINITY;
+        float           minZ      = Float.POSITIVE_INFINITY;
+        float           maxX      = Float.NEGATIVE_INFINITY;
+        float           maxY      = Float.NEGATIVE_INFINITY;
+        float           maxZ      = Float.NEGATIVE_INFINITY;
+        int             count     = 0;
+
+        for (int word = 0; word < MASK_WORDS; word ++) {
+            for (long bits = listed[word] & ~KEPT[word]; bits != 0L; bits &= bits - 1L) {
+                int section = word << 6 | Long.numberOfTrailingZeros(bits);
+
+                if (changedAt[section] >= testedSequence)
+                    continue;
+
+                int bounds = (int) allBounds[section];
+
+                if (bounds == 0)
+                    bounds = SectionBounds.FULL;
+
+                float originX = (float) (SectionPos.sectionToBlockCoord(region.getChunkX() + LocalSectionIndex.unpackX(section)) - testedX);
+                float originY = (float) (SectionPos.sectionToBlockCoord(region.getChunkY() + LocalSectionIndex.unpackY(section)) - testedY);
+                float originZ = (float) (SectionPos.sectionToBlockCoord(region.getChunkZ() + LocalSectionIndex.unpackZ(section)) - testedZ);
+
+                minX = Math.min(minX, originX + SectionBounds.min(bounds, 0));
+                minY = Math.min(minY, originY + SectionBounds.min(bounds, 1));
+                minZ = Math.min(minZ, originZ + SectionBounds.min(bounds, 2));
+                maxX = Math.max(maxX, originX + SectionBounds.max(bounds, 0));
+                maxY = Math.max(maxY, originY + SectionBounds.max(bounds, 1));
+                maxZ = Math.max(maxZ, originZ + SectionBounds.max(bounds, 2));
+                count ++;
+            }
+        }
+
+        return count > 1 && isAabbOccluded(minX, minY, minZ, maxX, maxY, maxZ);
+    }
+
+    private static boolean isAabbOccluded(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
+        float[] matrix  = TESTED_MATRIX;
+        float   nearest = Float.NEGATIVE_INFINITY;
+        float   left    = Float.POSITIVE_INFINITY;
+        float   bottom  = Float.POSITIVE_INFINITY;
+        float   right   = Float.NEGATIVE_INFINITY;
+        float   top     = Float.NEGATIVE_INFINITY;
+
+        for (int corner = 0; corner < 8; corner ++) {
+            float x = (corner & 1) == 0 ? minX : maxX;
+            float y = (corner & 2) == 0 ? minY : maxY;
+            float z = (corner & 4) == 0 ? minZ : maxZ;
+            float w = matrix[3] * x + matrix[7] * y + matrix[11] * z + matrix[15];
+
+            if (w <= NEAR)
+                return false;
+
+            float inverseW = 1.0F / w;
+            float screenX  = ((matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12]) * inverseW * 0.5F + 0.5F) * WIDTH;
+            float screenY  = ((matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13]) * inverseW * 0.5F + 0.5F) * HEIGHT;
+
+            nearest = Math.max(nearest, (matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14]) * inverseW);
+            left    = Math.min(left, screenX);
+            bottom  = Math.min(bottom, screenY);
+            right   = Math.max(right, screenX);
+            top     = Math.max(top, screenY);
+        }
+
+        return isRectOccluded(nearest, left, bottom, right, top);
     }
 
     private static int placeCorners(int bounds) {
@@ -781,6 +863,24 @@ public final class OcclusionCuller {
         return true;
     }
 
+    private static float[] ndcColumns() {
+        float[] columns = new float[WIDTH];
+
+        for (int x = 0; x < WIDTH; x ++)
+            columns[x] = (x + 0.5F) / WIDTH * 2.0F - 1.0F;
+
+        return columns;
+    }
+
+    private static float[][] bandDepths() {
+        float[][] depths = new float[REPROJECT_BANDS][];
+
+        for (int band = 1; band < REPROJECT_BANDS; band ++)
+            depths[band] = new float[WIDTH * HEIGHT];
+
+        return depths;
+    }
+
     private static void reproject() {
         float[] target = PYRAMID[0];
         float   moveX  = (float) (testedX - sourceX);
@@ -801,18 +901,50 @@ public final class OcclusionCuller {
 
         INVERSE.set(matrix).invert();
 
-        float   inverseX = INVERSE.m03();
-        float   inverseY = INVERSE.m13();
-        float   inverseZ = INVERSE.m23();
-        float   inverseW = INVERSE.m33();
+        reprojectShiftX   = shiftX;
+        reprojectShiftY   = shiftY;
+        reprojectShiftZ   = shiftZ;
+        reprojectShiftW   = shiftW;
+        reprojectInverseX = INVERSE.m03();
+        reprojectInverseY = INVERSE.m13();
+        reprojectInverseZ = INVERSE.m23();
+        reprojectInverseW = INVERSE.m33();
+
+        if (REPROJECT_BANDS == 1)
+            reprojectBand(0);
+        else
+            IntStream.range(0, REPROJECT_BANDS).parallel().forEach(OcclusionCuller::reprojectBand);
+
+        for (int index = 0; index < target.length; index ++) {
+            float depth = target[index];
+
+            for (int band = 1; band < REPROJECT_BANDS; band ++)
+                depth = Math.min(depth, BAND_DEPTH[band][index]);
+
+            target[index] = depth == Float.POSITIVE_INFINITY ? 0.0F : depth;
+        }
+    }
+
+    private static void reprojectBand(int band) {
+        float[] target   = band == 0 ? PYRAMID[0] : BAND_DEPTH[band];
+        float   shiftX   = reprojectShiftX;
+        float   shiftY   = reprojectShiftY;
+        float   shiftZ   = reprojectShiftZ;
+        float   shiftW   = reprojectShiftW;
+        float   inverseX = reprojectInverseX;
+        float   inverseY = reprojectInverseY;
+        float   inverseZ = reprojectInverseZ;
+        float   inverseW = reprojectInverseW;
 
         Arrays.fill(target, Float.POSITIVE_INFINITY);
 
-        for (int y = 0; y < HEIGHT; y ++) {
-            float ndcY = (y + 0.5F) / HEIGHT * 2.0F - 1.0F;
+        for (int y = band * HEIGHT / REPROJECT_BANDS; y < (band + 1) * HEIGHT / REPROJECT_BANDS; y ++) {
+            float ndcY     = (y + 0.5F) / HEIGHT * 2.0F - 1.0F;
+            float rowScale = inverseY * ndcY + inverseW;
+            int   row      = y * WIDTH;
 
             for (int x = 0; x < WIDTH; x ++) {
-                int   index = y * WIDTH + x;
+                int   index = row + x;
                 float depth = TESTED_DEPTH[index];
 
                 if (depth <= 0.0F) {
@@ -821,37 +953,37 @@ public final class OcclusionCuller {
                     continue;
                 }
 
-                float ndcX  = (x + 0.5F) / WIDTH * 2.0F - 1.0F;
-                float scale = inverseX * ndcX + inverseY * ndcY + inverseZ * depth + inverseW;
+                float ndcX  = NDC_X[x];
+                float scale = inverseX * ndcX + rowScale + inverseZ * depth;
 
                 if (scale <= 0.0F)
                     continue;
 
-                float w     = 1.0F / scale;
-                float clipW = w - shiftW;
+                float divisor = 1.0F - shiftW * scale;
 
-                if (clipW <= NEAR)
+                if (divisor <= NEAR * scale)
                     continue;
 
-                float inverseClipW = 1.0F / clipW;
-                float screenX      = ((ndcX * w - shiftX) * inverseClipW * 0.5F + 0.5F) * WIDTH;
-                float screenY      = ((ndcY * w - shiftY) * inverseClipW * 0.5F + 0.5F) * HEIGHT;
-                float moved        = (depth * w - shiftZ) * inverseClipW;
-                int   minX         = Math.max((int) Math.floor(screenX - 0.5F), 0);
-                int   minY         = Math.max((int) Math.floor(screenY - 0.5F), 0);
-                int   maxX         = Math.min((int) Math.ceil(screenX + 0.5F) - 1, WIDTH - 1);
-                int   maxY         = Math.min((int) Math.ceil(screenY + 0.5F) - 1, HEIGHT - 1);
+                float inverseDivisor = 1.0F / divisor;
+                float left           = ((ndcX - shiftX * scale) * inverseDivisor * 0.5F + 0.5F) * WIDTH - 0.5F;
+                float bottom         = ((ndcY - shiftY * scale) * inverseDivisor * 0.5F + 0.5F) * HEIGHT - 0.5F;
+
+                if (!(left > -1.0F && left < WIDTH && bottom > -1.0F && bottom < HEIGHT))
+                    continue;
+
+                float moved = (depth - shiftZ * scale) * inverseDivisor;
+                int   floorX = left >= 0.0F ? (int) left : -1;
+                int   floorY = bottom >= 0.0F ? (int) bottom : -1;
+                int   minX   = Math.max(floorX, 0);
+                int   minY   = Math.max(floorY, 0);
+                int   maxX   = Math.min(floorX == left ? floorX : floorX + 1, WIDTH - 1);
+                int   maxY   = Math.min(floorY == bottom ? floorY : floorY + 1, HEIGHT - 1);
 
                 for (int targetY = minY; targetY <= maxY; targetY ++) {
                     for (int targetX = minX; targetX <= maxX; targetX ++)
                         target[targetY * WIDTH + targetX] = Math.min(target[targetY * WIDTH + targetX], moved);
                 }
             }
-        }
-
-        for (int index = 0; index < target.length; index ++) {
-            if (target[index] == Float.POSITIVE_INFINITY)
-                target[index] = 0.0F;
         }
     }
 
