@@ -13,6 +13,7 @@ import com.mojang.blaze3d.shaders.UniformType;
 import org.polyfrost.polydium.vulkan.compat.GpuQueryPool;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderPassBackend;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTexture;
@@ -20,13 +21,16 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import org.polyfrost.polydium.vulkan.checkpoints.CheckpointExtension;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import net.minecraft.SharedConstants;
 import org.jspecify.annotations.Nullable;
+import org.lwjgl.BufferUtils;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
@@ -50,6 +54,13 @@ import org.lwjgl.vulkan.VkViewport.Buffer;
 public class VulkanRenderPass implements RenderPassBackend {
   public static final boolean VALIDATION = SharedConstants.IS_RUNNING_IN_IDE;
   private static @Nullable GpuBufferSlice lastDynamicTransforms;
+  private static final int POOL_LIMIT = 8;
+  private static final ArrayDeque<HashMap<String, GpuBufferSlice>> FREE_UNIFORMS = new ArrayDeque<>();
+  private static final ArrayDeque<HashMap<String, VulkanRenderPass.TextureViewAndSampler>> FREE_TEXTURES = new ArrayDeque<>();
+  private static final ArrayDeque<Object[]> FREE_SLOTS = new ArrayDeque<>();
+  private static final VulkanRenderPass.TextureViewAndSampler[] TEXTURE_CACHE = new VulkanRenderPass.TextureViewAndSampler[64];
+  private static final LongBuffer VERTEX_BUFFER = BufferUtils.createLongBuffer(1);
+  private static final LongBuffer VERTEX_OFFSET = BufferUtils.createLongBuffer(1);
   private final VulkanDevice device;
   private final VulkanCommandEncoder encoder;
   private final CheckpointExtension.CheckpointStorage checkpointStorage;
@@ -62,10 +73,11 @@ public class VulkanRenderPass implements RenderPassBackend {
   private final VkCommandBuffer commandBuffer;
   protected @Nullable VulkanRenderPipeline pipeline;
   private boolean anyDescriptorDirty = false;
-  protected final HashMap<String, GpuBufferSlice> uniforms = new HashMap<>();
-  protected final HashMap<String, VulkanRenderPass.TextureViewAndSampler> textures = new HashMap<>();
+  protected final HashMap<String, GpuBufferSlice> uniforms;
+  protected final HashMap<String, VulkanRenderPass.TextureViewAndSampler> textures;
   private Object[] uniformSlots = VulkanDynamicState.NO_SLOTS;
   private Object[] textureSlots = VulkanDynamicState.NO_SLOTS;
+  private final boolean pooled;
 
   public VulkanRenderPass(
     final VulkanDevice device,
@@ -87,6 +99,15 @@ public class VulkanRenderPass implements RenderPassBackend {
     this.outputHeight = outputHeight;
     this.hasDepth = hasDepth;
     this.label = label;
+    this.pooled = RenderSystem.isOnRenderThread();
+    HashMap<String, GpuBufferSlice> pooledUniforms = this.pooled ? FREE_UNIFORMS.pollFirst() : null;
+    this.uniforms = pooledUniforms != null ? pooledUniforms : new HashMap<>();
+    HashMap<String, VulkanRenderPass.TextureViewAndSampler> pooledTextures = this.pooled ? FREE_TEXTURES.pollFirst() : null;
+    this.textures = pooledTextures != null ? pooledTextures : new HashMap<>();
+    if (this.pooled) {
+      this.uniformSlots = acquireSlots();
+      this.textureSlots = acquireSlots();
+    }
     if (GpuProfileFlag.ENABLED && GpuProfiler.recording)
       GpuProfiler.pass(label);
     MemoryStack stack = MemoryStack.stackPush();
@@ -120,6 +141,47 @@ public class VulkanRenderPass implements RenderPassBackend {
 
   private VkCommandBuffer commandBuffer() {
     return this.commandBuffer;
+  }
+
+  private static Object[] acquireSlots() {
+    Object[] slots = FREE_SLOTS.pollFirst();
+    return slots != null ? slots : VulkanDynamicState.NO_SLOTS;
+  }
+
+  private static void releaseSlots(final Object[] slots) {
+    if (slots != VulkanDynamicState.NO_SLOTS && FREE_SLOTS.size() < POOL_LIMIT * 2) {
+      Arrays.fill(slots, null);
+      FREE_SLOTS.addFirst(slots);
+    }
+  }
+
+  private void release() {
+    if (!this.pooled || !RenderSystem.isOnRenderThread()) {
+      return;
+    }
+    this.uniforms.clear();
+    this.textures.clear();
+    if (FREE_UNIFORMS.size() < POOL_LIMIT) {
+      FREE_UNIFORMS.addFirst(this.uniforms);
+    }
+    if (FREE_TEXTURES.size() < POOL_LIMIT) {
+      FREE_TEXTURES.addFirst(this.textures);
+    }
+    releaseSlots(this.uniformSlots);
+    releaseSlots(this.textureSlots);
+    this.uniformSlots = VulkanDynamicState.NO_SLOTS;
+    this.textureSlots = VulkanDynamicState.NO_SLOTS;
+  }
+
+  private static VulkanRenderPass.TextureViewAndSampler textureViewAndSampler(final VulkanGpuTextureView view, final VulkanGpuSampler sampler) {
+    int index = (System.identityHashCode(view) * 31 + System.identityHashCode(sampler)) & (TEXTURE_CACHE.length - 1);
+    VulkanRenderPass.TextureViewAndSampler cached = TEXTURE_CACHE[index];
+    if (cached != null && cached.view == view && cached.sampler == sampler) {
+      return cached;
+    }
+    VulkanRenderPass.TextureViewAndSampler created = new VulkanRenderPass.TextureViewAndSampler(view, sampler);
+    TEXTURE_CACHE[index] = created;
+    return created;
   }
 
   @Override
@@ -157,12 +219,22 @@ public class VulkanRenderPass implements RenderPassBackend {
   @Override
   public void bindTexture(final String name, final @Nullable GpuTextureView textureView, final @Nullable GpuSampler sampler) {
     if (textureView != null && sampler != null) {
-      VulkanRenderPass.TextureViewAndSampler texture = new VulkanRenderPass.TextureViewAndSampler((VulkanGpuTextureView)textureView, (VulkanGpuSampler)sampler);
-      if (!texture.equals(this.textures.put(name, texture))) {
+      VulkanGpuTextureView view = (VulkanGpuTextureView)textureView;
+      VulkanGpuSampler vulkanSampler = (VulkanGpuSampler)sampler;
+      if (this.closed) {
+        return;
+      }
+      VulkanRenderPass.TextureViewAndSampler bound = this.textures.get(name);
+      if (bound == null || bound.view != view || bound.sampler != vulkanSampler) {
+        VulkanRenderPass.TextureViewAndSampler texture = textureViewAndSampler(view, vulkanSampler);
+        this.textures.put(name, texture);
         this.textureSlots = VulkanDynamicState.setSlot(this.textureSlots, name, texture);
         this.anyDescriptorDirty = true;
       }
     } else if (textureView == null && sampler == null) {
+      if (this.closed) {
+        return;
+      }
       if (this.textures.remove(name) != null) {
         this.textureSlots = VulkanDynamicState.setSlot(this.textureSlots, name, null);
       }
@@ -180,6 +252,9 @@ public class VulkanRenderPass implements RenderPassBackend {
   public void setUniform(final String name, final GpuBufferSlice value) {
     if (name.equals("DynamicTransforms")) {
       lastDynamicTransforms = value;
+    }
+    if (this.closed) {
+      return;
     }
     if (!value.equals(this.uniforms.put(name, value))) {
       this.uniformSlots = VulkanDynamicState.setSlot(this.uniformSlots, name, value);
@@ -236,6 +311,13 @@ public class VulkanRenderPass implements RenderPassBackend {
 
   @Override
   public void setVertexBuffer(final int slot, final GpuBuffer vertexBuffer) {
+    if (RenderSystem.isOnRenderThread()) {
+      VK12.vkCmdBindVertexBuffers(
+        this.commandBuffer(), slot, VERTEX_BUFFER.put(0, ((VulkanGpuBuffer)vertexBuffer).vkBuffer()),
+        VERTEX_OFFSET.put(0, ImmediateDrawRing.holds(vertexBuffer) ? ImmediateDrawRing.vertexOffset() : 0L)
+      );
+      return;
+    }
     MemoryStack stack = MemoryStack.stackPush();
 
     try {
@@ -361,20 +443,25 @@ public class VulkanRenderPass implements RenderPassBackend {
     }
     } finally {
       multiDrawing = null;
-      this.multiDrawViews.forEach(GpuTextureView::close);
-      this.multiDrawViews.clear();
+      if (this.multiDrawViews != null) {
+        this.multiDrawViews.forEach(GpuTextureView::close);
+        this.multiDrawViews.clear();
+      }
       if (profiled)
         GpuProfiler.end(this.commandBuffer);
     }
   }
 
   public static @Nullable VulkanRenderPass multiDrawing;
-  private final ArrayList<GpuTextureView> multiDrawViews = new ArrayList<>();
+  private @Nullable ArrayList<GpuTextureView> multiDrawViews;
 
   public void rebindSampler0(final GpuTexture texture) {
     VulkanRenderPass.TextureViewAndSampler bound = this.textures.get("Sampler0");
     if (bound == null) return;
     GpuTextureView view = this.device.createTextureView(texture);
+    if (this.multiDrawViews == null) {
+      this.multiDrawViews = new ArrayList<>();
+    }
     this.multiDrawViews.add(view);
     this.bindTexture("Sampler0", view, bound.sampler());
   }
@@ -606,6 +693,7 @@ public class VulkanRenderPass implements RenderPassBackend {
     if (!this.closed) {
       this.closed = true;
       this.encoder.submitRenderPass();
+      this.release();
     }
   }
 

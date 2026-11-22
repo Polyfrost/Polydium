@@ -11,21 +11,35 @@ public final class QuadSort {
     private static int next;
     private static int slot;
     private static int[] sharedKeys = new int[0];
+    private static final int MAX_SCRATCH = 4096;
+    private static final ThreadLocal<long[]> SCRATCH = ThreadLocal.withInitial(() -> new long[64]);
 
     private QuadSort() {
     }
 
     public static void sortSmall(int[] perm, int[] keys) {
         int length = perm.length;
-        long[] packed = new long[length];
+        long[] packed = scratch(length);
         for (int i = 0; i < length; i++) {
             int index = perm[i];
             packed[i] = (long) keys[index] << 32 | index & 0xFFFFFFFFL;
         }
-        Arrays.sort(packed);
+        Arrays.sort(packed, 0, length);
         for (int i = 0; i < length; i++) {
             perm[i] = (int) packed[i];
         }
+    }
+
+    private static long[] scratch(int length) {
+        if (length > MAX_SCRATCH) {
+            return new long[length];
+        }
+        long[] packed = SCRATCH.get();
+        if (packed.length < length) {
+            packed = new long[Math.min(MAX_SCRATCH, Math.max(length, packed.length << 1))];
+            SCRATCH.set(packed);
+        }
+        return packed;
     }
 
     public static boolean reuse(long currentFrame, int[] perm, int[] keys) {

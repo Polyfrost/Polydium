@@ -136,7 +136,7 @@ public final class VulkanDynamicState {
             if (value == null) {
                 return slots;
             }
-            slots = Arrays.copyOf(slots, slot + 8);
+            slots = Arrays.copyOf(slots, Math.max(slot, NEXT_SLOT.get()) + 8);
         }
         slots[slot] = value;
         return slots;
