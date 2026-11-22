@@ -434,6 +434,15 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".MixinGammaOptionGate") && !Mods.loaded("gammautils"))
             return false;
 
+        if (mixinClassName.contains(".perf.immediatelyfast.") && !Mods.loaded("immediatelyfast"))
+            return false;
+
+        if (mixinClassName.contains(".perf.polytone.") && !Mods.loaded("polytone"))
+            return false;
+
+        if (mixinClassName.contains(".perf.ixeris.") && !Mods.loaded("ixeris"))
+            return false;
+
         if (mixinClassName.endsWith(".MixinDynamicLightOptimisticRead") && !Mods.loaded("lambdynlights"))
             return false;
 

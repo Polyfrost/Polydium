@@ -888,6 +888,12 @@
     "client.perf.wwaypoints.MixinEssentialSharingContextResolver",
     "client.perf.punchy.MixinPunchyBlacklistCache",
     "client.perf.tiertagger.MixinTierTaggerModeCache",
+    "client.perf.immediatelyfast.MixinBatchableBufferSetPool",
+    "client.perf.polytone.MixinPolytoneTypelessMenu",
+    "client.perf.MixinLinkFsExists",
+    "client.perf.MixinLinkFsExistsPath",
+    //? if >= 26.3
+    "client.perf.ixeris.MixinIxerisSdlEventReuse",
     "client.perf.gammautils.MixinGammaOptionGate",
     "client.perf.lambdynlights.MixinDynamicLightOptimisticRead",
     "client.perf.lambdynlights.MixinLightSourceSetRemove",
