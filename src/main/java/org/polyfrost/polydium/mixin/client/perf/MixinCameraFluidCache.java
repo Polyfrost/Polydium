@@ -24,6 +24,9 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(value = Camera.class, priority = 999)
 public abstract class MixinCameraFluidCache {
@@ -70,8 +73,6 @@ public abstract class MixinCameraFluidCache {
     @Unique
     private long polydium$fluidTick;
     @Unique
-    private boolean polydium$fluidInitialized;
-    @Unique
     private /*? if >= 1.21.11 {*/Level/*?} else {*//*BlockGetter*//*?}*/ polydium$fluidLevel;
     @Unique
     private Vec3 polydium$fluidPosition;
@@ -94,8 +95,17 @@ public abstract class MixinCameraFluidCache {
     @Unique
     private FogType polydium$fluid;
 
+    @Inject(method = "reset", at = @At("TAIL"))
+    private void polydium$resetFluidCache(CallbackInfo ci) {
+        this.polydium$fluidLevel = null;
+        this.polydium$fluidFrame = -1L;
+    }
+
     @Overwrite
     public FogType getFluidInCamera() {
+        if (!this.initialized)
+            return FogType.NONE;
+
         long frame = PerfClock.frame;
         long tick = PerfClock.tick;
         long blockPos = this.blockPosition.asLong();
@@ -113,7 +123,6 @@ public abstract class MixinCameraFluidCache {
         *///?}
         if (this.polydium$fluidFrame == frame
             && this.polydium$fluidTick == tick
-            && this.polydium$fluidInitialized == this.initialized
             && this.polydium$fluidLevel == this.level
             && this.polydium$fluidPosition == this.position
             && this.polydium$fluidBlockPos == blockPos
@@ -129,7 +138,6 @@ public abstract class MixinCameraFluidCache {
         FogType fluid = this.polydium$findFluid();
         this.polydium$fluidFrame = frame;
         this.polydium$fluidTick = tick;
-        this.polydium$fluidInitialized = this.initialized;
         this.polydium$fluidLevel = this.level;
         this.polydium$fluidPosition = this.position;
         this.polydium$fluidBlockPos = blockPos;
@@ -146,9 +154,6 @@ public abstract class MixinCameraFluidCache {
 
     @Unique
     private FogType polydium$findFluid() {
-        if (!this.initialized)
-            return FogType.NONE;
-
         FluidState cameraFluid = this.level.getFluidState(this.blockPosition);
 
         if (cameraFluid.is(FluidTags.WATER) && this.position.y < this.blockPosition.getY() + this.polydium$height(cameraFluid, this.blockPosition))
