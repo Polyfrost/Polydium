@@ -3,6 +3,7 @@ package org.polyfrost.polydium.client.perf;
 //? if >= 1.21.10
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.util.FormattedCharSequence;
 import org.polyfrost.polydium.compat.FontrastCompat;
 
@@ -13,6 +14,7 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 // Geometry-cache idea ported from Argentum (TextBatcher), with permission from rdh.
 public final class PreparedTextCache<V> {
@@ -21,6 +23,41 @@ public final class PreparedTextCache<V> {
 
     public static boolean cacheable(Style style) {
         return !style.isObfuscated() && !FontrastCompat.forcesObfuscation() /*? if >= 1.21.10 {*/&& style.getFont() instanceof FontDescription.Resource/*?}*/;
+    }
+
+    public static int renderHash(Style style) {
+        TextColor color = style.getColor();
+        int hash = color == null ? -1 : color.getValue();
+        //? if >= 1.21.4 {
+        Integer shadow = style.getShadowColor();
+        hash = 31 * hash + (shadow == null ? 0 : shadow);
+        //?}
+        int flags = (style.isBold() ? 1 : 0) | (style.isItalic() ? 2 : 0) | (style.isUnderlined() ? 4 : 0)
+                | (style.isStrikethrough() ? 8 : 0) | (style.isObfuscated() ? 16 : 0);
+        return 31 * (31 * hash + flags) + style.getFont().hashCode();
+    }
+
+    public static boolean renderEquals(Style a, Style b) {
+        if (a == b) {
+            return true;
+        }
+        TextColor colorA = a.getColor();
+        TextColor colorB = b.getColor();
+        if (colorA != colorB && (colorA == null || colorB == null || colorA.getValue() != colorB.getValue())) {
+            return false;
+        }
+        //? if >= 1.21.4 {
+        if (!Objects.equals(a.getShadowColor(), b.getShadowColor())) {
+            return false;
+        }
+        //?}
+        return a.isBold() == b.isBold() && a.isItalic() == b.isItalic() && a.isUnderlined() == b.isUnderlined()
+                && a.isStrikethrough() == b.isStrikethrough() && a.isObfuscated() == b.isObfuscated()
+                && a.getFont().equals(b.getFont());
+    }
+
+    private static boolean sameStyle(Style a, Style b) {
+        return renderEquals(a, b) && a.equals(b);
     }
 
     public interface Access {
@@ -70,11 +107,19 @@ public final class PreparedTextCache<V> {
                     return false;
                 }
             }
+            Object previous = null;
+            Object previousOther = null;
             for (int i = 0; i < this.length; i++) {
                 Object style = this.styles[i];
-                if (style != key.styles[i] && !style.equals(key.styles[i])) {
+                Object otherStyle = key.styles[i];
+                if (style == otherStyle || (style == previous && otherStyle == previousOther)) {
+                    continue;
+                }
+                if (!sameStyle((Style) style, (Style) otherStyle)) {
                     return false;
                 }
+                previous = style;
+                previousOther = otherStyle;
             }
             return true;
         }
@@ -123,7 +168,7 @@ public final class PreparedTextCache<V> {
     private final Key scratch = new Key();
     private int generation;
     private int runHash;
-    private Object lastStyle;
+    private Style lastStyle;
 
     public PreparedTextCache(int limit) {
         this.limit = limit;
@@ -227,7 +272,7 @@ public final class PreparedTextCache<V> {
         this.lastStyle = null;
     }
 
-    public boolean add(int position, Object style, int codePoint) {
+    public boolean add(int position, Style style, int codePoint) {
         Key key = this.scratch;
         int length = key.length;
         if (length == MAX_LENGTH) {
@@ -237,8 +282,9 @@ public final class PreparedTextCache<V> {
         key.chars[2 * length + 1] = codePoint;
         key.styles[length] = style;
         key.length = length + 1;
-        if (style != this.lastStyle && !style.equals(this.lastStyle)) {
-            this.runHash = 31 * this.runHash + style.hashCode();
+        Style lastStyle = this.lastStyle;
+        if (lastStyle == null || !renderEquals(style, lastStyle)) {
+            this.runHash = 31 * this.runHash + renderHash(style);
         }
         this.lastStyle = style;
         this.runHash = 31 * (31 * this.runHash + position) + codePoint;

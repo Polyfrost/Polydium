@@ -31,6 +31,10 @@
     //? if >= 1.21.8
     "client.perf.MixinDebugChartMergeState",
     //? if >= 1.21.10 && < 26.2
+    //"client.perf.MixinNameTagSortPrimitive",
+    //? if >= 1.21.8
+    "client.perf.MixinGuiIntersectionIndexed",
+    //? if >= 1.21.10 && < 26.2
     //"client.perf.MixinBatchPipelineSortModels",
     //? if >= 1.21.1
     "client.perf.MixinFullCubeShape",
@@ -853,6 +857,7 @@
     //"client.perf.MixinFontTextureNodeFreeSpace",
     "client.perf.MixinTextDisplaySplitter",
     "client.perf.MixinEntityNameTagMemo",
+    "client.perf.MixinEntityNameStripMemo",
     "client.perf.MixinPlayerPassengerCount",
     "client.perf.MixinVillagerTextureCache",
     "client.perf.MixinEntityRendererNameTagMemo",
