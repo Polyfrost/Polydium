@@ -4,6 +4,7 @@ package org.polyfrost.polydium.client.perf;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.rendering.v1.FabricRenderState;
 import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.state.ArmorStandRenderState;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.ItemEntityRenderState;
 import net.minecraft.client.renderer.entity.state.SheepRenderState;
@@ -54,6 +55,12 @@ public final class EntityStateReuse {
         if (state != null && holder.polydium$reusedStateOwner() == renderer && holder.polydium$reusedStatePass() != pass) {
             holder.polydium$setReusedState(state, renderer, pass);
             ((FabricRenderState) state).clearExtraData();
+            state.distanceToCameraSq = 0.0;
+            state.nameTag = null;
+            state.nameTagAttachment = null;
+            //? if >= 26.1 {
+            state.scoreText = null;
+            //?}
             EtfStateReuse.expect(entity, true);
             return state;
         }
@@ -61,7 +68,7 @@ public final class EntityStateReuse {
         Class<?> cls = state.getClass();
         // Exact classes only: a state can be reused when its renderer rewrites every field on each extract
         if (cls == SlimeRenderState.class || cls == SheepRenderState.class || cls == VillagerRenderState.class
-                || cls == ItemEntityRenderState.class) {
+                || cls == ItemEntityRenderState.class || cls == ArmorStandRenderState.class) {
             holder.polydium$setReusedState(state, renderer, pass);
             EtfStateReuse.expect(entity, false);
         }
