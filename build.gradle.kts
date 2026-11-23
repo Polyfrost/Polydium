@@ -19,6 +19,8 @@ plugins {
     id("me.modmuss50.mod-publish-plugin") version "2.2.0"
     id("dev.detekt") version "2.0.0-alpha.6"
     id("net.ltgt.errorprone") version "5.1.1"
+    id("com.diffplug.spotless") version "8.11.0"
+    checkstyle
 }
 
 val stonecutter = extensions.getByName("stonecutter") as StonecutterBuildExtension
@@ -197,11 +199,25 @@ dependencies {
     errorprone("com.google.errorprone:error_prone_core:${property("deps.errorprone")}")
 }
 
+spotless {
+    kotlin {
+        target("src/**/*.kt")
+        ktlint()
+    }
+}
+
 tasks.withType<JavaCompile>().configureEach {
     options.errorprone {
         disableAllChecks = true
         error("UnnecessarilyFullyQualified")
     }
+
+    val sourceSetName = sourceSets.find { it.compileJavaTaskName == name }!!.name
+    finalizedBy("checkstyle${sourceSetName.capitalize()}")
+}
+
+tasks.withType<KotlinCompile>().configureEach {
+    finalizedBy("spotlessKotlinCheck")
 }
 
 // the enabled Detekt rules need type resolution, which only the per-compilation tasks have
