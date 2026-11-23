@@ -1,3 +1,7 @@
+## 1.4.21
+- perf: cut per-frame allocations (nametag sorting, entity names, text, armor stands, Vulkan render passes) for fewer GC stutters
+- fix: compat with BetterClouds
+
 ## 1.4.20
 - perf: improve performance of occlusion culling by splitting in parallel
 - perf: transform debug line normal once per line
