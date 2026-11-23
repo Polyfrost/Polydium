@@ -11,6 +11,7 @@ public abstract class MixinClimateSearchScratch {
     @Unique
     private static final ThreadLocal<long[]> polydium$target = ThreadLocal.withInitial(() -> new long[7]);
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "search", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/biome/Climate$TargetPoint;toParameterArray()[J"))
     private long[] polydium$scratchTarget(Climate.TargetPoint target) {
         long[] array = polydium$target.get();

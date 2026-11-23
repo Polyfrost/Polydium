@@ -10,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(SubmitNodeCollection.class)
 public class MixinSubmitPosePool {
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "submitModel", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack$Pose;copy()Lcom/mojang/blaze3d/vertex/PoseStack$Pose;"))
     private PoseStack.Pose polydium$pooledPose(PoseStack.Pose pose) {
         return SubmitPosePool.copy(pose);

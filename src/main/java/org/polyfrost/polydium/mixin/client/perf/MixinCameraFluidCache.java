@@ -94,6 +94,7 @@ public abstract class MixinCameraFluidCache {
     @Unique
     private FogType polydium$fluid;
 
+    @SuppressWarnings("checkstyle:NoOverwrite") // TODO: needed?
     @Overwrite
     public FogType getFluidInCamera() {
         long frame = PerfClock.frame;

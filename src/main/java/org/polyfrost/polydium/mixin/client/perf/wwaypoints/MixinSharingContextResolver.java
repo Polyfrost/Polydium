@@ -22,6 +22,7 @@ public abstract class MixinSharingContextResolver {
      * @author Polydium
      * @reason regex per player per tick
      */
+    @SuppressWarnings("checkstyle:NoOverwrite") // TODO: needed?
     @Overwrite
     private static boolean validUsername(String value) {
         if (value == null)

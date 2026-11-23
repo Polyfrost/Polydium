@@ -24,6 +24,7 @@ public abstract class MixinGlTexBufferCache {
     @Unique
     private GpuBuffer polydium$buffer;
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = {"trySetup", "setupDraw"}, at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/opengl/Uniform$Utb;texture()I"))
     private int polydium$captureUtb(Uniform.Utb utb) {
         polydium$utb = utb;

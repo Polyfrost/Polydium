@@ -11,6 +11,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(MappableRingBuffer.class)
 public abstract class MixinFenceBatchRingBuffer {
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "rotate", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/CommandEncoder;createFence()Lcom/mojang/blaze3d/buffers/GpuFence;"))
     private GpuFence polydium$deferFence(CommandEncoder encoder) {
         return FenceBatcher.defer();

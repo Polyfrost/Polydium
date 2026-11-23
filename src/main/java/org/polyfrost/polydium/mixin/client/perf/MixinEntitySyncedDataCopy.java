@@ -54,6 +54,7 @@ public abstract class MixinEntitySyncedDataCopy implements SyncedDataCopy {
         return polydium$STORED && PolydiumToggles.syncedDataCopies;
     }
 
+    @SuppressWarnings("checkstyle:NoOverwrite") // TODO: needed?
     @Overwrite
     protected boolean getSharedFlag(int flag) {
         if (polydium$copies())
@@ -61,6 +62,7 @@ public abstract class MixinEntitySyncedDataCopy implements SyncedDataCopy {
         return (this.entityData.get(DATA_SHARED_FLAGS_ID) & 1 << flag) != 0;
     }
 
+    @SuppressWarnings("checkstyle:NoOverwrite") // TODO: needed?
     @Overwrite
     public Component getCustomName() {
         if (polydium$copies())
@@ -68,6 +70,7 @@ public abstract class MixinEntitySyncedDataCopy implements SyncedDataCopy {
         return this.entityData.get(DATA_CUSTOM_NAME).orElse(null);
     }
 
+    @SuppressWarnings("checkstyle:NoOverwrite") // TODO: needed?
     @Overwrite
     public boolean hasCustomName() {
         if (polydium$copies())
@@ -75,6 +78,7 @@ public abstract class MixinEntitySyncedDataCopy implements SyncedDataCopy {
         return this.entityData.get(DATA_CUSTOM_NAME).isPresent();
     }
 
+    @SuppressWarnings("checkstyle:NoOverwrite") // TODO: needed?
     @Overwrite
     public boolean isCustomNameVisible() {
         if (polydium$copies())

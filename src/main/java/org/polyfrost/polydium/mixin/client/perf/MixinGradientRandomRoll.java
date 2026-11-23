@@ -17,6 +17,7 @@ public abstract class MixinGradientRandomRoll {
     @Unique
     private float polydium$roll;
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "compute", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/levelgen/PositionalRandomFactory;at(III)Lnet/minecraft/util/RandomSource;"))
     private RandomSource polydium$at(PositionalRandomFactory factory, int x, int y, int z) {
         if (!(factory instanceof XoroshiroRandomSource.XoroshiroPositionalRandomFactory)) {
@@ -27,6 +28,7 @@ public abstract class MixinGradientRandomRoll {
         return polydium$ROLLED;
     }
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "compute", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/RandomSource;nextFloat()F"))
     private float polydium$nextFloat(RandomSource random) {
         return random == polydium$ROLLED ? this.polydium$roll : random.nextFloat();

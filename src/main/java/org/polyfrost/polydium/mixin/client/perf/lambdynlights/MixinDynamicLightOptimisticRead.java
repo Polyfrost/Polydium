@@ -34,6 +34,7 @@ public abstract class MixinDynamicLightOptimisticRead {
     @Shadow(remap = false)
     public abstract int getLightmapWithDynamicLight(double dynamicLightLevel, int lightmap);
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "*", at = @At(value = "INVOKE", target = "Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;lock()V"), remap = false, require = 0)
     private void polydium$stampWrite(ReentrantReadWriteLock.WriteLock lock) {
         lock.lock();
@@ -43,6 +44,7 @@ public abstract class MixinDynamicLightOptimisticRead {
         }
     }
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "*", at = @At(value = "INVOKE", target = "Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;unlock()V"), remap = false, require = 0)
     private void polydium$unstampWrite(ReentrantReadWriteLock.WriteLock lock) {
         long stamp = polydium$writeStamp;

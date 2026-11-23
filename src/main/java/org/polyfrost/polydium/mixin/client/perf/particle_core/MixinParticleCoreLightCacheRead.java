@@ -11,6 +11,7 @@ import java.util.function.Function;
 
 @Mixin(value = Particle.class, priority = 1100)
 public abstract class MixinParticleCoreLightCacheRead {
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "particle_core_tickLightUpdate", at = @At(value = "INVOKE", target = "Ljava/util/concurrent/ConcurrentHashMap;computeIfAbsent(Ljava/lang/Object;Ljava/util/function/Function;)Ljava/lang/Object;", remap = false), remap = false, require = 0)
     private <K, V> V polydium$readFirst(ConcurrentHashMap<K, V> cache, K pos, Function<? super K, ? extends V> lookup) {
         if (!PolydiumToggles.particleLightCacheRead)

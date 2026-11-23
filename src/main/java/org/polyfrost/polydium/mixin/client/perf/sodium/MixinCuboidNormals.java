@@ -18,6 +18,7 @@ public abstract class MixinCuboidNormals {
     @Unique
     private static int polydium$lastNormal;
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(
             method = "prepareNormalsIfChanged",
             at = @At(value = "INVOKE", target = "Lnet/caffeinemc/mods/sodium/api/math/MatrixHelper;transformNormal(Lorg/joml/Matrix3f;ZLnet/minecraft/core/Direction;)I"),

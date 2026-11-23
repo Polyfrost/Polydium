@@ -46,6 +46,7 @@ public abstract class MixinDynamicAtlasTreeFreeSpace {
         this.polydium$refresh();
     }
 
+    @SuppressWarnings("checkstyle:NoOverwrite") // TODO: needed?
     @Overwrite
     private @Nullable DynamicAtlasTree insertInner(int slotWidth, int slotHeight, int spacing) {
         int free = this.polydium$freeBits;

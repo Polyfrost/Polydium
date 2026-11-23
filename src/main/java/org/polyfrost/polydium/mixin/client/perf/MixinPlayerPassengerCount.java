@@ -16,6 +16,7 @@ public abstract class MixinPlayerPassengerCount {
      * @author Wyvest
      * @reason Stop calling for every visible entity each frame even when ticking is frozen
      */
+    @SuppressWarnings("checkstyle:NoOverwrite") // TODO: needed?
     @Overwrite
     public int countPlayerPassengers() {
         ImmutableList<Entity> passengers = this.passengers;

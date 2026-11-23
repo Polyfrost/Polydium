@@ -29,6 +29,7 @@ public abstract class MixinFullTQuadPackedVertices {
     @Unique
     private int[] polydium$packed;
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/caffeinemc/mods/sodium/client/render/chunk/vertex/format/ChunkVertexEncoder$Vertex;uninitializedQuad()[Lnet/caffeinemc/mods/sodium/client/render/chunk/vertex/format/ChunkVertexEncoder$Vertex;"))
     private ChunkVertexEncoder.Vertex[] polydium$deferVertices() {
         return null;
@@ -71,12 +72,14 @@ public abstract class MixinFullTQuadPackedVertices {
         self.polydium$setVertexPositions(positions);
     }
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = {"initVertices", "writeToBuffer", "getVertexPositions", "getVeryAccurateNormal", "getVertices", "updateSplitQuadAfterVertexModification"},
             at = @At(value = "FIELD", target = "Lnet/caffeinemc/mods/sodium/client/render/chunk/translucent_sorting/quad/FullTQuad;vertices:[Lnet/caffeinemc/mods/sodium/client/render/chunk/vertex/format/ChunkVertexEncoder$Vertex;", opcode = 180))
     private ChunkVertexEncoder.Vertex[] polydium$vertices(FullTQuad quad) {
         return polydium$unpack(quad);
     }
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "splittingCopy",
             at = @At(value = "FIELD", target = "Lnet/caffeinemc/mods/sodium/client/render/chunk/translucent_sorting/quad/FullTQuad;vertices:[Lnet/caffeinemc/mods/sodium/client/render/chunk/vertex/format/ChunkVertexEncoder$Vertex;", opcode = 180))
     private static ChunkVertexEncoder.Vertex[] polydium$copySourceVertices(FullTQuad quad) {

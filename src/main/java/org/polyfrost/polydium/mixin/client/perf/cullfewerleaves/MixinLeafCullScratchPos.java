@@ -15,6 +15,7 @@ public abstract class MixinLeafCullScratchPos {
     private static final ThreadLocal<BlockPos.MutableBlockPos[]> polydium$scratch =
             ThreadLocal.withInitial(() -> new BlockPos.MutableBlockPos[]{new BlockPos.MutableBlockPos(), new BlockPos.MutableBlockPos()});
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "shouldCullSide", at = @At(value = "INVOKE", target = "Lnet/minecraft/core/Vec3i;multiply(I)Lnet/minecraft/core/Vec3i;", remap = true), remap = false, require = 0)
     private static Vec3i polydium$scaledNormal(Vec3i normal, int scale) {
         if (scale == 1) {
@@ -23,6 +24,7 @@ public abstract class MixinLeafCullScratchPos {
         return polydium$scratch.get()[0].set(normal.getX() * scale, normal.getY() * scale, normal.getZ() * scale);
     }
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "shouldCullSide", at = @At(value = "INVOKE", target = "Lnet/minecraft/core/BlockPos;offset(Lnet/minecraft/core/Vec3i;)Lnet/minecraft/core/BlockPos;", remap = true), remap = false, require = 0)
     private static BlockPos polydium$neighbor(BlockPos pos, Vec3i offset) {
         return polydium$scratch.get()[1].setWithOffset(pos, offset);

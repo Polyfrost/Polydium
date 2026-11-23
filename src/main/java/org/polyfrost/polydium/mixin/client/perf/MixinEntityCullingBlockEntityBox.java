@@ -45,12 +45,14 @@ public abstract class MixinEntityCullingBlockEntityBox {
         return cached != null ? cached : original.call(mod, blockEntity, pos);
     }
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @TargetHandler(mixin = POLYDIUM$MIXIN, name = "tryExtractRenderState")
     @Redirect(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/phys/AABB;inflate(D)Lnet/minecraft/world/phys/AABB;"), require = 0, expect = 0)
     private AABB polydium$cachedInflate(AABB box, double amount) {
         return this.polydium$cullTarget == null ? box : box.inflate(amount);
     }
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @TargetHandler(mixin = POLYDIUM$MIXIN, name = "tryExtractRenderState")
     @Redirect(method = "@MixinSquared:Handler", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/culling/Frustum;isVisible(Lnet/minecraft/world/phys/AABB;)Z"), require = 0, expect = 0)
     private boolean polydium$cacheTestedBox(Frustum frustum, AABB box) {

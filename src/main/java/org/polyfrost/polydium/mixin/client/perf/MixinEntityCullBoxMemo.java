@@ -43,6 +43,7 @@ public abstract class MixinEntityCullBoxMemo implements CullBoxMemo {
     }
 
     //? if >= 26.3 {
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "getInterpolatedBoundingBox", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/phys/AABB;move(DDD)Lnet/minecraft/world/phys/AABB;"))
     private AABB polydium$memoInterpolatedBox(AABB base, double dx, double dy, double dz) {
         return this.polydium$moveCullBox(base, dx, dy, dz);

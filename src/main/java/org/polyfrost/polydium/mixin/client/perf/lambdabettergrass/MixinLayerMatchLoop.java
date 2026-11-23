@@ -18,6 +18,7 @@ public abstract class MixinLayerMatchLoop {
     @Shadow @Final
     private List<? extends Predicate<BlockState>> matchers;
 
+    @SuppressWarnings("checkstyle:NoOverwrite") // TODO: needed?
     @Overwrite
     public boolean match(BlockState state) {
         List<? extends Predicate<BlockState>> matchers = this.matchers;

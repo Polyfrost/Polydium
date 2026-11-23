@@ -32,6 +32,7 @@ public abstract class MixinVillagerTextureCache {
      * @author Wyvest
      * @reason Optimize
      */
+    @SuppressWarnings("checkstyle:NoOverwrite") // TODO: needed?
     @Overwrite
     //? if >= 1.21.11 {
     private Identifier getIdentifier(String type, Identifier key) {

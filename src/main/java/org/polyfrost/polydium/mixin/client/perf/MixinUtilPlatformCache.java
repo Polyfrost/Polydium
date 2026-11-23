@@ -16,6 +16,7 @@ public abstract class MixinUtilPlatformCache {
     @Unique
     private static final String polydium$osName = System.getProperty("os.name").toLowerCase(Locale.ROOT);
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "getPlatform", at = @At(value = "INVOKE", target = "Ljava/lang/String;toLowerCase(Ljava/util/Locale;)Ljava/lang/String;"))
     private static String polydium$cachedOsName(String osName, Locale locale) {
         return polydium$osName;

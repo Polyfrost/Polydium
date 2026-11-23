@@ -18,6 +18,7 @@ public interface MixinBlockEntityRenderDistance {
      * @author Polydium
      * @reason Vanilla allocates a Vec3 per block entity per frame for the distance check.
      */
+    @SuppressWarnings("checkstyle:NoOverwrite") // TODO: needed?
     @Overwrite
     default boolean shouldRender(BlockEntity blockEntity, Vec3 cameraPosition) {
         BlockPos pos = blockEntity.getBlockPos();

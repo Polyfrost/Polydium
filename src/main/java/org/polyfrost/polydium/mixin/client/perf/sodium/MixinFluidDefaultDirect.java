@@ -30,6 +30,7 @@ public abstract class MixinFluidDefaultDirect {
         }
     };
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/fabricmc/fabric/api/client/render/fluid/v1/FluidRendering;render(Lnet/minecraft/client/renderer/block/FluidRenderer;Lnet/fabricmc/fabric/api/client/render/fluid/v1/FluidRenderHandler;Lnet/minecraft/client/renderer/block/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/client/renderer/block/FluidRenderer$Output;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/material/FluidState;Lnet/fabricmc/fabric/api/client/render/fluid/v1/FluidRendering$DefaultRenderer;)V"))
     private void polydium$renderDefaultDirect(FluidRenderer renderer, FluidRenderHandler handler, BlockAndTintGetter level, BlockPos pos,
                                               FluidRenderer.Output output, BlockState blockState, FluidState fluidState, FluidRendering.DefaultRenderer defaultRenderer) {

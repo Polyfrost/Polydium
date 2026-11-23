@@ -14,6 +14,7 @@ public abstract class MixinVisGraphScratch {
     @Unique
     private BitArray polydium$visited;
 
+    @SuppressWarnings("checkstyle:NoRedirect") // TODO: needed?
     @Redirect(method = "resolveWithDirections", at = @At(value = "INVOKE", target = "Lnet/caffeinemc/mods/sodium/client/util/collections/BitArray;copy()Lnet/caffeinemc/mods/sodium/client/util/collections/BitArray;"))
     private BitArray polydium$copyIntoScratch(BitArray blocks) {
         BitArray visited = this.polydium$visited;
