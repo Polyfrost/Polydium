@@ -1,3 +1,7 @@
+## 1.4.22
+- fix: crash with Essential on 26.3
+- feat: Experimental Borderless option on 26.3 (Windows). Makes borderless fullscreen exactly monitor-sized so Windows stops compositing it, for higher FPS. Off by default
+
 ## 1.4.21
 - perf: cut per-frame allocations (nametag sorting, entity names, text, armor stands, Vulkan render passes) for fewer GC stutters
 - fix: compat with BetterClouds
