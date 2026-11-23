@@ -18,7 +18,11 @@ import org.spongepowered.asm.mixin.Unique;
 public abstract class MixinGuiTextureSetupReuse {
 
     @Unique
-    private static TextureSetup polydium$last;
+    private static final TextureSetup[] polydium$setups = new TextureSetup[8];
+    @Unique
+    private static int polydium$lastHit;
+    @Unique
+    private static int polydium$nextSlot;
 
     //? if >= 1.21.11 {
     @WrapMethod(method = "singleTextureWithLightmap")
@@ -30,14 +34,21 @@ public abstract class MixinGuiTextureSetupReuse {
         /*GpuTextureView lightmap        = Minecraft.getInstance().gameRenderer.lightTexture().getTextureView();
         *///?}
         GpuSampler     lightmapSampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
-        TextureSetup   last            = polydium$last;
+        TextureSetup[] setups          = polydium$setups;
+        int            start           = polydium$lastHit;
 
-        if (last != null && last.texure0() == texture && last.sampler0() == sampler && last.texure2() == lightmap && last.sampler2() == lightmapSampler)
-            return last;
+        for (int i = 0; i < setups.length; i++) {
+            int          slot   = (start + i) & (setups.length - 1);
+            TextureSetup cached = setups[slot];
+            if (cached != null && cached.texure0() == texture && cached.sampler0() == sampler && cached.texure2() == lightmap && cached.sampler2() == lightmapSampler) {
+                polydium$lastHit = slot;
+                return cached;
+            }
+        }
 
         TextureSetup setup = original.call(texture, sampler);
 
-        polydium$last = setup;
+        polydium$store(setup);
 
         return setup;
     }
@@ -46,17 +57,33 @@ public abstract class MixinGuiTextureSetupReuse {
     private static TextureSetup polydium$reuseLastSetup(GpuTextureView texture, Operation<TextureSetup> original) {
 
         GpuTextureView lightmap = Minecraft.getInstance().gameRenderer.lightTexture().getTextureView();
-        TextureSetup   last     = polydium$last;
+        TextureSetup[] setups   = polydium$setups;
+        int            start    = polydium$lastHit;
 
-        if (last != null && last.texure0() == texture && last.texure2() == lightmap)
-            return last;
+        for (int i = 0; i < setups.length; i++) {
+            int          slot   = (start + i) & (setups.length - 1);
+            TextureSetup cached = setups[slot];
+            if (cached != null && cached.texure0() == texture && cached.texure2() == lightmap) {
+                polydium$lastHit = slot;
+                return cached;
+            }
+        }
 
         TextureSetup setup = original.call(texture);
 
-        polydium$last = setup;
+        polydium$store(setup);
 
         return setup;
     }
     *///?}
+
+    @Unique
+    private static void polydium$store(TextureSetup setup) {
+        TextureSetup[] setups = polydium$setups;
+        int            slot   = polydium$nextSlot;
+        setups[slot] = setup;
+        polydium$lastHit = slot;
+        polydium$nextSlot = (slot + 1) & (setups.length - 1);
+    }
 }
 //?}
