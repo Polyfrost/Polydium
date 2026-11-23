@@ -26,20 +26,20 @@ public final class PresentThread {
     private static final ThreadMXBean THREADS = ManagementFactory.getThreadMXBean();
     private static final Runnable PRESENT_JOB = PresentThread::presentHandedOff;
 
-    private static volatile Thread    worker;
-    private static volatile boolean   running;
-    private static volatile Runnable  job;
-    private static volatile Thread    waiting;
-    private static volatile boolean   workerParked;
+    private static volatile Thread worker;
+    private static volatile boolean running;
+    private static volatile Runnable job;
+    private static volatile Thread waiting;
+    private static volatile boolean workerParked;
     private static volatile Throwable failure;
-    private static GpuSurface         armed;
-    private static Runnable           captured;
-    private static boolean            capturing;
-    private static boolean            handedOff;
-    public static boolean             vulkanSurface;
+    private static GpuSurface armed;
+    private static Runnable captured;
+    private static boolean capturing;
+    private static boolean handedOff;
+    public static boolean vulkanSurface;
     private static VulkanQueue.Submission handedSubmission;
-    private static Runnable               handedPresent;
-    private static long                   handedFrame = -1L;
+    private static Runnable handedPresent;
+    private static long handedFrame = -1L;
 
     private PresentThread() {
     }
@@ -48,7 +48,7 @@ public final class PresentThread {
         if (armed != null)
             throw new IllegalStateException("The frame present is already armed");
 
-        armed     = frameSurface;
+        armed = frameSurface;
         handedOff = false;
     }
 
@@ -85,7 +85,7 @@ public final class PresentThread {
     public static void handOff(VulkanQueue.Submission submission) {
         GpuSurface surface = armed;
 
-        armed     = null;
+        armed = null;
         capturing = true;
 
         try {
@@ -109,7 +109,7 @@ public final class PresentThread {
 
         if (!FramePath.frameUsesWorker()) {
             long wallStart = System.nanoTime();
-            long cpuStart  = THREADS.getCurrentThreadCpuTime();
+            long cpuStart = THREADS.getCurrentThreadCpuTime();
             submission.close();
             present.run();
             FramePath.recordGpuWait(Math.max(0L, System.nanoTime() - wallStart - (THREADS.getCurrentThreadCpuTime() - cpuStart)));
@@ -120,12 +120,12 @@ public final class PresentThread {
 
         if (thread == null) {
             running = true;
-            worker  = thread = Thread.ofPlatform().name("Polydium Present").daemon().priority(Thread.MAX_PRIORITY).start(PresentThread::work);
+            worker = thread = Thread.ofPlatform().name("Polydium Present").daemon().priority(Thread.MAX_PRIORITY).start(PresentThread::work);
         }
 
         handedSubmission = submission;
-        handedPresent    = present;
-        job              = PRESENT_JOB;
+        handedPresent = present;
+        job = PRESENT_JOB;
 
         if (workerParked)
             LockSupport.unpark(thread);
@@ -150,8 +150,8 @@ public final class PresentThread {
             presentInfo.pSwapchains(stack.longs(swapchain));
             presentInfo.pImageIndices(stack.ints(imageIndex));
 
-            long start  = GpuProfileFlag.ENABLED ? GpuProfiler.presentStart() : 0L;
-            int  result = KHRSwapchain.vkQueuePresentKHR(queue, presentInfo);
+            long start = GpuProfileFlag.ENABLED ? GpuProfiler.presentStart() : 0L;
+            int result = KHRSwapchain.vkQueuePresentKHR(queue, presentInfo);
 
             if (GpuProfileFlag.ENABLED)
                 GpuProfiler.presentWait(start, true, handedFrame);
@@ -190,7 +190,7 @@ public final class PresentThread {
 
         while (job != null) {
             if (spins < SPINS) {
-                spins ++;
+                spins++;
                 Thread.onSpinWait();
                 continue;
             }
@@ -267,10 +267,10 @@ public final class PresentThread {
 
     private static void presentHandedOff() {
         VulkanQueue.Submission submission = handedSubmission;
-        Runnable               present    = handedPresent;
+        Runnable present = handedPresent;
 
         handedSubmission = null;
-        handedPresent    = null;
+        handedPresent = null;
 
         submission.close();
         present.run();

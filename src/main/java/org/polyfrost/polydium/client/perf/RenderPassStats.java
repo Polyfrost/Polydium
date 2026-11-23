@@ -11,16 +11,16 @@ public final class RenderPassStats {
 
     public static final boolean ENABLED = Boolean.getBoolean("polydium.passStats");
 
-    private static final Logger LOGGER       = LoggerFactory.getLogger("polydium/perf");
-    private static final long   REPORT_NANOS = 5_000_000_000L;
-    private static final int    TOP          = 15;
+    private static final Logger LOGGER = LoggerFactory.getLogger("polydium/perf");
+    private static final long REPORT_NANOS = 5_000_000_000L;
+    private static final int TOP = 15;
 
     private static final Map<String, int[]> SPLITS = new HashMap<>();
 
     private static long lastReport = System.nanoTime();
-    private static int  submits;
-    private static int  begun;
-    private static int  merged;
+    private static int submits;
+    private static int begun;
+    private static int merged;
 
     private RenderPassStats() {
     }
@@ -38,7 +38,7 @@ public final class RenderPassStats {
             String command = null;
 
             for (StackWalker.StackFrame frame : (Iterable<StackWalker.StackFrame>) frames::iterator) {
-                String type   = frame.getClassName();
+                String type = frame.getClassName();
                 String method = frame.getMethodName();
 
                 if (method.contains("polydium$") || type.endsWith("RenderPassStats"))
@@ -83,9 +83,9 @@ public final class RenderPassStats {
         SPLITS.clear();
 
         lastReport = now;
-        submits    = 0;
-        begun      = 0;
-        merged     = 0;
+        submits = 0;
+        begun = 0;
+        merged = 0;
     }
 
     private static void count(String key) {

@@ -75,7 +75,7 @@ public abstract class MixinRenderTypeTextures {
         if (prepared != null && this.polydium$matches(prepared, textureManager, samplerCache, overlayTexture, lightmapTexture))
             return prepared;
 
-        prepared               = new TextureList(original.call(textureManager, samplerCache, overlayTexture, lightmapTexture).toArray(PreparedRenderType.Texture[]::new));
+        prepared = new TextureList(original.call(textureManager, samplerCache, overlayTexture, lightmapTexture).toArray(PreparedRenderType.Texture[]::new));
         this.polydium$prepared = prepared;
 
         return prepared;
@@ -85,35 +85,35 @@ public abstract class MixinRenderTypeTextures {
 
     @Unique
     private void polydium$readBindings() {
-        String[]                     names    = new String[this.textures.size()];
+        String[] names = new String[this.textures.size()];
         RenderSetupBindingAccessor[] bindings = new RenderSetupBindingAccessor[names.length];
-        int                          index    = 0;
+        int index = 0;
 
         for (Map.Entry<String, Object> entry : this.textures.entrySet()) {
-            names[index]    = entry.getKey();
+            names[index] = entry.getKey();
             bindings[index] = (RenderSetupBindingAccessor) entry.getValue();
-            index ++;
+            index++;
         }
 
         this.polydium$bindings = bindings;
-        this.polydium$names    = names;
+        this.polydium$names = names;
     }
 
     @Unique
     private AbstractTexture[] polydium$resolve(TextureManager textureManager) {
-        TextureManagerVersion version  = (TextureManagerVersion) textureManager;
-        AbstractTexture[]     textures = this.polydium$textures;
+        TextureManagerVersion version = (TextureManagerVersion) textureManager;
+        AbstractTexture[] textures = this.polydium$textures;
 
         if (textures != null && this.polydium$texturesOwner == textureManager && this.polydium$texturesVersion == version.polydium$getVersion())
             return textures;
 
         textures = new AbstractTexture[this.polydium$names.length];
 
-        for (int binding = 0; binding < textures.length; binding ++)
+        for (int binding = 0; binding < textures.length; binding++)
             textures[binding] = textureManager.getTexture(this.polydium$bindings[binding].polydium$location());
 
-        this.polydium$textures        = textures;
-        this.polydium$texturesOwner   = textureManager;
+        this.polydium$textures = textures;
+        this.polydium$texturesOwner = textureManager;
         this.polydium$texturesVersion = version.polydium$getVersion();
 
         return textures;
@@ -127,19 +127,19 @@ public abstract class MixinRenderTypeTextures {
 
         int index = 0;
 
-        if (this.useOverlay && !polydium$same(prepared.get(index ++), "Sampler1", overlayTexture, samplerCache.getClampToEdge(FilterMode.LINEAR)))
+        if (this.useOverlay && !polydium$same(prepared.get(index++), "Sampler1", overlayTexture, samplerCache.getClampToEdge(FilterMode.LINEAR)))
             return false;
 
-        if (this.useLightmap && !polydium$same(prepared.get(index ++), "Sampler2", lightmapTexture, samplerCache.getClampToEdge(FilterMode.LINEAR)))
+        if (this.useLightmap && !polydium$same(prepared.get(index++), "Sampler2", lightmapTexture, samplerCache.getClampToEdge(FilterMode.LINEAR)))
             return false;
 
         AbstractTexture[] textures = this.polydium$resolve(textureManager);
 
-        for (int binding = 0; binding < this.polydium$names.length; binding ++) {
-            AbstractTexture texture         = textures[binding];
-            GpuSampler      samplerOverride = this.polydium$bindings[binding].polydium$sampler().get();
+        for (int binding = 0; binding < this.polydium$names.length; binding++) {
+            AbstractTexture texture = textures[binding];
+            GpuSampler samplerOverride = this.polydium$bindings[binding].polydium$sampler().get();
 
-            if (!polydium$same(prepared.get(index ++), this.polydium$names[binding], texture.getTextureView(), samplerOverride != null ? samplerOverride : texture.getSampler()))
+            if (!polydium$same(prepared.get(index++), this.polydium$names[binding], texture.getTextureView(), samplerOverride != null ? samplerOverride : texture.getSampler()))
                 return false;
         }
 
@@ -164,7 +164,7 @@ public abstract class MixinRenderTypeTextures {
         if (prepared != null && this.polydium$matches(prepared))
             return prepared;
 
-        prepared               = original.call();
+        prepared = original.call();
         this.polydium$prepared = prepared;
 
         return prepared;
@@ -172,8 +172,8 @@ public abstract class MixinRenderTypeTextures {
 
     @Unique
     private boolean polydium$matches(Map<String, RenderSetup.TextureAndSampler> prepared) {
-        Minecraft  minecraft = Minecraft.getInstance();
-        GpuSampler clamp     = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
+        Minecraft minecraft = Minecraft.getInstance();
+        GpuSampler clamp = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
 
         if (this.useOverlay && !polydium$same(prepared.get("Sampler1"), minecraft.gameRenderer.overlayTexture().getTextureView(), clamp))
             return false;
@@ -183,9 +183,9 @@ public abstract class MixinRenderTypeTextures {
 
         AbstractTexture[] textures = this.polydium$resolve(minecraft.getTextureManager());
 
-        for (int binding = 0; binding < this.polydium$names.length; binding ++) {
-            AbstractTexture texture         = textures[binding];
-            GpuSampler      samplerOverride = this.polydium$bindings[binding].polydium$sampler().get();
+        for (int binding = 0; binding < this.polydium$names.length; binding++) {
+            AbstractTexture texture = textures[binding];
+            GpuSampler samplerOverride = this.polydium$bindings[binding].polydium$sampler().get();
 
             if (!polydium$same(prepared.get(this.polydium$names[binding]), texture.getTextureView(), samplerOverride != null ? samplerOverride : texture.getSampler()))
                 return false;

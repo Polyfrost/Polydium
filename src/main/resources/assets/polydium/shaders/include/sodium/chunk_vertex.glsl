@@ -18,13 +18,13 @@ uint _draw_id;
 uint _material_params;
 
 #ifdef USE_VERTEX_COMPRESSION
-const uint POSITION_BITS        = 20u;
-const uint POSITION_MAX_COORD   = 1u << POSITION_BITS;
-const uint POSITION_MAX_VALUE   = POSITION_MAX_COORD - 1u;
+const uint POSITION_BITS = 20u;
+const uint POSITION_MAX_COORD = 1u << POSITION_BITS;
+const uint POSITION_MAX_VALUE = POSITION_MAX_COORD - 1u;
 
-const uint TEXTURE_BITS         = 15u;
-const uint TEXTURE_MAX_COORD    = 1u << TEXTURE_BITS;
-const uint TEXTURE_MAX_VALUE    = TEXTURE_MAX_COORD - 1u;
+const uint TEXTURE_BITS = 15u;
+const uint TEXTURE_MAX_COORD = 1u << TEXTURE_BITS;
+const uint TEXTURE_MAX_VALUE = TEXTURE_MAX_COORD - 1u;
 
 const float VERTEX_SCALE = 32.0 / float(POSITION_MAX_COORD);
 const float VERTEX_OFFSET = -8.0;

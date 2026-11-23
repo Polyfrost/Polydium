@@ -182,7 +182,7 @@ public abstract class MixinStagedVertexDirectCopy implements VertexCopy.Owner {
 
     @Unique
     private void polydium$queueCopy(ByteBufferBuilder.Result slice, ByteBuffer buffer) {
-        int size  = slice.size();
+        int size = slice.size();
         int start = buffer.position();
 
         if (size > buffer.remaining())

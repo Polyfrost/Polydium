@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 public abstract class MixinVulkanCommandEncoderPresentThreadBackport {
     @WrapOperation(method = "submit", at = @At(value = "INVOKE", target = "Lorg/polyfrost/polydium/vulkan/VulkanCommandEncoder;awaitSubmitCompletion(JJ)Z"))
     private boolean polydium$measureGpuWait(VulkanCommandEncoder encoder, long submitIndex, long timeout, Operation<Boolean> original) {
-        long    start  = System.nanoTime();
+        long start = System.nanoTime();
         boolean result = original.call(encoder, submitIndex, timeout);
         FramePath.recordGpuWait(System.nanoTime() - start);
         return result;

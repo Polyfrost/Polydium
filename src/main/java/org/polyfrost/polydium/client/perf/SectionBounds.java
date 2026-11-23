@@ -11,10 +11,10 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 public final class SectionBounds {
 
-    private static final int                 ORIGIN   = 8;
-    private static final int                 MAX_BITS = 31;
-    private static final int                 BITS     = 5;
-    private static final long                MIX      = 0x9E3779B97F4A7C15L;
+    private static final int ORIGIN = 8;
+    private static final int MAX_BITS = 31;
+    private static final int BITS = 5;
+    private static final long MIX = 0x9E3779B97F4A7C15L;
     private static final ThreadLocal<Tracked> TRACKED = ThreadLocal.withInitial(Tracked::new);
 
     public static final int FULL = pack(0.0F, 0.0F, 0.0F, 16.0F, 16.0F, 16.0F);
@@ -30,13 +30,13 @@ public final class SectionBounds {
 
     public static void include(Tracked tracked, ChunkVertexEncoder.Vertex[] vertices, int materialBits, int pass, boolean translucent) {
         float[] extent = tracked.extent;
-        float   minX   = extent[0];
-        float   minY   = extent[1];
-        float   minZ   = extent[2];
-        float   maxX   = extent[3];
-        float   maxY   = extent[4];
-        float   maxZ   = extent[5];
-        long    hash   = pass;
+        float minX = extent[0];
+        float minY = extent[1];
+        float minZ = extent[2];
+        float maxX = extent[3];
+        float maxY = extent[4];
+        float maxZ = extent[5];
+        long hash = pass;
 
         for (ChunkVertexEncoder.Vertex vertex : vertices) {
             float x = vertex.x;
@@ -115,8 +115,8 @@ public final class SectionBounds {
 
     public static long take() {
         Tracked tracked = TRACKED.get();
-        float[] extent  = tracked.extent;
-        long    packed  = tracked.decided && !tracked.active ? UNTRACKED : extent[0] > extent[3] ? 0L : (tracked.shape ^ tracked.shape >>> Integer.SIZE) << Integer.SIZE | pack(extent[0], extent[1], extent[2], extent[3], extent[4], extent[5]);
+        float[] extent = tracked.extent;
+        long packed = tracked.decided && !tracked.active ? UNTRACKED : extent[0] > extent[3] ? 0L : (tracked.shape ^ tracked.shape >>> Integer.SIZE) << Integer.SIZE | pack(extent[0], extent[1], extent[2], extent[3], extent[4], extent[5]);
 
         tracked.reset();
 
@@ -145,13 +145,13 @@ public final class SectionBounds {
 
     public static final class Tracked {
 
-        private final float[]               extent   = new float[6];
-        private final float[]               animated = new float[6];
+        private final float[] extent = new float[6];
+        private final float[] animated = new float[6];
         private ChunkVertexEncoder.Vertex[] lastOpaque;
-        private long                        shape;
-        private boolean                     animatedAhead;
-        private boolean                     decided;
-        private boolean                     active;
+        private long shape;
+        private boolean animatedAhead;
+        private boolean decided;
+        private boolean active;
 
         private Tracked() {
             this.reset();
@@ -160,7 +160,7 @@ public final class SectionBounds {
         public boolean active() {
             if (!this.decided) {
                 this.decided = true;
-                this.active  = !IrisShaders.packInUse();
+                this.active = !IrisShaders.packInUse();
             }
 
             return this.active;
@@ -178,15 +178,15 @@ public final class SectionBounds {
         }
 
         private void reset() {
-            this.shape         = 0;
-            this.lastOpaque    = null;
+            this.shape = 0;
+            this.lastOpaque = null;
             this.animatedAhead = false;
-            this.decided       = false;
+            this.decided = false;
 
-            for (int axis = 0; axis < 3; axis ++) {
-                this.extent[axis]       = Float.POSITIVE_INFINITY;
-                this.extent[axis + 3]   = Float.NEGATIVE_INFINITY;
-                this.animated[axis]     = Float.POSITIVE_INFINITY;
+            for (int axis = 0; axis < 3; axis++) {
+                this.extent[axis] = Float.POSITIVE_INFINITY;
+                this.extent[axis + 3] = Float.NEGATIVE_INFINITY;
+                this.animated[axis] = Float.POSITIVE_INFINITY;
                 this.animated[axis + 3] = Float.NEGATIVE_INFINITY;
             }
         }

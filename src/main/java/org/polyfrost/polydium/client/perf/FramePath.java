@@ -3,24 +3,24 @@ package org.polyfrost.polydium.client.perf;
 //? if >= 1.21.11 {
 public final class FramePath {
 
-    private static final int    WINDOW_FRAMES = 128;
-    private static final double WAIT_LIMIT    = 0.10;
+    private static final int WINDOW_FRAMES = 128;
+    private static final double WAIT_LIMIT = 0.10;
     private static final double BLOCKED_LIMIT = 0.20;
 
     private static boolean worker;
     private static boolean frameUsesWorker;
     private static boolean frameEligible;
-    private static long    lastSubmit;
-    private static long    windowFrameNanos;
-    private static long    windowWaitNanos;
-    private static long    windowAcquireNanos;
-    private static int     windowFrames;
+    private static long lastSubmit;
+    private static long windowFrameNanos;
+    private static long windowWaitNanos;
+    private static long windowAcquireNanos;
+    private static int windowFrames;
 
     private FramePath() {
     }
 
     public static boolean beginFrame(boolean eligible) {
-        frameEligible   = eligible;
+        frameEligible = eligible;
         frameUsesWorker = eligible && worker;
 
         return frameUsesWorker;
@@ -63,7 +63,7 @@ public final class FramePath {
         }
 
         windowFrameNanos += frameNanos;
-        windowFrames ++;
+        windowFrames++;
 
         if (windowFrames < WINDOW_FRAMES)
             return;
@@ -77,16 +77,16 @@ public final class FramePath {
     }
 
     public static void reset() {
-        worker     = false;
+        worker = false;
         lastSubmit = 0L;
         resetWindow();
     }
 
     private static void resetWindow() {
-        windowFrameNanos   = 0L;
-        windowWaitNanos    = 0L;
+        windowFrameNanos = 0L;
+        windowWaitNanos = 0L;
         windowAcquireNanos = 0L;
-        windowFrames       = 0;
+        windowFrames = 0;
     }
 }
 //?}

@@ -28,7 +28,7 @@ final class PoolStamps implements GpuStamps {
     PoolStamps(int size) {
         GpuDevice device = RenderSystem.getDevice();
 
-        pools   = new GpuQueryPool[GpuStamps.pools(size)];
+        pools = new GpuQueryPool[GpuStamps.pools(size)];
         vkPools = new long[pools.length];
 
         try {
@@ -48,14 +48,14 @@ final class PoolStamps implements GpuStamps {
         }
 
         nanosPerTick = device.getDeviceInfo().timestampPeriod();
-        encoder      = device.createCommandEncoder();
+        encoder = device.createCommandEncoder();
     }
 
     @Override
     public void write(int query, @Nullable Object context) {
-        int          index = query / POOL_SIZE;
-        int          local = query % POOL_SIZE;
-        GpuQueryPool pool  = pools[index];
+        int index = query / POOL_SIZE;
+        int local = query % POOL_SIZE;
+        GpuQueryPool pool = pools[index];
 
         if (context instanceof RenderPass pass)
             pass.writeTimestamp(pool, local);

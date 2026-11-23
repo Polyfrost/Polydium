@@ -51,18 +51,18 @@ final class GpuProfileReport {
                 + "This driver does not report usable GPU timings. No report was written.",
                 session.frames, session.environment.get("gpu"), session.environment.get("driver"));
 
-        List<Row> byKey  = rows(session.byKey, frames, measuredMs, id -> labels.get((int) keyParts.get(id)[0]),
+        List<Row> byKey = rows(session.byKey, frames, measuredMs, id -> labels.get((int) keyParts.get(id)[0]),
             id -> labels.get((int) keyParts.get(id)[1]), session.passLevel);
         List<Row> byPass = session.passGroups.isEmpty() ? rows(session.byPass, frames, measuredMs, labels::get, id -> "", false)
             : groupedPasses(session, frames, measuredMs, labels);
-        List<Row> byMod  = byNamespace(byKey, measuredMs);
+        List<Row> byMod = byNamespace(byKey, measuredMs);
 
         Path dir = FabricLoader.getInstance().getGameDir().resolve("polydium").resolve("gpu-profiles");
 
         Files.createDirectories(dir);
 
         String stem = "gpu-" + LocalDateTime.now().format(FILE_TIME);
-        Path   text = dir.resolve(stem + ".txt");
+        Path text = dir.resolve(stem + ".txt");
 
         Files.writeString(text, text(session, frames, measuredMs, byPass, byKey, byMod), StandardCharsets.UTF_8);
         Files.writeString(dir.resolve(stem + ".json"), json(session, frames, measuredMs, byPass, byKey, byMod), StandardCharsets.UTF_8);
@@ -99,7 +99,7 @@ final class GpuProfileReport {
                 continue;
 
             String labelName = label.of(id);
-            double avg       = totals.nanos[id] / 1e6 / frames;
+            double avg = totals.nanos[id] / 1e6 / frames;
             String namespace = passLevel && labelName.equals(GpuProfiler.PASS_BEGIN_NAME) ? UNATTRIBUTED : namespace(pass.of(id), labelName);
 
             rows.add(new Row(pass.of(id), labelName, namespace, avg, share(avg, measuredMs),
@@ -112,7 +112,7 @@ final class GpuProfileReport {
     }
 
     static List<Row> groupedPasses(GpuProfileSession session, int frames, double measuredMs, List<String> labels) {
-        GpuProfileSession.Totals    totals = session.byPass;
+        GpuProfileSession.Totals totals = session.byPass;
         Map<Integer, List<Integer>> groups = new LinkedHashMap<>();
 
         for (int id = 0; id < totals.size(); id++) {
@@ -123,10 +123,10 @@ final class GpuProfileReport {
         List<Row> rows = new ArrayList<>();
 
         groups.forEach((root, members) -> {
-            long          nanos = 0;
-            long          calls = 0;
-            long          draws = 0;
-            StringJoiner  name  = new StringJoiner(" + ");
+            long nanos = 0;
+            long calls = 0;
+            long draws = 0;
+            StringJoiner name = new StringJoiner(" + ");
 
             members.sort(Comparator.comparing(id -> !id.equals(root)));
 
@@ -223,7 +223,7 @@ final class GpuProfileReport {
             session.overflowFrames, GpuProfiler.SAMPLES_PER_FRAME));
         out.append('\n');
 
-        double cpuMs  = avgMs(session.allCpuFrames);
+        double cpuMs = avgMs(session.allCpuFrames);
         double spanMs = avgMs(session.gpuSpans);
 
         out.append("Frame                      avg      p50      p99      max\n");
@@ -301,7 +301,7 @@ final class GpuProfileReport {
         out.append("    ms/frame   share   max ms  calls/f  draws/f  name\n");
 
         for (int i = 0; i < Math.min(limit, rows.size()); i++) {
-            Row    row  = rows.get(i);
+            Row row = rows.get(i);
             String name = row.pass.isEmpty() ? row.namespace : withLabel ? row.pass + "  >  " + row.label : row.pass;
 
             out.append(String.format(Locale.ROOT, "    %8.3f  %5.1f%%  %7s  %7.1f  %7.1f  %s%n", row.avgMs, row.share,
@@ -316,7 +316,7 @@ final class GpuProfileReport {
 
     private static String json(GpuProfileSession session, int frames, double measuredMs, List<Row> byPass, List<Row> byKey, List<Row> byMod) {
         JsonObject root = new JsonObject();
-        JsonObject env  = new JsonObject();
+        JsonObject env = new JsonObject();
 
         session.environment.forEach(env::addProperty);
         root.add("environment", env);

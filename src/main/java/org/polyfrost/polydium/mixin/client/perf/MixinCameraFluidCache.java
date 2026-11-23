@@ -155,21 +155,21 @@ public abstract class MixinCameraFluidCache {
         if (cameraFluid.is(FluidTags.WATER) && this.position.y < this.blockPosition.getY() + this.polydium$height(cameraFluid, this.blockPosition))
             return FogType.WATER;
 
-        CameraNearPlaneAccessor  plane    = (CameraNearPlaneAccessor) this.polydium$nearPlane();
-        Vec3                     forward  = plane.polydium$forward();
-        Vec3                     left     = plane.polydium$left();
-        Vec3                     up       = plane.polydium$up();
-        double                   topX     = forward.x + up.x;
-        double                   topY     = forward.y + up.y;
-        double                   topZ     = forward.z + up.z;
-        double                   bottomX  = forward.x + -up.x;
-        double                   bottomY  = forward.y + -up.y;
-        double                   bottomZ  = forward.z + -up.z;
+        CameraNearPlaneAccessor plane = (CameraNearPlaneAccessor) this.polydium$nearPlane();
+        Vec3 forward = plane.polydium$forward();
+        Vec3 left = plane.polydium$left();
+        Vec3 up = plane.polydium$up();
+        double topX = forward.x + up.x;
+        double topY = forward.y + up.y;
+        double topZ = forward.z + up.z;
+        double bottomX = forward.x + -up.x;
+        double bottomY = forward.y + -up.y;
+        double bottomZ = forward.z + -up.z;
         BlockPos.MutableBlockPos checkPos = this.polydium$checkPos.set(this.blockPosition);
-        FluidState               fluid    = cameraFluid;
-        BlockState               block    = null;
+        FluidState fluid = cameraFluid;
+        BlockState block = null;
 
-        for (int point = 0; point < NEAR_PLANE_POINTS; point ++) {
+        for (int point = 0; point < NEAR_PLANE_POINTS; point++) {
             double x = this.position.x + switch (point) {
                 case 0 -> forward.x;
                 case 1 -> topX + left.x;

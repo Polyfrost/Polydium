@@ -15,9 +15,9 @@ public final class VulkanProfilerStamps implements GpuStamps {
     private final int validBits;
 
     public VulkanProfilerStamps(int size) {
-        device    = VulkanDevice.active;
+        device = VulkanDevice.active;
         validBits = GpuStamps.vulkanTimestampBits(device.vkDevice(), device.graphicsQueue().queueFamilyIndex());
-        pools     = new VulkanQueryPool[GpuStamps.pools(size)];
+        pools = new VulkanQueryPool[GpuStamps.pools(size)];
 
         try {
             for (int i = 0; i < pools.length; i++)

@@ -23,7 +23,7 @@ public abstract class MixinOcclusionBoundsBuffers {
     @Inject(method = "<init>", at = @At("RETURN"))
     private void polydium$tagPasses(CallbackInfo ci) {
         for (Reference2ReferenceMap.Entry<TerrainRenderPass, BakedChunkModelBuilder> entry : this.builders.reference2ReferenceEntrySet()) {
-            int     pass        = System.identityHashCode(entry.getKey());
+            int pass = System.identityHashCode(entry.getKey());
             boolean translucent = entry.getKey().isTranslucent();
 
             for (ModelQuadFacing facing : ModelQuadFacing.VALUES)

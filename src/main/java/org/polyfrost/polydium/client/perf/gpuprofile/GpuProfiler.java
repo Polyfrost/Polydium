@@ -125,7 +125,7 @@ public final class GpuProfiler {
         }
 
         GpuProfileSession current = session;
-        boolean           presented;
+        boolean presented;
 
         if (frameTimed)
             current.allCpuFrames.add(now - frameStart);
@@ -144,11 +144,11 @@ public final class GpuProfiler {
             slot = (slot + 1) % SLOTS;
         }
 
-        recording  = false;
+        recording = false;
         sampleOpen = false;
-        flushOpen  = false;
-        depth      = 0;
-        cursor     = 0;
+        flushOpen = false;
+        depth = 0;
+        cursor = 0;
         frameStart = now;
 
         boolean slotFree = collect(slot);
@@ -178,10 +178,10 @@ public final class GpuProfiler {
                 takePresents(current, frameId - 1, false);
             }
 
-            presentFrames[index]    = frameId;
+            presentFrames[index] = frameId;
             presentWaitNanos[index] = 0L;
-            presentThreads[index]   = null;
-            presentPending[index]   = false;
+            presentThreads[index] = null;
+            presentPending[index] = false;
         }
 
         frameTimed = true;
@@ -193,12 +193,12 @@ public final class GpuProfiler {
         }
 
         overflowed[slot] = false;
-        recording        = true;
+        recording = true;
     }
 
     private static boolean open(Request started) {
         Map<String, String> environment = GpuProfileBackend.describe();
-        String              unsupported = GpuProfileBackend.unsupported(environment);
+        String unsupported = GpuProfileBackend.unsupported(environment);
 
         if (unsupported != null) {
             started.done().accept("Could not start the GPU profiler: " + unsupported);
@@ -244,12 +244,12 @@ public final class GpuProfiler {
             nextPresentFrame = frameId;
         }
 
-        session       = new GpuProfileSession(started, now, environment, passLevel);
+        session = new GpuProfileSession(started, now, environment, passLevel);
         timingPresent = true;
-        draining      = false;
-        drainFrames   = 0;
-        frameTimed    = false;
-        slot          = 0;
+        draining = false;
+        drainFrames = 0;
+        frameTimed = false;
+        slot = 0;
 
         for (int i = 0; i < SLOTS; i++)
             counts[i] = -1;
@@ -281,7 +281,7 @@ public final class GpuProfiler {
             return true;
 
         GpuStamps active = stamps;
-        int       base   = index * QUERIES_PER_FRAME;
+        int base = index * QUERIES_PER_FRAME;
 
         if (count > 0 && !active.read(base, count * 2, readBuffer))
             return false;
@@ -299,9 +299,9 @@ public final class GpuProfiler {
     private static void finish(boolean drained) {
         GpuProfileSession done = session;
 
-        session       = null;
-        recording     = false;
-        draining      = false;
+        session = null;
+        recording = false;
+        draining = false;
         timingPresent = false;
 
         synchronized (presentLock) {
@@ -341,16 +341,16 @@ public final class GpuProfiler {
         keyIds.clear();
         keyParts.clear();
         shaderNames.clear();
-        passLabel   = NO_PASS;
+        passLabel = NO_PASS;
         encoderPass = NO_PASS;
-        drawLabel   = UNNAMED;
+        drawLabel = UNNAMED;
     }
 
     public static void shutdown() {
-        session       = null;
-        request       = null;
-        recording     = false;
-        draining      = false;
+        session = null;
+        request = null;
+        recording = false;
+        draining = false;
         timingPresent = false;
 
         if (stamps != null) {
@@ -395,7 +395,7 @@ public final class GpuProfiler {
             return;
 
         long waited = System.nanoTime() - startNanos;
-        int  index  = (int) (frame % PRESENT_FRAMES);
+        int index = (int) (frame % PRESENT_FRAMES);
 
         synchronized (presentLock) {
             if (presentFrames[index] != frame)
@@ -477,7 +477,7 @@ public final class GpuProfiler {
 
     public static int key(int pass, int label) {
         long packed = ((long) pass << 32) | (label & 0xFFFFFFFFL);
-        int  id     = keyIds.get(packed);
+        int id = keyIds.get(packed);
 
         if (id < 0) {
             id = keyParts.size();
@@ -563,9 +563,9 @@ public final class GpuProfiler {
         }
 
         stamps.write(slot * QUERIES_PER_FRAME + cursor * 2, context);
-        keys[slot][cursor]  = key;
+        keys[slot][cursor] = key;
         draws[slot][cursor] = drawCount;
-        sampleOpen          = true;
+        sampleOpen = true;
     }
 
     private static void close(@Nullable Object context) {

@@ -13,29 +13,29 @@ public final class VertexCopy {
         void polydium$finishVertexCopy();
     }
 
-    private static final int  CHUNK_BYTES      = 32768;
-    private static final int  IDLE             = 0;
-    private static final int  QUEUED           = 1;
-    private static final int  RUNNING          = 2;
+    private static final int CHUNK_BYTES = 32768;
+    private static final int IDLE = 0;
+    private static final int QUEUED = 1;
+    private static final int RUNNING = 2;
     private static final long FAST_FRAME_NANOS = 250_000L;
-    private static final int  SMOOTHING_SHIFT  = 4;
+    private static final int SMOOTHING_SHIFT = 4;
 
-    private static boolean    levelPrepare;
-    private static Owner      inFlight;
+    private static boolean levelPrepare;
+    private static Owner inFlight;
     private static VertexCopy toStart;
-    private static long       lastLevelFrame;
-    private static long       averageFrameNanos;
-    private static boolean    fastFrames;
+    private static long lastLevelFrame;
+    private static long averageFrameNanos;
+    private static boolean fastFrames;
 
-    private final AtomicInteger next  = new AtomicInteger();
+    private final AtomicInteger next = new AtomicInteger();
     private final AtomicInteger state = new AtomicInteger();
 
     private volatile Throwable failure;
-    private long[]             sources = new long[64];
-    private long[]             targets = new long[64];
-    private int[]              sizes   = new int[64];
-    private int                count;
-    private boolean            pending;
+    private long[] sources = new long[64];
+    private long[] targets = new long[64];
+    private int[] sizes = new int[64];
+    private int count;
+    private boolean pending;
 
     public static void beginLevelPrepare() {
         long now = System.nanoTime();
@@ -44,11 +44,11 @@ public final class VertexCopy {
             long frameNanos = now - lastLevelFrame;
 
             averageFrameNanos = averageFrameNanos == 0L ? frameNanos : averageFrameNanos + (frameNanos - averageFrameNanos >> SMOOTHING_SHIFT);
-            fastFrames        = averageFrameNanos < FAST_FRAME_NANOS;
+            fastFrames = averageFrameNanos < FAST_FRAME_NANOS;
         }
 
         lastLevelFrame = now;
-        levelPrepare   = true;
+        levelPrepare = true;
     }
 
     public static void endLevelPrepare() {
@@ -95,13 +95,13 @@ public final class VertexCopy {
             if (this.count == this.sizes.length) {
                 this.sources = Arrays.copyOf(this.sources, this.count * 2);
                 this.targets = Arrays.copyOf(this.targets, this.count * 2);
-                this.sizes   = Arrays.copyOf(this.sizes, this.count * 2);
+                this.sizes = Arrays.copyOf(this.sizes, this.count * 2);
             }
 
             this.sources[this.count] = source + offset;
             this.targets[this.count] = target + offset;
-            this.sizes[this.count]   = Math.min(CHUNK_BYTES, size - offset);
-            this.count ++;
+            this.sizes[this.count] = Math.min(CHUNK_BYTES, size - offset);
+            this.count++;
         }
     }
 
@@ -114,7 +114,7 @@ public final class VertexCopy {
 
         this.next.set(0);
         this.pending = true;
-        toStart      = this;
+        toStart = this;
     }
 
     private void startInBackground() {
@@ -177,8 +177,8 @@ public final class VertexCopy {
 
     private static final class Worker {
 
-        private static final AtomicReference<VertexCopy> JOB    = new AtomicReference<>();
-        private static final Thread                      THREAD = Thread.ofPlatform().name("Polydium Vertex Copy").daemon().priority(Thread.MAX_PRIORITY).start(Worker::work);
+        private static final AtomicReference<VertexCopy> JOB = new AtomicReference<>();
+        private static final Thread THREAD = Thread.ofPlatform().name("Polydium Vertex Copy").daemon().priority(Thread.MAX_PRIORITY).start(Worker::work);
 
         private static void queue(VertexCopy copy, boolean wake) {
             JOB.set(copy);

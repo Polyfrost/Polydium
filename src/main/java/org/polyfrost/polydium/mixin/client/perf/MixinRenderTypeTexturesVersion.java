@@ -17,7 +17,7 @@ public abstract class MixinRenderTypeTexturesVersion implements TextureManagerVe
 
     @Inject(method = {"register", "release", "close"}, at = @At("HEAD"))
     private void polydium$changeTextures(CallbackInfo ci) {
-        this.polydium$version ++;
+        this.polydium$version++;
     }
 
     @Override

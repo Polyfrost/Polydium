@@ -38,10 +38,10 @@ public interface GpuStamps {
         long origin = 0L;
 
         for (int start = 0, chunk; start < count; start += chunk) {
-            int            query  = first + start;
+            int query = first + start;
             OptionalLong[] values;
 
-            chunk  = chunk(query, count - start, READ_CHUNK);
+            chunk = chunk(query, count - start, READ_CHUNK);
             values = reader.values(query / POOL_SIZE, query % POOL_SIZE, chunk);
 
             for (int i = 0; i < chunk; i++) {

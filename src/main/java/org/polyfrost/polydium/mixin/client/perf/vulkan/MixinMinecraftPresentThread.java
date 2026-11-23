@@ -76,16 +76,16 @@ public abstract class MixinMinecraftPresentThread {
     @ModifyExpressionValue(method = "renderFrame", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;windowSurfaceNeedsReconfiguring:Z", opcode = Opcodes.GETFIELD))
     private boolean polydium$deferAcquire(boolean needsReconfiguring) {
         if (!this.polydium$presentThread) {
-            this.polydium$presentThread          = true;
+            this.polydium$presentThread = true;
             this.windowSurfaceNeedsReconfiguring = true;
-            needsReconfiguring                   = true;
+            needsReconfiguring = true;
             FramePath.reset();
         }
 
         boolean worker = FramePath.beginFrame(PresentThread.canDeferAcquire(this.windowSurface));
 
         this.polydium$frameAcquiredEarly = this.polydium$imageAcquiredEarly || this.polydium$earlyAcquireFailure != null;
-        this.polydium$acquireDeferred    = !needsReconfiguring && worker && !this.polydium$frameAcquiredEarly;
+        this.polydium$acquireDeferred = !needsReconfiguring && worker && !this.polydium$frameAcquiredEarly;
 
         return needsReconfiguring;
     }
@@ -114,8 +114,8 @@ public abstract class MixinMinecraftPresentThread {
 
         SurfaceException failure = this.polydium$earlyAcquireFailure;
 
-        this.polydium$frameAcquiredEarly  = false;
-        this.polydium$imageAcquiredEarly  = false;
+        this.polydium$frameAcquiredEarly = false;
+        this.polydium$imageAcquiredEarly = false;
         this.polydium$earlyAcquireFailure = null;
 
         if (failure != null)
@@ -210,22 +210,22 @@ public abstract class MixinMinecraftPresentThread {
         if (this.polydium$imageAcquiredEarly)
             ((PresentThread.Discard) surface).polydium$discardAcquired();
 
-        this.polydium$imageAcquiredEarly  = false;
+        this.polydium$imageAcquiredEarly = false;
         this.polydium$earlyAcquireFailure = null;
-        this.polydium$frameAcquiredEarly  = false;
+        this.polydium$frameAcquiredEarly = false;
     }
 
     @Unique
     private void polydium$configureAndAcquire() {
         //? if >= 26.3 {
         if ((this.windowSurfaceNeedsReconfiguring || this.windowSurface.isSuboptimal() && !this.surfaceIsInvalid) && !this.window.isIconified()) {
-            Window.FramebufferSize   framebufferSize = this.window.queryFramebufferSize();
-            GpuSurface.PresentMode   presentMode     = GpuSurface.PresentMode.getSupportedVsyncMode(this.windowSurface.supportedPresentModes(), this.options.enableVsync().get());
-            GpuSurface.Configuration config          = new GpuSurface.Configuration(framebufferSize.width(), framebufferSize.height(), presentMode);
+            Window.FramebufferSize framebufferSize = this.window.queryFramebufferSize();
+            GpuSurface.PresentMode presentMode = GpuSurface.PresentMode.getSupportedVsyncMode(this.windowSurface.supportedPresentModes(), this.options.enableVsync().get());
+            GpuSurface.Configuration config = new GpuSurface.Configuration(framebufferSize.width(), framebufferSize.height(), presentMode);
 
             try {
                 this.windowSurface.configure(config);
-                this.surfaceIsInvalid                = false;
+                this.surfaceIsInvalid = false;
                 this.windowSurfaceNeedsReconfiguring = false;
             } catch (SurfaceException exception) {
                 LOGGER.warn("Couldn't configure surface to {}", config, exception);
@@ -237,14 +237,14 @@ public abstract class MixinMinecraftPresentThread {
             return;
         //?} else {
         /*if (this.windowSurfaceNeedsReconfiguring || this.windowSurface.isSuboptimal() && !this.surfaceIsInvalid) {
-            int[] width  = new int[1];
+            int[] width = new int[1];
             int[] height = new int[1];
 
             GLFW.glfwGetFramebufferSize(this.window.handle(), width, height);
 
             if (width[0] != 0 || height[0] != 0) {
-                GpuSurface.PresentMode   presentMode = GpuSurface.PresentMode.getSupportedVsyncMode(this.windowSurface.supportedPresentModes(), this.options.enableVsync().get());
-                GpuSurface.Configuration config      = new GpuSurface.Configuration(width[0], height[0], presentMode);
+                GpuSurface.PresentMode presentMode = GpuSurface.PresentMode.getSupportedVsyncMode(this.windowSurface.supportedPresentModes(), this.options.enableVsync().get());
+                GpuSurface.Configuration config = new GpuSurface.Configuration(width[0], height[0], presentMode);
 
                 try {
                     this.windowSurface.configure(config);
@@ -272,7 +272,7 @@ public abstract class MixinMinecraftPresentThread {
             //?} else {
             /*LOGGER.warn("Couldn't acquire next surface texture with config {}: {}", this.windowSurface.currentConfiguration(), ex);
             *///?}
-            this.surfaceIsInvalid                = true;
+            this.surfaceIsInvalid = true;
             this.windowSurfaceNeedsReconfiguring = true;
         }
 

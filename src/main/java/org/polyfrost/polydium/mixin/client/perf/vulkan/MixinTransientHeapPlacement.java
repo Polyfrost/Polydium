@@ -51,8 +51,8 @@ public abstract class MixinTransientHeapPlacement {
     @WrapOperation(method = "allocateVulkanBlock", at = @At(value = "INVOKE", target = "Lorg/lwjgl/util/vma/Vma;vmaCreateBuffer(JLorg/lwjgl/vulkan/VkBufferCreateInfo;Lorg/lwjgl/util/vma/VmaAllocationCreateInfo;Ljava/nio/LongBuffer;Lorg/lwjgl/PointerBuffer;Lorg/lwjgl/util/vma/VmaAllocationInfo;)I"))
     private int polydium$captureMemoryType(long allocator, VkBufferCreateInfo bufferInfo, VmaAllocationCreateInfo allocationCreateInfo, LongBuffer buffer, PointerBuffer allocation, VmaAllocationInfo ignored, Operation<Integer> original) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            VmaAllocationInfo info   = VmaAllocationInfo.calloc(stack);
-            int               result = original.call(allocator, bufferInfo, allocationCreateInfo, buffer, allocation, info);
+            VmaAllocationInfo info = VmaAllocationInfo.calloc(stack);
+            int result = original.call(allocator, bufferInfo, allocationCreateInfo, buffer, allocation, info);
             this.polydium$memoryType = result == VK10.VK_SUCCESS ? info.memoryType() : -1;
             return result;
         }

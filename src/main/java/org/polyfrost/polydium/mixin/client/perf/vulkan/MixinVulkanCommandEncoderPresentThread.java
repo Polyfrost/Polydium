@@ -15,7 +15,7 @@ public abstract class MixinVulkanCommandEncoderPresentThread {
 
     @WrapOperation(method = "submit", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/vulkan/VulkanCommandEncoder;awaitSubmitCompletion(JJ)Z"))
     private boolean polydium$measureGpuWait(VulkanCommandEncoder encoder, long submitIndex, long timeout, Operation<Boolean> original) {
-        long    start  = System.nanoTime();
+        long start = System.nanoTime();
         boolean result = original.call(encoder, submitIndex, timeout);
 
         FramePath.recordGpuWait(System.nanoTime() - start);

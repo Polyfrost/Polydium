@@ -14,14 +14,14 @@ import com.mojang.renderpearl.util.TextureViewAndSampler;
 public final class TextureList extends AbstractList<PreparedRenderType.Texture> implements RandomAccess {
 
     private final PreparedRenderType.Texture[] textures;
-    private final int                          hash;
+    private final int hash;
     //? if >= 26.3 {
-    private final TextureViewAndSampler[]      bindings;
+    private final TextureViewAndSampler[] bindings;
     //?}
 
     public TextureList(PreparedRenderType.Texture[] textures) {
         this.textures = textures;
-        this.hash     = Arrays.hashCode(textures);
+        this.hash = Arrays.hashCode(textures);
         //? if >= 26.3 {
         this.bindings = new TextureViewAndSampler[textures.length];
         for (int index = 0; index < textures.length; index++) {

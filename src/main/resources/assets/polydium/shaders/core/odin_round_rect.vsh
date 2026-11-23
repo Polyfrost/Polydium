@@ -27,8 +27,8 @@ void main() {
     radii = vec4(
         float(UV2.x & 0xFF), // top left
         float((UV2.x >> 8) & 0xFF), // top right
-        float(UV2.y  & 0xFF), // bottom right
-        float((UV2.y >> 8) & 0xFF)  // bottom left
+        float(UV2.y & 0xFF), // bottom right
+        float((UV2.y >> 8) & 0xFF) // bottom left
     ) / 4.0;
     edgeWidth = LineWidth;
 }

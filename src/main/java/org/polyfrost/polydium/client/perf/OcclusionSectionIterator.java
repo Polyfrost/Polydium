@@ -9,16 +9,16 @@ final class OcclusionSectionIterator implements ByteIterator {
     private static final int CAPACITY = 256;
 
     private final byte[] sections = new byte[CAPACITY];
-    private int          count;
-    private int          position;
+    private int count;
+    private int position;
 
     void reset() {
-        this.count    = 0;
+        this.count = 0;
         this.position = 0;
     }
 
     void add(int section) {
-        this.sections[this.count ++] = (byte) section;
+        this.sections[this.count++] = (byte) section;
     }
 
     boolean isEmpty() {
@@ -32,7 +32,7 @@ final class OcclusionSectionIterator implements ByteIterator {
 
     @Override
     public int nextByteAsInt() {
-        return this.sections[this.position ++] & 0xFF;
+        return this.sections[this.position++] & 0xFF;
     }
 }
 //?}

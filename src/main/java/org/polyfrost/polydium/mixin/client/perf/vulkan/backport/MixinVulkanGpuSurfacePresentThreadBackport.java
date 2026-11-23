@@ -107,9 +107,9 @@ public abstract class MixinVulkanGpuSurfacePresentThreadBackport implements Pres
         if (this.swapchainOutOfDate)
             throw new IllegalStateException("Attempt to use out of date swapchain");
 
-        long semaphore  = this.presentSemaphores[this.currentImageIndex];
+        long semaphore = this.presentSemaphores[this.currentImageIndex];
         long frameChain = this.swapchain;
-        int  imageIndex = this.currentImageIndex;
+        int imageIndex = this.currentImageIndex;
 
         this.currentImageIndex = -1;
         PresentThread.capture(() -> this.polydium$queuePresent(semaphore, frameChain, imageIndex));
@@ -132,8 +132,8 @@ public abstract class MixinVulkanGpuSurfacePresentThreadBackport implements Pres
         int result = PresentThread.queuePresent(this.presentQueue, semaphore, frameChain, imageIndex);
         if (result == KHRSwapchain.VK_ERROR_OUT_OF_DATE_KHR) {
             this.swapchainSuboptimal = true;
-            this.swapchainOutOfDate  = true;
-            this.eatenException      = new SurfaceException("Failed to present image, swapchain out of date");
+            this.swapchainOutOfDate = true;
+            this.eatenException = new SurfaceException("Failed to present image, swapchain out of date");
         } else if (result == KHRSwapchain.VK_SUBOPTIMAL_KHR) {
             this.swapchainSuboptimal = true;
         } else {

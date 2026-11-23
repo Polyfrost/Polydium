@@ -28,11 +28,11 @@ public final class TransientHeapPlacement {
             VkPhysicalDeviceMemoryProperties properties = VkPhysicalDeviceMemoryProperties.calloc(stack);
             VK10.vkGetPhysicalDeviceMemoryProperties(physicalDevice, properties);
 
-            int  gpu     = -1;
+            int gpu = -1;
             long gpuSize = -1L;
             for (int i = 0; i < properties.memoryHeapCount(); i++) {
                 if ((properties.memoryHeaps(i).flags() & VK10.VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0 && properties.memoryHeaps(i).size() >= gpuSize) {
-                    gpu     = i;
+                    gpu = i;
                     gpuSize = properties.memoryHeaps(i).size();
                 }
             }

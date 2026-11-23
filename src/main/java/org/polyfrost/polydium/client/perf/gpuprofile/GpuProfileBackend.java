@@ -39,9 +39,9 @@ final class GpuProfileBackend {
     }
 
     static Map<String, String> describe() {
-        Map<String, String>  out       = new LinkedHashMap<>();
-        Minecraft            minecraft = Minecraft.getInstance();
-        FabricLoader         loader    = FabricLoader.getInstance();
+        Map<String, String> out = new LinkedHashMap<>();
+        Minecraft minecraft = Minecraft.getInstance();
+        FabricLoader loader = FabricLoader.getInstance();
 
         out.put("minecraft", version(loader, "minecraft"));
         out.put("polydium", version(loader, "polydium"));
@@ -95,8 +95,8 @@ final class GpuProfileBackend {
             return "iris not installed";
 
         try {
-            Class<?> api      = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
-            Object   instance = api.getMethod("getInstance").invoke(null);
+            Class<?> api = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
+            Object instance = api.getMethod("getInstance").invoke(null);
 
             return Boolean.TRUE.equals(api.getMethod("isShaderPackInUse").invoke(instance)) ? "in use" : "off";
         } catch (ReflectiveOperationException | LinkageError error) {

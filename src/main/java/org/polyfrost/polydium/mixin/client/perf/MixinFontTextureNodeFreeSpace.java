@@ -84,7 +84,7 @@ public abstract class MixinFontTextureNodeFreeSpace {
     @Unique
     private void polydium$refresh() {
         if (this.polydium$left != null && this.polydium$right != null) {
-            int left  = this.polydium$left.polydium$freeBits;
+            int left = this.polydium$left.polydium$freeBits;
             int right = this.polydium$right.polydium$freeBits;
 
             this.polydium$freeBits = (byte) (Math.max(left & NIBBLE_MASK, right & NIBBLE_MASK) | Math.max(left >>> NIBBLE & NIBBLE_MASK, right >>> NIBBLE & NIBBLE_MASK) << NIBBLE);

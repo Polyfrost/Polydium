@@ -66,7 +66,7 @@ public abstract class MixinMinecraftPresentThreadBackport {
         if (this.polydium$imageAcquiredEarly)
             ((PresentThread.Discard) surface).polydium$discardAcquired();
 
-        this.polydium$imageAcquiredEarly  = false;
+        this.polydium$imageAcquiredEarly = false;
         this.polydium$earlyAcquireFailure = null;
     }
 
@@ -75,7 +75,7 @@ public abstract class MixinMinecraftPresentThreadBackport {
         if (this.polydium$imageAcquiredEarly || this.polydium$earlyAcquireFailure != null) {
             SurfaceException failure = this.polydium$earlyAcquireFailure;
 
-            this.polydium$imageAcquiredEarly  = false;
+            this.polydium$imageAcquiredEarly = false;
             this.polydium$earlyAcquireFailure = null;
 
             if (failure != null)

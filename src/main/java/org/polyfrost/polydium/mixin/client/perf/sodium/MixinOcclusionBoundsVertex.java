@@ -33,7 +33,7 @@ public abstract class MixinOcclusionBoundsVertex implements SectionBounds.PassHo
 
     @Override
     public void polydium$setPass(int pass, boolean translucent) {
-        this.polydium$pass        = pass;
+        this.polydium$pass = pass;
         this.polydium$translucent = translucent;
     }
 }

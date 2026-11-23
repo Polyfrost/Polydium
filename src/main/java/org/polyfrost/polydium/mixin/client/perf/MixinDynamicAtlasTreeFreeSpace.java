@@ -73,10 +73,10 @@ public abstract class MixinDynamicAtlasTreeFreeSpace {
             }
 
             if (this.width - slotWidth > this.height - slotHeight) {
-                this.left  = new DynamicAtlasTree(this.x, this.y, slotWidth, this.height);
+                this.left = new DynamicAtlasTree(this.x, this.y, slotWidth, this.height);
                 this.right = new DynamicAtlasTree(this.x + slotWidth + spacing, this.y, this.width - slotWidth - spacing, this.height);
             } else {
-                this.left  = new DynamicAtlasTree(this.x, this.y, this.width, slotHeight);
+                this.left = new DynamicAtlasTree(this.x, this.y, this.width, slotHeight);
                 this.right = new DynamicAtlasTree(this.x, this.y + slotHeight + spacing, this.width, this.height - slotHeight - spacing);
             }
 
@@ -91,7 +91,7 @@ public abstract class MixinDynamicAtlasTreeFreeSpace {
     @Unique
     private void polydium$refresh() {
         if (this.left != null && this.right != null) {
-            int left  = polydium$of(this.left).polydium$freeBits;
+            int left = polydium$of(this.left).polydium$freeBits;
             int right = polydium$of(this.right).polydium$freeBits;
 
             this.polydium$freeBits = (byte) (Math.max(left & NIBBLE_MASK, right & NIBBLE_MASK) | Math.max(left >>> NIBBLE & NIBBLE_MASK, right >>> NIBBLE & NIBBLE_MASK) << NIBBLE);

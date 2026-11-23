@@ -96,7 +96,7 @@ public abstract class MixinOcclusionRegion implements RegionOcclusion {
     public void polydium$clearBatches() {
         int culled = this.polydium$culledPasses;
 
-        for (int index = 0; index < DefaultTerrainRenderPasses.ALL.length; index ++) {
+        for (int index = 0; index < DefaultTerrainRenderPasses.ALL.length; index++) {
             MultiDrawBatch batch = this.cachedBatches.get(DefaultTerrainRenderPasses.ALL[index]);
 
             if (batch != null && batch.isFilled)
@@ -131,7 +131,7 @@ public abstract class MixinOcclusionRegion implements RegionOcclusion {
 
     @Unique
     private static int polydium$bit(TerrainRenderPass pass) {
-        for (int index = 0; index < DefaultTerrainRenderPasses.ALL.length; index ++) {
+        for (int index = 0; index < DefaultTerrainRenderPasses.ALL.length; index++) {
             if (DefaultTerrainRenderPasses.ALL[index] == pass)
                 return 1 << index;
         }

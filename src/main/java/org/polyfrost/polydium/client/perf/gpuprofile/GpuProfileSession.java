@@ -34,11 +34,11 @@ final class GpuProfileSession {
     final Int2IntOpenHashMap passGroups = new Int2IntOpenHashMap();
 
     GpuProfileSession(GpuProfiler.Request request, long now, Map<String, String> environment, boolean passLevel) {
-        this.request     = request;
-        this.startNanos  = now;
-        this.endNanos    = now + request.seconds() * 1_000_000_000L;
+        this.request = request;
+        this.startNanos = now;
+        this.endNanos = now + request.seconds() * 1_000_000_000L;
         this.environment = environment;
-        this.passLevel   = passLevel;
+        this.passLevel = passLevel;
     }
 
     void frameEnded(long presentWaitNanos, @Nullable String presentThread, boolean presentMissing) {
@@ -73,7 +73,7 @@ final class GpuProfileSession {
         if (overflow)
             overflowFrames++;
 
-        long sum         = 0;
+        long sum = 0;
         long previousEnd = count == 0 ? 0L : stamps[0];
 
         for (int i = 0; i < count; i++) {
@@ -82,7 +82,7 @@ final class GpuProfileSession {
             if (key == GpuProfiler.DISCARDED)
                 continue;
 
-            long end      = stamps[i * 2 + 1];
+            long end = stamps[i * 2 + 1];
             long duration = Math.max(0L, end - (passLevel ? previousEnd : stamps[i * 2]));
 
             previousEnd = Math.max(previousEnd, end);
@@ -114,7 +114,7 @@ final class GpuProfileSession {
             grow(id + 1);
 
             if (!isTouched[id]) {
-                isTouched[id]           = true;
+                isTouched[id] = true;
                 touched[touchedCount++] = id;
             }
 
@@ -128,14 +128,14 @@ final class GpuProfileSession {
 
         void endFrame() {
             for (int i = 0; i < touchedCount; i++) {
-                int  id    = touched[i];
+                int id = touched[i];
                 long frame = frameNanos[id];
 
                 nanos[id] += frame;
                 maxFrameNanos[id] = Math.max(maxFrameNanos[id], frame);
                 framesSeen[id]++;
                 frameNanos[id] = 0;
-                isTouched[id]  = false;
+                isTouched[id] = false;
             }
 
             touchedCount = 0;
@@ -151,14 +151,14 @@ final class GpuProfileSession {
 
             int size = Math.max(needed, nanos.length * 2);
 
-            nanos         = Arrays.copyOf(nanos, size);
+            nanos = Arrays.copyOf(nanos, size);
             maxFrameNanos = Arrays.copyOf(maxFrameNanos, size);
-            calls         = Arrays.copyOf(calls, size);
-            draws         = Arrays.copyOf(draws, size);
-            framesSeen    = Arrays.copyOf(framesSeen, size);
-            frameNanos    = Arrays.copyOf(frameNanos, size);
-            isTouched     = Arrays.copyOf(isTouched, size);
-            touched       = Arrays.copyOf(touched, size);
+            calls = Arrays.copyOf(calls, size);
+            draws = Arrays.copyOf(draws, size);
+            framesSeen = Arrays.copyOf(framesSeen, size);
+            frameNanos = Arrays.copyOf(frameNanos, size);
+            isTouched = Arrays.copyOf(isTouched, size);
+            touched = Arrays.copyOf(touched, size);
         }
     }
 }

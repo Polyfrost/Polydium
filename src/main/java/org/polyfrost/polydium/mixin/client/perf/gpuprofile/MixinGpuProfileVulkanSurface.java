@@ -41,8 +41,8 @@ public abstract class MixinGpuProfileVulkanSurface {
 
     @WrapOperation(method = "acquireNextTexture", at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/KHRSwapchain;vkAcquireNextImageKHR(Lorg/lwjgl/vulkan/VkDevice;JJJJLjava/nio/IntBuffer;)I", remap = false))
     private int polydium$timeAcquire(VkDevice device, long swapchain, long timeout, long semaphore, long fence, IntBuffer index, Operation<Integer> original) {
-        long start  = GpuProfiler.presentStart();
-        int  result = original.call(device, swapchain, timeout, semaphore, fence, index);
+        long start = GpuProfiler.presentStart();
+        int result = original.call(device, swapchain, timeout, semaphore, fence, index);
 
         GpuProfiler.presentWait(start, false);
 
@@ -51,8 +51,8 @@ public abstract class MixinGpuProfileVulkanSurface {
 
     @WrapOperation(method = "present", at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/KHRSwapchain;vkQueuePresentKHR(Lorg/lwjgl/vulkan/VkQueue;Lorg/lwjgl/vulkan/VkPresentInfoKHR;)I", remap = false))
     private int polydium$timePresent(VkQueue queue, VkPresentInfoKHR info, Operation<Integer> original) {
-        long start  = GpuProfiler.presentStart();
-        int  result = original.call(queue, info);
+        long start = GpuProfiler.presentStart();
+        int result = original.call(queue, info);
 
         GpuProfiler.presentWait(start, true);
 

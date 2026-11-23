@@ -36,7 +36,7 @@ public abstract class MixinOcclusionDepthCapture {
         }
 
         RenderTarget mainTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
-        long         start      = System.nanoTime();
+        long start = System.nanoTime();
 
         pass.close();
 

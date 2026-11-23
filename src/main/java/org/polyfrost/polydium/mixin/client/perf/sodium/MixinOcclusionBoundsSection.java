@@ -40,9 +40,9 @@ public abstract class MixinOcclusionBoundsSection {
     @Unique
     private void polydium$replaceBounds(long built, int animated) {
         RegionOcclusion occlusion = (RegionOcclusion) this.region;
-        long[]          bounds    = occlusion.polydium$getSectionBounds();
-        int             section   = this.getSectionIndex();
-        long            previous  = bounds[section];
+        long[] bounds = occlusion.polydium$getSectionBounds();
+        int section = this.getSectionIndex();
+        long previous = bounds[section];
 
         occlusion.polydium$getAnimatedBounds()[section] = animated;
 

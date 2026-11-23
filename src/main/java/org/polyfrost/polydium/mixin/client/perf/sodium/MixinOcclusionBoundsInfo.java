@@ -22,7 +22,7 @@ public abstract class MixinOcclusionBoundsInfo implements SectionBounds.Holder {
     private void polydium$takeBounds(CallbackInfo ci) {
         if (BuiltSectionInfo.EMPTY != null) {
             this.polydium$animatedBounds = SectionBounds.takeAnimated();
-            this.polydium$bounds         = SectionBounds.take();
+            this.polydium$bounds = SectionBounds.take();
         }
     }
 
