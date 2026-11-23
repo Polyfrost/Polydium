@@ -88,6 +88,8 @@
     //? if >= 26.3
     "client.perf.MixinWindowMinimizedPoll",
     //? if >= 26.3
+    "client.perf.MixinExperimentalBorderless",
+    //? if >= 26.3
     "client.perf.MixinMainPassExpose",
     //? if < 26.3
     //"client.perf.MixinUnboundKeyPoll",
@@ -721,6 +723,8 @@
     "client.perf.opengl.MixinGlTexBufferCache",
     //? if >= 26.2
     "client.perf.opengl.MixinGlFallbackCloseFree",
+    //? if >= 26.3
+    "client.perf.opengl.MixinGlColorReadBuffer",
     //? if >= 26.2 && < 26.3
     //"client.perf.opengl.MixinVertexArrayLookup",
     //? if >= 26.2

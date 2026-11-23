@@ -42,6 +42,9 @@ public class PolydiumToggles {
     //? if >= 26.3
     @Switch(title = "Sky In Main Pass", description = "On Vulkan, draws the deferred sky inside the main render pass instead of closing and reopening it.")
     public static boolean skyMainPass = true;
+    //? if >= 26.3
+    @Switch(title = "Experimental Borderless", description = "On Windows, makes borderless fullscreen exactly the size of the monitor instead of 1px larger, so Windows can stop compositing it for higher FPS. Adaptive sync (G-Sync, FreeSync) will not work. Turn off if alt-tabbing causes black screens. Applies the next time fullscreen is entered.")
+    public static boolean experimentalBorderless = false;
     //? if >= 1.21.8
     @Switch(title = "Occlusion Culling", description = "Skips chunk sections hidden behind nearer terrain when the GPU is the bottleneck.")
     public static boolean occlusionCulling = true;
