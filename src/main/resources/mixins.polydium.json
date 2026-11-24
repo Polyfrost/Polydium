@@ -505,6 +505,12 @@
     "client.perf.MixinEmptyFeaturePhaseFrame",
     //? if >= 26.3
     "client.perf.MixinParticleOitFallback",
+    //? if >= 26.3
+    "client.perf.MixinOitlessRenderTypeFallback",
+    //? if >= 26.3
+    "client.perf.RenderTypeSetupAccessor",
+    //? if >= 26.3
+    "client.perf.RenderSetupOitAccessor",
     //? if >= 26.2
     "client.perf.MixinBatchPipelineSort",
     //? if >= 1.21.11
