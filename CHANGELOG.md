@@ -1,3 +1,10 @@
+## 1.4.23
+- fix: crash on render types without OIT pipelines
+- fix: crash from null GLFW input handle on Vulkan
+- fix: Vulkan crash recheck no longer treats native out-of-memory as a failed start
+- perf: skip GL fence poll for in-flight staged buffer recycles
+- perf: cache Shield Status shield check per model
+
 ## 1.4.22
 - fix: crash with Essential on 26.3
 - feat: Experimental Borderless option on 26.3 (Windows). Makes borderless fullscreen exactly monitor-sized so Windows stops compositing it, for higher FPS. Off by default
