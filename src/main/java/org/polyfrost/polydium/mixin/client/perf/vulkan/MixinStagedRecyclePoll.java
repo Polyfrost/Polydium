@@ -4,6 +4,7 @@ package org.polyfrost.polydium.mixin.client.perf.vulkan;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.renderpearl.api.commands.GpuFence;
+import com.mojang.renderpearl.backend.opengl.GlFence;
 import org.polyfrost.polydium.client.perf.RecyclePolling;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -19,6 +20,9 @@ public class MixinStagedRecyclePoll {
             return original.call(fence, timeout);
         }
         long submitIndex = vulkanFence.polydium$submitIndex();
+        if (fence instanceof GlFence && RecyclePolling.isGlInFlight(submitIndex)) {
+            return false;
+        }
         if (RecyclePolling.isKnownPending(submitIndex)) {
             return false;
         }

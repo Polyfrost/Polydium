@@ -5,11 +5,17 @@ public final class RecyclePolling {
     private static long pendingFrame = -1L;
     private static long lowestPending;
 
+    public static long glSubmitIndex = -1L;
+
     private RecyclePolling() {
     }
 
     public static boolean isKnownPending(long submitIndex) {
         return pendingFrame == PerfClock.frame && submitIndex >= lowestPending;
+    }
+
+    public static boolean isGlInFlight(long submitIndex) {
+        return glSubmitIndex >= 0L && submitIndex >= glSubmitIndex - 1L;
     }
 
     public static void markPending(long submitIndex) {
