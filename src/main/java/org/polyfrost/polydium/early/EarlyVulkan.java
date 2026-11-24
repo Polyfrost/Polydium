@@ -560,8 +560,22 @@ public final class EarlyVulkan implements LanguageAdapter {
         if (startedAt == null || !Files.readAllLines(options).contains("startedCleanly:false"))
             return;
         Path report = newestReport(startedAt, Instant.MAX);
-        if (report != null && nonRenderStartupCrash(report, Instant.MAX))
+        if (report != null ? nonRenderStartupCrash(report, Instant.MAX) : nativeOutOfMemory(startedAt))
             markStartClean();
+    }
+
+    private static boolean nativeOutOfMemory(Instant startedAt) {
+        for (Path file : nativeCrashes()) {
+            Instant at = modified(file);
+            if (at == null || at.isBefore(startedAt))
+                continue;
+            try {
+                if (new String(Files.readAllBytes(file), StandardCharsets.ISO_8859_1).contains("There is insufficient memory for the Java Runtime Environment to continue"))
+                    return true;
+            } catch (IOException ignored) {
+            }
+        }
+        return false;
     }
 
     //? if >= 26.3 {

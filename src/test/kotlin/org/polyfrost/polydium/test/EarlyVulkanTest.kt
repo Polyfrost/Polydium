@@ -557,6 +557,45 @@ class EarlyVulkanTest {
     }
 
     @Test
+    fun nativeOutOfMemoryIsNotAFailedStart() {
+        crashAfterUncleanStart(listOf())
+        Files.delete(gameDir.resolve("crash-reports/crash-2026-11-12_13.14.30-client.txt"))
+        Files.writeString(gameDir.resolve("crash-reports/hs_err_pid1.log"),
+            "#\n# There is insufficient memory for the Java Runtime Environment to continue.\n# Native memory allocation (mmap) failed to map 461373440 bytes. Error detail: G1 virtual space\n")
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.vulkanAtStartup())
+        assertFalse(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun renderCrashWinsOverNativeOutOfMemory() {
+        crashAfterUncleanStart(vulkanCrash)
+        Files.writeString(gameDir.resolve("crash-reports/hs_err_pid1.log"),
+            "# There is insufficient memory for the Java Runtime Environment to continue.\n")
+
+        EarlyVulkan()
+
+        assertFalse(EarlyVulkan.vulkanAtStartup())
+        assertTrue(EarlyVulkan.failed())
+    }
+
+    @Test
+    fun unreadableNativeLogIsSkipped() {
+        crashAfterUncleanStart(listOf())
+        Files.delete(gameDir.resolve("crash-reports/crash-2026-11-12_13.14.30-client.txt"))
+        Files.createDirectory(gameDir.resolve("crash-reports/hs_err_pid2.log"))
+        Files.writeString(gameDir.resolve("crash-reports/hs_err_pid1.log"),
+            "# There is insufficient memory for the Java Runtime Environment to continue.\n")
+
+        EarlyVulkan()
+
+        assertTrue(EarlyVulkan.vulkanAtStartup())
+        assertFalse(EarlyVulkan.failed())
+    }
+
+    @Test
     fun truncatedReportIsAFailedStart() {
         crashAfterUncleanStart(listOf("Description: Initializing game", "", "java.lang.NullPointerException"))
 
