@@ -39,6 +39,11 @@ public abstract class MixinVulkanLegacyEncoder implements VulkanLegacyRendering.
     @Shadow
     private @Nullable VulkanRenderPass currentRenderPass;
 
+    //? if >= 26.3 {
+    @Shadow
+    private @Nullable VkCommandBuffer currentInitCommandBuffer;
+    //?}
+
     @Shadow
     private void endCommandBuffer() {
         throw new AssertionError();
@@ -92,7 +97,11 @@ public abstract class MixinVulkanLegacyEncoder implements VulkanLegacyRendering.
 
     @Inject(method = "destroy", at = @At("HEAD"))
     private void polydium$endOpenCommandBuffer(CallbackInfo ci) {
-        if (this.currentCommandBuffer != null && this.currentRenderPass == null) {
+        //? if >= 26.3 {
+        boolean open = this.currentCommandBuffer != null || this.currentInitCommandBuffer != null;
+        //?} else
+        /*boolean open = this.currentCommandBuffer != null;*/
+        if (open && this.currentRenderPass == null) {
             polydium$LOGGER.warn("Ending open Vulkan command buffer before device shutdown");
             this.endCommandBuffer();
         }
