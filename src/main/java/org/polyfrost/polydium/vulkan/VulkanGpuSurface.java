@@ -6,6 +6,7 @@ import org.polyfrost.polydium.vulkan.compat.GpuSurfaceBackend;
 import org.polyfrost.polydium.vulkan.compat.SurfaceException;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
+import org.polyfrost.polydium.client.perf.VulkanSync;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
 import org.polyfrost.polydium.vulkan.checkpoints.CheckpointExtension;

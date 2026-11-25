@@ -2,6 +2,7 @@ package org.polyfrost.polydium.vulkan;
 
 import java.util.function.Supplier;
 import org.polyfrost.polydium.client.PolydiumToggles;
+import org.polyfrost.polydium.client.perf.VulkanSync;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
 import java.util.OptionalInt;

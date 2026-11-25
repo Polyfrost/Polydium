@@ -1,6 +1,7 @@
 package org.polyfrost.polydium.vulkan;
 
 import org.polyfrost.polydium.client.perf.RawGl;
+import org.polyfrost.polydium.client.perf.VulkanSync;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
 import org.polyfrost.polydium.vulkan.compat.SurfaceException;

@@ -773,6 +773,12 @@
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLegacyPipeline",
     //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacyRenderPass",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacySubmission",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacySurface",
+    //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLazyTransient",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLazyTransientSubmission",

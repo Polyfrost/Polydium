@@ -11,9 +11,9 @@ import com.mojang.renderpearl.api.commands.GpuQueryPool;
 //?} else
 /*import com.mojang.blaze3d.systems.GpuQueryPool;*/
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.vulkan.KHRSynchronization2;
 import org.lwjgl.vulkan.VK12;
 import org.lwjgl.vulkan.VkCommandBuffer;
+import org.polyfrost.polydium.client.perf.VulkanSync;
 import org.polyfrost.polydium.mixin.client.perf.gpuprofile.VulkanQueryPoolAccessor;
 
 final class PoolStamps implements GpuStamps {
@@ -74,7 +74,7 @@ final class PoolStamps implements GpuStamps {
             vkPool = vkPools[index] = ((VulkanQueryPoolAccessor) pools[index]).polydium$vkQueryPool();
 
         VK12.vkResetQueryPool(buffer.getDevice(), vkPool, query, 1);
-        KHRSynchronization2.vkCmdWriteTimestamp2KHR(buffer, ALL_COMMANDS, vkPool, query);
+        VulkanSync.writeTimestamp(buffer, ALL_COMMANDS, vkPool, query);
     }
 
     @Override

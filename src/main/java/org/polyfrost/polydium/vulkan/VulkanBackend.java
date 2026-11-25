@@ -1,6 +1,7 @@
 package org.polyfrost.polydium.vulkan;
 
 import org.polyfrost.polydium.client.perf.VmaPolicy;
+import org.polyfrost.polydium.client.perf.VulkanSync;
 import com.mojang.blaze3d.GLFWErrorCapture;
 import com.mojang.blaze3d.shaders.GpuDebugOptions;
 import com.mojang.blaze3d.shaders.ShaderSource;
