@@ -510,6 +510,8 @@
     //? if >= 26.3
     "client.perf.MixinOitlessRenderTypeFallback",
     //? if >= 26.3
+    "client.perf.MixinOitlessDrawGuard",
+    //? if >= 26.3
     "client.perf.RenderTypeSetupAccessor",
     //? if >= 26.3
     "client.perf.RenderSetupOitAccessor",
