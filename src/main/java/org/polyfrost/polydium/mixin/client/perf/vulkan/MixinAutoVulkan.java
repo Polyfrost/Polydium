@@ -183,6 +183,8 @@ public abstract class MixinAutoVulkan {
     @Inject(method = "onGameLoadFinished", at = @At("TAIL"))
     private void polydium$finishVulkanStart(CallbackInfo ci) {
         EarlyVulkan.markVulkanStart(false);
+        if (VulkanActive.active)
+            EarlyVulkan.markVulkanWorked();
     }
 
     @Inject(method = "stop", at = @At("HEAD"))
