@@ -57,7 +57,7 @@ public abstract class MixinVulkanDeferralBackport implements VulkanDeferral.Host
     private CheckpointExtension.CheckpointStorage checkpointStorage;
 
     @Unique
-    private final VulkanDeferral polydium$deferral = new VulkanDeferral(this);
+    private final VulkanDeferral polydium$deferral = new VulkanDeferral(this, false);
 
     @Shadow
     public abstract void clearDepthTextureUnsynced(MemoryStack stack, GpuTexture depthTexture, double clearDepth);
