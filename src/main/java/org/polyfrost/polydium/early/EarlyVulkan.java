@@ -277,6 +277,14 @@ public final class EarlyVulkan implements LanguageAdapter {
         }
     }
 
+    public static boolean consumeVulkanWorked() {
+        try {
+            return Files.deleteIfExists(vulkanWorkedFile());
+        } catch (IOException ignored) {
+            return false;
+        }
+    }
+
     public static void markStartClean() {
         markVulkanStart(false);
         try {
@@ -305,12 +313,7 @@ public final class EarlyVulkan implements LanguageAdapter {
             } catch (IOException ignored) {
             }
             if (vulkan && startFailed && vulkanStartUnfinished()) {
-                boolean worked = false;
-                try {
-                    worked = Files.deleteIfExists(vulkanWorkedFile());
-                } catch (IOException ignored) {
-                }
-                if (worked) {
+                if (consumeVulkanWorked()) {
                     LoggerFactory.getLogger("polydium/vulkan").warn("Last Vulkan startup did not finish: starting on OpenGL once, keeping Vulkan selected");
                     markVulkanStart(false);
                 } else {
