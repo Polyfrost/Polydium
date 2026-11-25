@@ -8,7 +8,6 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
-import org.polyfrost.polydium.vulkan.checkpoints.CheckpointExtension;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongArrays;
 import it.unimi.dsi.fastutil.longs.LongList;
@@ -368,13 +367,8 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
         int result = KHRSwapchain.vkAcquireNextImageKHR(this.device.vkDevice(), this.swapchain, 5000000000L, acquireSemaphore, 0L, frameIndexPtr);
         if (GpuProfileFlag.ENABLED)
           GpuProfiler.presentWait(acquireStart, false);
-        if (result == 2) {
-          List<CheckpointExtension.QueueCheckpoints> checkpoints = this.device.checkpointExtension().retrieveCheckpoints(false);
-          throw new IllegalStateException("GPU timeout attempting to acquire next frame: " + VulkanUtils.formatCheckpoints(checkpoints));
-        }
-
         this.currentImageIndex = frameIndexPtr.get(0);
-        if (result == -1000001004) {
+        if (result == 2 || result == -1000001004) {
           this.swapchainSuboptimal = true;
           this.swapchainOutOfDate = true;
           throw new SurfaceException("Failed to acquire image, swapchain out of date");
