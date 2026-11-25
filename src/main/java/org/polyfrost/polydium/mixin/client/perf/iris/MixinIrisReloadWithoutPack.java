@@ -14,7 +14,7 @@ public class MixinIrisReloadWithoutPack {
     @Inject(method = "reload", at = @At(value = "INVOKE", target = "Lnet/irisshaders/iris/config/IrisConfig;initialize()V", shift = At.Shift.AFTER), cancellable = true, require = 0)
     private static void polydium$skipReloadWithoutPack(CallbackInfo ci) {
         IrisConfig config = Iris.getIrisConfig();
-        if (Iris.getCurrentPack().isEmpty() && (!config.areShadersEnabled() || config.getShaderPackName().isEmpty()))
+        if (Iris.getCurrentPack().isEmpty() && !Iris.isFallback() && (!config.areShadersEnabled() || config.getShaderPackName().isEmpty()))
             ci.cancel();
     }
 }
