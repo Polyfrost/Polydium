@@ -268,6 +268,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("GlIndirectTerrainBatch", new String[]{"GlRenderPassIrisTessellation"}),
             Map.entry("CullTreeRelease", new String[]{"CullTaskTreePool"}),
             Map.entry("OitlessRenderTypeFallback", new String[]{"RenderTypeSetupAccessor", "RenderSetupOitAccessor"}),
+            Map.entry("VulkanAcquireTimeout", new String[]{"VulkanSubmitWaitAccessor"}),
             Map.entry("ParticleAirCollision", new String[]{"ParticleCollisionReach", "ParticleCollisionReachSection", "ParticleCollisionReachChunk", "ParticleCollisionReachViewRadius", "EntityCollideShapesInvoker"}),
             //? if >= 1.21.4 {
             Map.entry("SkinTextureNoPackProbe", new String[]{"TextureManagerAccessor"})
