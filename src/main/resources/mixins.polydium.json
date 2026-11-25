@@ -248,6 +248,7 @@
     "client.perf.iris.MixinIrisOverrideBaseClose",
     //? if >= 26.3
     "client.perf.iris.MixinIrisRenderingPipeline",
+    "client.perf.iris.MixinIrisReloadWithoutPack",
     "client.perf.iris.MixinIrisTimeUniforms",
     //? if >= 1.21.11 && < 26.2 {
     /*"client.perf.iris.BufferSourceAccessor",
