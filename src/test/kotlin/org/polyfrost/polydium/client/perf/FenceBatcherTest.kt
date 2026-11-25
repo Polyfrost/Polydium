@@ -26,6 +26,7 @@ class FenceBatcherTest {
     fun `shares one fence per frame and closes it once`() {
         val created = mutableListOf<FakeFence>()
         FenceBatcher.factory = Supplier { FakeFence().also(created::add) }
+        FenceBatcher.glFlush = Runnable {}
         FenceBatcher.flush()
         created.clear()
 
@@ -56,6 +57,25 @@ class FenceBatcherTest {
         dropped.close()
         FenceBatcher.flush()
         assertEquals(2, created.size)
+    }
+
+    @Test
+    fun `flushes commands before waiting on a fence created mid-frame`() {
+        // like GL, a wait on a fence whose command was never flushed never completes
+        val created = mutableListOf<UnflushedFence>()
+        FenceBatcher.factory = Supplier { UnflushedFence().also(created::add) }
+        FenceBatcher.glFlush = Runnable { created.forEach { it.flushed = true } }
+        FenceBatcher.flush()
+
+        assertTrue(FenceBatcher.defer().awaitCompletion(Long.MAX_VALUE))
+    }
+
+    private class UnflushedFence : GpuFence {
+        var flushed = false
+
+        override fun close() {}
+
+        override fun awaitCompletion(timeout: Long) = flushed
     }
 }
 *///?}

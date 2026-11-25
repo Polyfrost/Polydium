@@ -4,9 +4,11 @@ package org.polyfrost.polydium.client.perf;
 /*import com.mojang.blaze3d.buffers.GpuFence;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.function.Supplier;
+import org.lwjgl.opengl.GL11;
 
 public final class FenceBatcher {
     static Supplier<GpuFence> factory = () -> RenderSystem.getDevice().createCommandEncoder().createFence();
+    static Runnable glFlush = GL11::glFlush;
 
     private static Batch pending;
 
@@ -50,6 +52,8 @@ public final class FenceBatcher {
             }
             if (b.fence == null) {
                 flush();
+                // the fence was only just queued, and drivers like Intel's and Apple's never signal it before a flush
+                glFlush.run();
             }
             return b.signaled = b.fence.awaitCompletion(timeout);
         }
