@@ -31,6 +31,7 @@ import org.polyfrost.polydium.vulkan.compat.RenderArea;
 import org.polyfrost.polydium.vulkan.compat.RenderPassDescriptor;
 *///?}
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import org.joml.Vector4f;
 import org.joml.Vector4fc;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
@@ -152,7 +153,7 @@ public final class VulkanDeferral {
             this.flush(true, false);
         }
         this.clearColorTexture = colorTexture;
-        this.clearColor = clearColor;
+        this.clearColor = new Vector4f(clearColor);
     }
 
     public void deferPairedDepthClear(GpuTexture depthTexture, double clearDepth) {
@@ -418,7 +419,14 @@ public final class VulkanDeferral {
         if (depth != null) {
             depth = new RenderPassDescriptor.Attachment<>(depth.textureView(), OptionalDouble.empty());
         }
-        RenderPassDescriptor loaded = replaced(descriptor, descriptor.colorAttachments(), depth, area);
+        List<RenderPassDescriptor.Attachment<Optional<Vector4fc>>> colors = new ArrayList<>(descriptor.colorAttachments());
+        for (int index = 0; index < colors.size(); index++) {
+            RenderPassDescriptor.Attachment<Optional<Vector4fc>> color = colors.get(index);
+            if (color != null && color.clearValue().isPresent()) {
+                colors.set(index, new RenderPassDescriptor.Attachment<>(color.textureView(), Optional.empty()));
+            }
+        }
+        RenderPassDescriptor loaded = replaced(descriptor, colors, depth, area);
         this.endRendering(commandBuffer);
         this.flushClears();
         try (MemoryStack stack = MemoryStack.stackPush()) {
