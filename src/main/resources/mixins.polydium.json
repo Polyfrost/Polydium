@@ -753,6 +753,8 @@
     "client.perf.vulkan.MixinGraphicsApiTooltip",
     //? if >= 1.21.11
     "client.MixinVulkanStartupProbe",
+    //? if >= 26.3
+    "client.MixinLegacyCoreShaderFallback",
     //? if >= 26.2 && < 26.3
     //"client.perf.vulkan.MixinVulkanLegacyBindGroupLayout",
     //? if >= 26.2
