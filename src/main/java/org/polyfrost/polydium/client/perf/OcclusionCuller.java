@@ -173,7 +173,7 @@ public final class OcclusionCuller {
             return false;
 
         //? if >= 26.3 {
-        if (Minecraft.getInstance().gameRenderer.useImprovedTransparency())
+        if (Minecraft.getInstance().gameRenderer.useImprovedTransparency() || OcclusionDepth.mainPassForeign())
             return false;
         //?}
 

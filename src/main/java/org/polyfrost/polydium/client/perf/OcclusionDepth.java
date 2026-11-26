@@ -82,6 +82,8 @@ public final class OcclusionDepth {
     private static GpuTextureView targetView;
     private static boolean captureDue;
     private static boolean captureRequested;
+    //? if >= 26.3
+    private static boolean mainPassForeign;
     private static double frameX;
     private static double frameY;
     private static double frameZ;
@@ -121,6 +123,16 @@ public final class OcclusionDepth {
     public static boolean canCapture() {
         return captureDue;
     }
+
+    //? if >= 26.3 {
+    public static void mainPassForeign(boolean foreign) {
+        mainPassForeign = foreign;
+    }
+
+    public static boolean mainPassForeign() {
+        return mainPassForeign;
+    }
+    //?}
 
     public static void requestCapture() {
         captureRequested = true;
