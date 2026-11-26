@@ -49,7 +49,6 @@ public final class OcclusionCuller {
     private static final int CARVE_COLUMNS = (WIDTH + CARVE_TILE - 1) / CARVE_TILE;
     static final long MIN_INTERVAL = Integer.getInteger("polydium.occlusionCaptureMs", 100) * 1_000_000L;
     private static final double TEST_BUDGET = 0.5;
-    private static final double EYE_TOLERANCE = 0.5;
     private static final double REPROJECT_LIMIT = 8.0;
     private static final float HIGH_YIELD = 0.15F;
     private static final float LOW_YIELD = 0.05F;
@@ -540,7 +539,7 @@ public final class OcclusionCuller {
     }
 
     private static boolean isUnchanged(double cameraX, double cameraY, double cameraZ) {
-        if (!culling || sectionsChanged || isBeyond(cameraX, cameraY, cameraZ, testedX, testedY, testedZ, EYE_TOLERANCE))
+        if (!culling || sectionsChanged || !isAtTested(cameraX, cameraY, cameraZ))
             return false;
 
         if (retestPending)
@@ -578,7 +577,11 @@ public final class OcclusionCuller {
     }
 
     private static boolean isPyramidCurrent(double cameraX, double cameraY, double cameraZ) {
-        return culling && !retestPending && OcclusionDepth.latestVersion() == testedVersion && !isBeyond(cameraX, cameraY, cameraZ, testedX, testedY, testedZ, EYE_TOLERANCE);
+        return culling && !retestPending && OcclusionDepth.latestVersion() == testedVersion && isAtTested(cameraX, cameraY, cameraZ);
+    }
+
+    private static boolean isAtTested(double cameraX, double cameraY, double cameraZ) {
+        return cameraX == testedX && cameraY == testedY && cameraZ == testedZ;
     }
 
     private static void retestUntested() {
