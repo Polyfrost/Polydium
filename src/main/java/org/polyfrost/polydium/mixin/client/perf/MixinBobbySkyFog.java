@@ -1,5 +1,6 @@
 package org.polyfrost.polydium.mixin.client.perf;
 
+//? if >= 26.2 {
 import com.bawnorton.mixinsquared.TargetHandler;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
 import net.minecraft.client.Minecraft;
@@ -19,3 +20,4 @@ public abstract class MixinBobbySkyFog {
         }
     }
 }
+//?}
