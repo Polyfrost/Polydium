@@ -128,6 +128,10 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
 
   @Override
   public void destroy() {
+    if ((this.currentCommandBuffer != null || this.currentInitCommandBuffer != null) && this.currentRenderPass == null) {
+      LoggerFactory.getLogger("polydium/vulkan").warn("Ending open Vulkan command buffer before device shutdown");
+      this.endCommandBuffer();
+    }
     this.releaseUnusedAttachment();
     this.transientMemory.endSubmit();
     this.submissionBuilder.close();
