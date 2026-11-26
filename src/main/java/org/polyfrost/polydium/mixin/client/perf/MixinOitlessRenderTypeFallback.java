@@ -3,7 +3,11 @@ package org.polyfrost.polydium.mixin.client.perf;
 //? if >= 26.3 {
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.renderer.SubmitNodeCollection;
+import net.minecraft.client.renderer.feature.TextFeatureRenderer;
 import net.minecraft.client.renderer.feature.phase.FeatureRenderPhase;
 import net.minecraft.client.renderer.feature.phase.SimpleFeatureRenderPhase;
 import net.minecraft.client.renderer.item.ItemStackRenderState.FoilType;
@@ -66,6 +70,43 @@ public class MixinOitlessRenderTypeFallback {
         }
 
         return phase;
+    }
+
+    @ModifyExpressionValue(method = "submitTextPart", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/SubmitNodeCollection;texts:Lnet/minecraft/client/renderer/feature/phase/SimpleFeatureRenderPhase;"))
+    private SimpleFeatureRenderPhase polydium$textWithoutOit(SimpleFeatureRenderPhase phase, @Local(argsOnly = true) Font.DisplayMode displayMode, @Local(argsOnly = true) TextFeatureRenderer.Content content) {
+        return phase == this.oitTranslucent && polydium$textLacksOitPipeline(displayMode, content) ? this.solid : phase;
+    }
+
+    @ModifyExpressionValue(method = "submitNameTagPart", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/SubmitNodeCollection;nameTags:Lnet/minecraft/client/renderer/feature/phase/SimpleFeatureRenderPhase;"))
+    private SimpleFeatureRenderPhase polydium$nameTagWithoutOit(SimpleFeatureRenderPhase phase, @Local(argsOnly = true) TextFeatureRenderer.Submit nameTag) {
+        return phase == this.oitTranslucent && polydium$textLacksOitPipeline(nameTag.displayMode(), nameTag.content()) ? this.solid : phase;
+    }
+
+    @Unique
+    private static boolean polydium$textLacksOitPipeline(Font.DisplayMode displayMode, TextFeatureRenderer.Content content) {
+        Font font = Minecraft.getInstance().font;
+        return switch (content) {
+            case TextFeatureRenderer.Content.StandaloneBackground background ->
+                    polydium$lacksOitPipeline(font.prepareBackground(background.x0(), background.y0(), background.x1(), background.y1(), background.color()).renderType(displayMode));
+            case TextFeatureRenderer.Content.Text text -> text.outlineColor() == 0
+                    ? polydium$glyphsLackOitPipeline(font.prepareText(text.string(), text.x(), text.y(), text.color(), text.dropShadow(), false, text.backgroundColor()), displayMode)
+                    : polydium$glyphsLackOitPipeline(font.prepare8xTextOutline(text.string(), text.x(), text.y(), text.outlineColor()), Font.DisplayMode.NORMAL)
+                    || polydium$glyphsLackOitPipeline(font.prepareText(text.string(), text.x(), text.y(), text.color(), false, false, 0), Font.DisplayMode.POLYGON_OFFSET);
+        };
+    }
+
+    @Unique
+    private static boolean polydium$glyphsLackOitPipeline(Font.PreparedText text, Font.DisplayMode displayMode) {
+        boolean[] lacking = new boolean[1];
+        text.visit(new Font.GlyphVisitor() {
+            @Override
+            public void acceptRenderable(TextRenderable renderable) {
+                RenderType renderType = renderable.renderType(displayMode);
+                if (((RenderSetupOitAccessor) (Object) ((RenderTypeSetupAccessor) renderType).polydium$state()).polydium$oitPipelineSet() == null)
+                    lacking[0] = true;
+            }
+        });
+        return lacking[0];
     }
 
     @Unique
