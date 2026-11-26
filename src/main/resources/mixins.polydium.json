@@ -750,6 +750,8 @@
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanSampledAttachment",
     //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanBlitLayout",
+    //? if >= 26.2
     "client.perf.vulkan.MixinGraphicsApiTooltip",
     //? if >= 1.21.11
     "client.MixinVulkanStartupProbe",
