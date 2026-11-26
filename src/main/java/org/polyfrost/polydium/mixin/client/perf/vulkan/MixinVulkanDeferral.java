@@ -53,6 +53,9 @@ public abstract class MixinVulkanDeferral implements VulkanDeferral.Host {
     @Unique
     private final VulkanDeferral polydium$deferral = new VulkanDeferral(this, true);
 
+    @Unique
+    private boolean polydium$passSynced;
+
     @Shadow
     public abstract void clearDepthTextureUnsynced(MemoryStack stack, GpuTexture depthTexture, double clearDepth);
 
@@ -184,7 +187,14 @@ public abstract class MixinVulkanDeferral implements VulkanDeferral.Host {
     @WrapOperation(method = "submitRenderPass", at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/KHRDynamicRendering;vkCmdEndRenderingKHR(Lorg/lwjgl/vulkan/VkCommandBuffer;)V"))
     private void polydium$generalLayouts(VkCommandBuffer commandBuffer, Operation<Void> original) {
         original.call(commandBuffer);
-        this.polydium$deferral.renderingEnded(commandBuffer);
+        this.polydium$passSynced = this.polydium$deferral.renderingEnded(commandBuffer);
+    }
+
+    @WrapWithCondition(method = "submitRenderPass", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/vulkan/VulkanCommandEncoder;memoryBarrier(Lorg/lwjgl/system/MemoryStack;)V"))
+    private boolean polydium$skipSyncedPassBarrier(VulkanCommandEncoder encoder, MemoryStack stack) {
+        boolean synced = this.polydium$passSynced;
+        this.polydium$passSynced = false;
+        return !synced;
     }
 
     @Inject(method = "createRenderPass", at = @At("RETURN"))

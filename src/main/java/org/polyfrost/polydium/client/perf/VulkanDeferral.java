@@ -44,6 +44,7 @@ import org.lwjgl.vulkan.VkClearRect;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.lwjgl.vulkan.VkDependencyInfo;
 import org.lwjgl.vulkan.VkImageMemoryBarrier2;
+import org.lwjgl.vulkan.VkMemoryBarrier2;
 import org.lwjgl.vulkan.VkRect2D;
 import org.lwjgl.vulkan.VkRenderingAttachmentInfo;
 import org.lwjgl.vulkan.VkRenderingInfo;
@@ -468,13 +469,13 @@ public final class VulkanDeferral {
             .storeOp(VK10.VK_ATTACHMENT_STORE_OP_STORE);
     }
 
-    private void endRendering(VkCommandBuffer commandBuffer) {
+    private boolean endRendering(VkCommandBuffer commandBuffer) {
         //? if >= 26.2 {
         VulkanLegacyRendering.endRendering(this.host.polydium$device(), commandBuffer);
         //?} else {
         /*VulkanCommandEncoder.endRendering(this.host.polydium$device(), commandBuffer);
         *///?}
-        this.renderingEnded(commandBuffer);
+        return this.renderingEnded(commandBuffer);
     }
 
     public void beginRendering(VkCommandBuffer commandBuffer, VkRenderingInfo renderingInfo, RenderPassDescriptor descriptor) {
@@ -502,16 +503,17 @@ public final class VulkanDeferral {
         this.transitionAttachments(commandBuffer, true);
     }
 
-    public void renderingEnded(VkCommandBuffer commandBuffer) {
-        this.transitionAttachments(commandBuffer, false);
+    public boolean renderingEnded(VkCommandBuffer commandBuffer) {
+        boolean synced = this.transitionAttachments(commandBuffer, false);
         this.attachmentLayoutTextures.clear();
         this.attachmentLayouts.clear();
+        return synced;
     }
 
-    private void transitionAttachments(VkCommandBuffer commandBuffer, boolean toAttachment) {
+    private boolean transitionAttachments(VkCommandBuffer commandBuffer, boolean toAttachment) {
         int count = this.attachmentLayoutTextures.size();
         if (count == 0) {
-            return;
+            return false;
         }
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkImageMemoryBarrier2.Buffer barriers = VkImageMemoryBarrier2.calloc(count, stack);
@@ -535,8 +537,17 @@ public final class VulkanDeferral {
                     .baseArrayLayer(0)
                     .layerCount(1);
             }
-            KHRSynchronization2.vkCmdPipelineBarrier2KHR(commandBuffer, VkDependencyInfo.calloc(stack).sType$Default().pImageMemoryBarriers(barriers));
+            VkDependencyInfo dependency = VkDependencyInfo.calloc(stack).sType$Default().pImageMemoryBarriers(barriers);
+            if (!toAttachment) {
+                dependency.pMemoryBarriers(VkMemoryBarrier2.calloc(1, stack).sType$Default()
+                    .srcStageMask(VK10.VK_PIPELINE_STAGE_ALL_COMMANDS_BIT)
+                    .srcAccessMask(VK10.VK_ACCESS_MEMORY_READ_BIT | VK10.VK_ACCESS_MEMORY_WRITE_BIT)
+                    .dstStageMask(VK10.VK_PIPELINE_STAGE_ALL_COMMANDS_BIT)
+                    .dstAccessMask(VK10.VK_ACCESS_MEMORY_READ_BIT | VK10.VK_ACCESS_MEMORY_WRITE_BIT));
+            }
+            KHRSynchronization2.vkCmdPipelineBarrier2KHR(commandBuffer, dependency);
         }
+        return true;
     }
 
     private static int clearLabel(GpuTexture color, GpuTexture depth) {
@@ -573,9 +584,12 @@ public final class VulkanDeferral {
         VkCommandBuffer commandBuffer = this.host.polydium$currentCommandBuffer();
         this.suspendedPass = null;
         this.suspendedDescriptor = null;
-        this.endRendering(commandBuffer);
+        boolean synced = this.endRendering(commandBuffer);
         this.host.polydium$device().instance().debug().endDebugGroup(commandBuffer);
         this.host.polydium$checkpointStorage().recordCheckpoint(commandBuffer, CheckpointExtension.CheckpointType.END_RENDER_PASS, pass.getLabel());
+        if (synced) {
+            return;
+        }
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VulkanCommandEncoder.memoryBarrier(commandBuffer, stack);
         }
