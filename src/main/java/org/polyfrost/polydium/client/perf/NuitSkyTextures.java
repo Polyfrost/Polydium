@@ -162,7 +162,10 @@ public final class NuitSkyTextures {
 
             NativeImage image = contents.image();
             GpuDevice device = RenderSystem.getDevice();
+            //? if >= 26.2 {
             this.releaseTextures();
+            //?} else
+            /*super.close();*/
             //? if >= 26.2 {
             this.texture = device.createTexture(this.id::toString, 5, GpuFormat.RGBA8_UNORM, image.getWidth(), image.getHeight(), 1, 1);
             //?} else
