@@ -805,6 +805,8 @@
     "client.perf.MixinGlRecycleSubmitIndex",
     //? if >= 26.2
     "client.perf.MixinGlSubmitWaitMeter",
+    //? if >= 26.2
+    "client.perf.opengl.MixinGlCreateBufferErrorSync",
     //? if >= 26.3
     "client.perf.sodium.MixinOcclusionCull",
     //? if >= 1.21.8
