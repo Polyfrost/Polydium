@@ -36,7 +36,6 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.vulkan.EXTMultiDraw;
 import org.lwjgl.vulkan.KHRPushDescriptor;
-import org.lwjgl.vulkan.KHRSynchronization2;
 import org.lwjgl.vulkan.VK12;
 import org.lwjgl.vulkan.VkBufferViewCreateInfo;
 import org.lwjgl.vulkan.VkCommandBuffer;
@@ -683,7 +682,7 @@ public class VulkanRenderPass implements RenderPassBackend {
   public void writeTimestamp(final GpuQueryPool pool, final int index) {
     long queryPool = ((VulkanQueryPool)pool).vkQueryPool();
     VK12.vkResetQueryPool(this.device.vkDevice(), queryPool, index, 1);
-    KHRSynchronization2.vkCmdWriteTimestamp2KHR(this.commandBuffer(), 65536L, queryPool, index);
+    VulkanSync.writeTimestamp(this.commandBuffer(), 65536L, queryPool, index);
   }
 
   private boolean closed;

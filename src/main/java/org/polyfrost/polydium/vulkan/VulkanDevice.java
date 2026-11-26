@@ -103,6 +103,7 @@ public class VulkanDevice implements GpuDeviceBackend {
     this.fillModeNonSolid = physicalDevice.supportsFillModeNonSolid();
     this.dynamicRendering = enabledDeviceExtensions.contains("VK_KHR_dynamic_rendering");
     this.pushDescriptors = enabledDeviceExtensions.contains("VK_KHR_push_descriptor");
+    VulkanSync.sync2 = enabledDeviceExtensions.contains("VK_KHR_synchronization2");
     Set<String> extensionNames = new HashSet<>();
 
     for (String name : instance.getEnabledExtensions()) {

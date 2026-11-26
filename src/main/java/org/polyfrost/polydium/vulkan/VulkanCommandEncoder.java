@@ -34,7 +34,6 @@ import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.vulkan.KHRDynamicRendering;
-import org.lwjgl.vulkan.KHRSynchronization2;
 import org.lwjgl.vulkan.VK12;
 import org.lwjgl.vulkan.VkBufferCopy;
 import org.lwjgl.vulkan.VkBufferImageCopy;
@@ -268,7 +267,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
     memoryBarrier.dstAccessMask(98304L);
     VkDependencyInfo depInfo = VkDependencyInfo.calloc(stack).sType$Default();
     depInfo.pMemoryBarriers(memoryBarrier);
-    KHRSynchronization2.vkCmdPipelineBarrier2KHR(commandBuffer, depInfo);
+    VulkanSync.pipelineBarrier(commandBuffer, depInfo);
   }
 
   public long currentSubmitIndex() {
@@ -1065,7 +1064,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
   public void writeTimestamp(final GpuQueryPool pool, final int index) {
     long queryPool = ((VulkanQueryPool)pool).vkQueryPool();
     VK12.vkResetQueryPool(this.device.vkDevice(), queryPool, index, 1);
-    KHRSynchronization2.vkCmdWriteTimestamp2KHR(this.commandBuffer(), 65536L, queryPool, index);
+    VulkanSync.writeTimestamp(this.commandBuffer(), 65536L, queryPool, index);
   }
 
   public long getTimestampNow() {
@@ -1074,7 +1073,7 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
     long var5;
     try (VulkanQueryPool queryPool = (VulkanQueryPool)this.device.createTimestampQueryPool(1)) {
       VkCommandBuffer commandBuffer = this.allocateAndBeginTransientCommandBuffer();
-      KHRSynchronization2.vkCmdWriteTimestamp2KHR(commandBuffer, 0L, queryPool.vkQueryPool(), 0);
+      VulkanSync.writeTimestamp(commandBuffer, 0L, queryPool.vkQueryPool(), 0);
       VulkanUtils.crashIfFailure(this.device, VK12.vkEndCommandBuffer(commandBuffer), "Failed to end VkCommandBuffer");
 
       try (VulkanQueue.Submission submit = this.device.graphicsQueue().beginSubmit()) {
