@@ -2,7 +2,10 @@ package org.polyfrost.polydium.mixin.client.perf.vulkan;
 
 //? if >= 26.2 {
 import com.mojang.renderpearl.api.textures.GpuTextureView;
+//? if >= 26.3 {
 import com.mojang.renderpearl.backend.api.CommandEncoderBackend;
+//?} else
+/*import com.mojang.blaze3d.systems.CommandEncoderBackend;*/
 import com.mojang.renderpearl.backend.vulkan.VulkanGpuSurface;
 import org.polyfrost.polydium.client.perf.VulkanDeferral;
 import org.spongepowered.asm.mixin.Mixin;

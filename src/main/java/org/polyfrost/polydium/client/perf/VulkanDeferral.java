@@ -34,6 +34,8 @@ import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
 import org.joml.Vector4fc;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
+//? if >= 26.2
+import org.polyfrost.polydium.mixin.client.perf.vulkan.MixinVulkanTextureViewsAccessor;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.KHRDynamicRendering;
 import org.lwjgl.vulkan.KHRSynchronization2;
@@ -316,7 +318,7 @@ public final class VulkanDeferral {
             if (this.layouts.containsKey(texture) || info.loadOp() != VK10.VK_ATTACHMENT_LOAD_OP_CLEAR || texture.getDepthOrLayers() != 1 || !coversTexture(view, texture, area) || hasStencil(texture)) {
                 return;
             }
-            this.layouts.keySet().removeIf(GpuTexture::isClosed);
+            this.layouts.keySet().removeIf(VulkanDeferral::released);
             this.layouts.put(texture, layout);
             layoutBarrier(barriers.get(), texture, VK10.VK_IMAGE_LAYOUT_UNDEFINED, layout);
         }
@@ -324,11 +326,14 @@ public final class VulkanDeferral {
     }
 
     public void toGeneral(GpuTexture texture, boolean discard) {
+        if (this.layouts.getInt(texture) == VK10.VK_IMAGE_LAYOUT_GENERAL) {
+            return;
+        }
+        VkCommandBuffer commandBuffer = this.host.polydium$commandBuffer();
         int current = this.layouts.getInt(texture);
         if (current == VK10.VK_IMAGE_LAYOUT_GENERAL) {
             return;
         }
-        VkCommandBuffer commandBuffer = this.host.polydium$commandBuffer();
         this.layouts.removeInt(texture);
         transition(commandBuffer, texture, discard && !hasStencil(texture) ? VK10.VK_IMAGE_LAYOUT_UNDEFINED : current, VK10.VK_IMAGE_LAYOUT_GENERAL);
     }
@@ -342,7 +347,7 @@ public final class VulkanDeferral {
     }
 
     private static void layoutBarrier(VkImageMemoryBarrier2 barrier, GpuTexture texture, int oldLayout, int newLayout) {
-        int aspect = oldLayout == VK10.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL || newLayout == VK10.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        int aspect = texture.getFormat().hasColorAspect()
             ? VK10.VK_IMAGE_ASPECT_COLOR_BIT
             : VK10.VK_IMAGE_ASPECT_DEPTH_BIT | (hasStencil(texture) ? VK10.VK_IMAGE_ASPECT_STENCIL_BIT : 0);
         barrier.sType$Default()
@@ -356,6 +361,14 @@ public final class VulkanDeferral {
             .dstQueueFamilyIndex(VK10.VK_QUEUE_FAMILY_IGNORED)
             .image(((VulkanGpuTexture) texture).vkImage());
         barrier.subresourceRange().aspectMask(aspect).baseMipLevel(0).levelCount(texture.getMipLevels()).baseArrayLayer(0).layerCount(texture.getDepthOrLayers());
+    }
+
+    private static boolean released(GpuTexture texture) {
+        //? if >= 26.2 {
+        return texture.isClosed() && ((MixinVulkanTextureViewsAccessor) texture).polydium$views() == 0;
+        //?} else {
+        /*return texture.isClosed() && ((VulkanGpuTexture) texture).views() == 0;
+        *///?}
     }
 
     private static boolean hasStencil(GpuTexture texture) {
