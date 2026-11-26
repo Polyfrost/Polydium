@@ -53,9 +53,6 @@ public abstract class MixinVulkanDeferral implements VulkanDeferral.Host {
     @Unique
     private final VulkanDeferral polydium$deferral = new VulkanDeferral(this, true);
 
-    @Unique
-    private boolean polydium$passSynced;
-
     @Shadow
     public abstract void clearDepthTextureUnsynced(MemoryStack stack, GpuTexture depthTexture, double clearDepth);
 
@@ -67,6 +64,21 @@ public abstract class MixinVulkanDeferral implements VulkanDeferral.Host {
     @Shadow
     private void memoryBarrier(MemoryStack stack) {
         throw new AssertionError();
+    }
+
+    @Shadow
+    private VkCommandBuffer commandBuffer() {
+        throw new AssertionError();
+    }
+
+    @Override
+    public VkCommandBuffer polydium$commandBuffer() {
+        return this.commandBuffer();
+    }
+
+    @Override
+    public void polydium$general(GpuTexture texture) {
+        this.polydium$deferral.toGeneral(texture, false);
     }
 
     @Override
@@ -157,12 +169,20 @@ public abstract class MixinVulkanDeferral implements VulkanDeferral.Host {
     @Inject(method = {"writeToTexture", "copyBufferToTexture", "copyTextureToBuffer"}, at = @At("HEAD"))
     private void polydium$flushClearOfTexture(CallbackInfo ci, @Local(argsOnly = true) GpuTexture texture) {
         this.polydium$deferral.touched(texture);
+        this.polydium$deferral.toGeneral(texture, false);
     }
 
     @Inject(method = "copyTextureToTexture", at = @At("HEAD"))
     private void polydium$flushClearsOfCopy(CallbackInfo ci, @Local(argsOnly = true, ordinal = 0) GpuTexture source, @Local(argsOnly = true, ordinal = 1) GpuTexture destination) {
         this.polydium$deferral.touched(source);
         this.polydium$deferral.touched(destination);
+        this.polydium$deferral.toGeneral(source, false);
+        this.polydium$deferral.toGeneral(destination, false);
+    }
+
+    @Inject(method = {"clearColorTextureUnsynced", "clearDepthTextureUnsynced"}, at = @At("HEAD"))
+    private void polydium$generalForClear(CallbackInfo ci, @Local(argsOnly = true) GpuTexture texture) {
+        this.polydium$deferral.toGeneral(texture, texture.getDepthOrLayers() == 1);
     }
 
     @ModifyVariable(method = "createRenderPass", at = @At("HEAD"), argsOnly = true)
@@ -182,19 +202,6 @@ public abstract class MixinVulkanDeferral implements VulkanDeferral.Host {
             this.polydium$deferral.beginRendering(commandBuffer, renderingInfo, descriptor);
         }
         original.call(commandBuffer, renderingInfo);
-    }
-
-    @WrapOperation(method = "submitRenderPass", at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/KHRDynamicRendering;vkCmdEndRenderingKHR(Lorg/lwjgl/vulkan/VkCommandBuffer;)V"))
-    private void polydium$generalLayouts(VkCommandBuffer commandBuffer, Operation<Void> original) {
-        original.call(commandBuffer);
-        this.polydium$passSynced = this.polydium$deferral.renderingEnded(commandBuffer);
-    }
-
-    @WrapWithCondition(method = "submitRenderPass", at = @At(value = "INVOKE", target = "Lcom/mojang/renderpearl/backend/vulkan/VulkanCommandEncoder;memoryBarrier(Lorg/lwjgl/system/MemoryStack;)V"))
-    private boolean polydium$skipSyncedPassBarrier(VulkanCommandEncoder encoder, MemoryStack stack) {
-        boolean synced = this.polydium$passSynced;
-        this.polydium$passSynced = false;
-        return !synced;
     }
 
     @Inject(method = "createRenderPass", at = @At("RETURN"))

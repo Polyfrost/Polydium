@@ -117,6 +117,10 @@ public class VulkanGpuTexture extends GpuTexture implements Destroyable {
     return this.closed;
   }
 
+  public int views() {
+    return this.views;
+  }
+
   public void addViews() {
     this.views++;
   }
