@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
@@ -36,9 +37,12 @@ public abstract class MixinAutoVulkan {
     @Shadow
     private boolean gameLoadFinished;
 
+    @Unique
+    private static boolean polydium$openGlOnce;
+
     @ModifyArg(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;initRenderer"))
     private GpuDevice polydium$undoFailedVulkan(GpuDevice device, @Local(argsOnly = true) GameConfig config) {
-        if (config.game.forcedGraphicsApi != null || !EarlyVulkan.switchPending())
+        if (config.game.forcedGraphicsApi != null || polydium$openGlOnce || !EarlyVulkan.switchPending())
             return device;
         if (this.options.preferredGraphicsBackend().get() == PreferredGraphicsApi.VULKAN
                 && !"Vulkan".equalsIgnoreCase(device.getDeviceInfo().backendName())) {
@@ -70,12 +74,19 @@ public abstract class MixinAutoVulkan {
             LoggerFactory.getLogger("polydium/vulkan").info("Keeping Vulkan: the unfinished startup was not a Vulkan start");
             return;
         }
+        if (EarlyVulkan.consumeVulkanWorked()) {
+            LoggerFactory.getLogger("polydium/vulkan").warn("Last Vulkan startup did not finish: starting on OpenGL once, keeping Vulkan selected");
+            polydium$openGlOnce = true;
+            return;
+        }
         EarlyVulkan.markFailed("last game startup did not finish");
         original.call(option, value);
     }
 
     @WrapOperation(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/PreferredGraphicsApi;getBackendsToTry()[Lcom/mojang/renderpearl/api/device/GpuBackend;"))
     private GpuBackend[] polydium$markVulkanStart(PreferredGraphicsApi api, Operation<GpuBackend[]> original) {
+        if (polydium$openGlOnce)
+            api = PreferredGraphicsApi.OPENGL;
         EarlyVulkan.markVulkanStart(api == PreferredGraphicsApi.VULKAN);
         return original.call(api);
     }
@@ -83,6 +94,8 @@ public abstract class MixinAutoVulkan {
     @Inject(method = "onGameLoadFinished", at = @At("TAIL"))
     private void polydium$finishVulkanStart(CallbackInfo ci) {
         EarlyVulkan.markVulkanStart(false);
+        if ("Vulkan".equalsIgnoreCase(RenderSystem.getDevice().getDeviceInfo().backendName()))
+            EarlyVulkan.markVulkanWorked();
     }
 
     @Inject(method = "onGameLoadFinished", at = @At("HEAD"))
@@ -183,6 +196,8 @@ public abstract class MixinAutoVulkan {
     @Inject(method = "onGameLoadFinished", at = @At("TAIL"))
     private void polydium$finishVulkanStart(CallbackInfo ci) {
         EarlyVulkan.markVulkanStart(false);
+        if (VulkanActive.active)
+            EarlyVulkan.markVulkanWorked();
     }
 
     @Inject(method = "stop", at = @At("HEAD"))
