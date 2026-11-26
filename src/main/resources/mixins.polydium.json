@@ -248,6 +248,7 @@
     "client.perf.iris.MixinIrisOverrideBaseClose",
     //? if >= 26.3
     "client.perf.iris.MixinIrisRenderingPipeline",
+    "client.perf.iris.MixinIrisReloadWithoutPack",
     "client.perf.iris.MixinIrisTimeUniforms",
     //? if >= 1.21.11 && < 26.2 {
     /*"client.perf.iris.BufferSourceAccessor",
@@ -757,6 +758,8 @@
     "client.perf.vulkan.MixinGraphicsApiTooltip",
     //? if >= 1.21.11
     "client.MixinVulkanStartupProbe",
+    //? if >= 26.3
+    "client.MixinLegacyCoreShaderFallback",
     //? if >= 26.2 && < 26.3
     //"client.perf.vulkan.MixinVulkanLegacyBindGroupLayout",
     //? if >= 26.2
@@ -807,6 +810,8 @@
     "client.perf.MixinGlRecycleSubmitIndex",
     //? if >= 26.2
     "client.perf.MixinGlSubmitWaitMeter",
+    //? if >= 26.2
+    "client.perf.opengl.MixinGlCreateBufferErrorSync",
     //? if >= 26.3
     "client.perf.sodium.MixinOcclusionCull",
     //? if >= 1.21.8
@@ -834,6 +839,10 @@
     //? if >= 1.21.10
     "client.perf.MixinBlockEntityCullBox",
     "client.perf.MixinBlockEntityLightCache",
+    //? if >= 26.2
+    "client.perf.MixinBobbySkyFog",
+    //? if >= 26.2
+    "client.perf.MixinBobbySkyFogUpdate",
     //? if >= 1.21.10
     "client.perf.MixinEntityCullingBlockEntityBox",
     //? if >= 1.21.10

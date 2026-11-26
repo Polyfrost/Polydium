@@ -79,7 +79,11 @@ public final class PresentThread {
     public static boolean canDeferAcquire(GpuSurface surface) {
         Optional<GpuSurface.Configuration> config = surface.currentConfiguration();
 
-        return vulkanSurface && config.isPresent() && config.get().presentMode() == GpuSurface.PresentMode.IMMEDIATE;
+        return vulkanSurface && config.isPresent() && isUncapped(config.get().presentMode());
+    }
+
+    public static boolean isUncapped(GpuSurface.PresentMode mode) {
+        return mode == GpuSurface.PresentMode.IMMEDIATE || mode == GpuSurface.PresentMode.MAILBOX;
     }
 
     public static void handOff(VulkanQueue.Submission submission) {

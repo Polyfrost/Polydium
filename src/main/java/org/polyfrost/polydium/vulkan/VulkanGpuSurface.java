@@ -27,7 +27,6 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.vulkan.KHRSurface;
 import org.lwjgl.vulkan.KHRSwapchain;
-import org.lwjgl.vulkan.KHRSynchronization2;
 import org.lwjgl.vulkan.VK12;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.lwjgl.vulkan.VkDependencyInfo;
@@ -452,7 +451,7 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
         subresourceRange.layerCount(1);
         VkDependencyInfo depinfo = VkDependencyInfo.calloc(stack).sType$Default();
         depinfo.pImageMemoryBarriers(imageBarrier);
-        KHRSynchronization2.vkCmdPipelineBarrier2KHR(blitCommandBuffer, depinfo);
+        VulkanSync.pipelineBarrier(blitCommandBuffer, depinfo);
       } catch (Throwable var21) {
         if (var8 != null) {
           try {
@@ -547,7 +546,7 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
         VkDependencyInfo depinfo = VkDependencyInfo.calloc(stack).sType$Default();
         depinfo.pMemoryBarriers(memoryBarrier);
         depinfo.pImageMemoryBarriers(imageBarrier);
-        KHRSynchronization2.vkCmdPipelineBarrier2KHR(blitCommandBuffer, depinfo);
+        VulkanSync.pipelineBarrier(blitCommandBuffer, depinfo);
       } catch (Throwable var19) {
         if (var8 != null) {
           try {

@@ -103,6 +103,7 @@ public class VulkanDevice implements GpuDeviceBackend {
     this.fillModeNonSolid = physicalDevice.supportsFillModeNonSolid();
     this.dynamicRendering = enabledDeviceExtensions.contains("VK_KHR_dynamic_rendering");
     this.pushDescriptors = enabledDeviceExtensions.contains("VK_KHR_push_descriptor");
+    VulkanSync.sync2 = enabledDeviceExtensions.contains("VK_KHR_synchronization2");
     Set<String> extensionNames = new HashSet<>();
 
     for (String name : instance.getEnabledExtensions()) {
@@ -461,25 +462,27 @@ public class VulkanDevice implements GpuDeviceBackend {
       int[] width = new int[1];
       int[] height = new int[1];
       GLFW.glfwGetFramebufferSize(this.window, width, height);
-      if (width[0] != 0 && height[0] != 0) {
-        SodiumExtraMac.reduceSwapchain(this.window, width, height);
-        GpuSurface.Configuration config = new GpuSurface.Configuration(
-          width[0], height[0], GpuSurface.PresentMode.getSupportedVsyncMode(this.surface.supportedPresentModes(), this.vsync)
-        );
+      if (width[0] == 0 || height[0] == 0) {
+        return;
+      }
 
-        try {
-          this.surface.configure(config);
-          this.surfaceIsInvalid = false;
-          this.surfaceNeedsReconfiguring = false;
-        } catch (SurfaceException e) {
-          LOGGER.warn("Couldn't configure surface to {}: {}", config, e);
-          this.surfaceIsInvalid = true;
-          this.surfaceNeedsReconfiguring = true;
-        }
+      SodiumExtraMac.reduceSwapchain(this.window, width, height);
+      GpuSurface.Configuration config = new GpuSurface.Configuration(
+        width[0], height[0], GpuSurface.PresentMode.getSupportedVsyncMode(this.surface.supportedPresentModes(), this.vsync)
+      );
+
+      try {
+        this.surface.configure(config);
+        this.surfaceIsInvalid = false;
+        this.surfaceNeedsReconfiguring = false;
+      } catch (SurfaceException e) {
+        LOGGER.warn("Couldn't configure surface to {}: {}", config, e);
+        this.surfaceIsInvalid = true;
+        this.surfaceNeedsReconfiguring = true;
       }
     }
 
-    if (this.surfaceIsInvalid) {
+    if (this.surfaceIsInvalid || iconified) {
       return;
     }
 

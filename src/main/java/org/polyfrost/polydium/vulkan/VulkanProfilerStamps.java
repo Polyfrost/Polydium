@@ -1,7 +1,6 @@
 package org.polyfrost.polydium.vulkan;
 
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.vulkan.KHRSynchronization2;
 import org.lwjgl.vulkan.VK12;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuStamps;
@@ -32,7 +31,7 @@ public final class VulkanProfilerStamps implements GpuStamps {
 
     @Override
     public void write(int query, @Nullable Object context) {
-        KHRSynchronization2.vkCmdWriteTimestamp2KHR((VkCommandBuffer) context, ALL_COMMANDS, pools[query / POOL_SIZE].vkQueryPool(), query % POOL_SIZE);
+        VulkanSync.writeTimestamp((VkCommandBuffer) context, ALL_COMMANDS, pools[query / POOL_SIZE].vkQueryPool(), query % POOL_SIZE);
     }
 
     @Override

@@ -259,6 +259,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             Map.entry("IrisShadowOutlineDrop", new String[]{"BufferSourceAccessor", "OutlineBufferSourceAccessor"}),
             Map.entry("SpriteMipUpscale", new String[]{"SpriteContentsAccessor", "SpriteContentsUpscale"}),
             Map.entry("ItemModelUpscale", new String[]{"SpriteContentsUpscale"}),
+            Map.entry("BobbySkyFog", new String[]{"BobbySkyFogUpdate"}),
             //? if < 1.21.10 {
             /*Map.entry("OpaqueSpriteParticle", new String[]{"SpriteContentsTransparency", "OpaqueParticleRenderOrder"}),
             *///?} else {
@@ -503,6 +504,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
             return false;
 
         if (mixinClassName.endsWith(".MixinReplayEntityTickets") && !Mods.loaded("flashback"))
+            return false;
+
+        if (mixinClassName.contains(".MixinBobbySkyFog") && !Mods.loaded("bobby"))
             return false;
 
         if ((mixinClassName.endsWith(".MixinEntityCullingBlockEntityBox") || mixinClassName.endsWith(".MixinBlockEntityCullBox") || mixinClassName.contains(".MixinEntityCullingPrefetch")) && !Mods.loaded("entityculling"))

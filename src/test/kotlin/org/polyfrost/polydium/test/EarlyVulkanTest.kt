@@ -310,6 +310,33 @@ class EarlyVulkanTest {
     }
 
     @Test
+    fun unfinishedStartAfterWorkingVulkanFallsBackOnce() {
+        val unclean = "version:${EarlyVulkan.BACKEND_FIX_VERSION}\nfov:1.0\nstartedCleanly:false\n"
+        Files.writeString(options, unclean)
+        EarlyVulkan.setGraphicsApi("vulkan")
+        EarlyVulkan.markVulkanWorked()
+        EarlyVulkan.markVulkanStart(true)
+
+        assertFalse(EarlyVulkan.vulkanAtStartup())
+        assertFalse(EarlyVulkan.failed())
+        assertEquals("vulkan", EarlyVulkan.graphicsApi())
+        assertFalse(EarlyVulkan.vulkanStartUnfinished())
+
+        resetStartupCheck()
+        Files.writeString(options, "version:${EarlyVulkan.BACKEND_FIX_VERSION}\nfov:1.0\nstartedCleanly:true\n")
+        assertTrue(EarlyVulkan.vulkanAtStartup())
+
+        resetStartupCheck()
+        Files.writeString(options, unclean)
+        assertFalse(EarlyVulkan.vulkanAtStartup())
+        assertTrue(EarlyVulkan.failed())
+        assertEquals("default", EarlyVulkan.graphicsApi())
+    }
+
+    private fun resetStartupCheck() =
+        EarlyVulkan::class.java.getDeclaredField("vulkanAtStartup").apply { isAccessible = true }.set(null, null)
+
+    @Test
     fun uncleanStartOfAnotherBackendKeepsVulkan() {
         Files.writeString(options, "version:${EarlyVulkan.BACKEND_FIX_VERSION}\nfov:1.0\nstartedCleanly:false\n")
         EarlyVulkan.setGraphicsApi("vulkan")
