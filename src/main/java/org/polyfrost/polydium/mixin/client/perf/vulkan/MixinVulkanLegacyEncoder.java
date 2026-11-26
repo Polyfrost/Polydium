@@ -4,14 +4,18 @@ package org.polyfrost.polydium.mixin.client.perf.vulkan;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.logging.LogUtils;
 import com.mojang.renderpearl.api.commands.RenderPassDescriptor;
 import com.mojang.renderpearl.backend.vulkan.VulkanCommandEncoder;
 import com.mojang.renderpearl.backend.vulkan.VulkanDevice;
+import com.mojang.renderpearl.backend.vulkan.VulkanRenderPass;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.lwjgl.vulkan.VkRenderingInfo;
 import org.polyfrost.polydium.client.perf.VulkanLegacyRendering;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
+import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -22,9 +26,28 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(VulkanCommandEncoder.class)
 public abstract class MixinVulkanLegacyEncoder implements VulkanLegacyRendering.Encoder {
+    @Unique
+    private static final Logger polydium$LOGGER = LogUtils.getLogger();
+
     @Shadow
     @Final
     private VulkanDevice device;
+
+    @Shadow
+    private @Nullable VkCommandBuffer currentCommandBuffer;
+
+    @Shadow
+    private @Nullable VulkanRenderPass currentRenderPass;
+
+    //? if >= 26.3 {
+    @Shadow
+    private @Nullable VkCommandBuffer currentInitCommandBuffer;
+    //?}
+
+    @Shadow
+    private void endCommandBuffer() {
+        throw new AssertionError();
+    }
 
     @Unique
     private VulkanLegacyRendering.DescriptorPools polydium$descriptorPools;
@@ -69,6 +92,18 @@ public abstract class MixinVulkanLegacyEncoder implements VulkanLegacyRendering.
     private void polydium$retireDescriptorPool(CallbackInfo ci) {
         if (this.polydium$descriptorPools != null) {
             this.polydium$descriptorPools.retire();
+        }
+    }
+
+    @Inject(method = "destroy", at = @At("HEAD"))
+    private void polydium$endOpenCommandBuffer(CallbackInfo ci) {
+        //? if >= 26.3 {
+        boolean open = this.currentCommandBuffer != null || this.currentInitCommandBuffer != null;
+        //?} else
+        /*boolean open = this.currentCommandBuffer != null;*/
+        if (open && this.currentRenderPass == null) {
+            polydium$LOGGER.warn("Ending open Vulkan command buffer before device shutdown");
+            this.endCommandBuffer();
         }
     }
 
