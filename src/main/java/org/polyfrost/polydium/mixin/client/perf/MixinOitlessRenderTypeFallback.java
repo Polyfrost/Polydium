@@ -88,10 +88,11 @@ public class MixinOitlessRenderTypeFallback {
         return switch (content) {
             case TextFeatureRenderer.Content.StandaloneBackground background ->
                     polydium$lacksOitPipeline(font.prepareBackground(background.x0(), background.y0(), background.x1(), background.y1(), background.color()).renderType(displayMode));
-            case TextFeatureRenderer.Content.Text text -> text.outlineColor() == 0
+            case TextFeatureRenderer.Content.Text text -> !text.string().accept((index, style, codePoint) -> !style.isObfuscated())
+                    || (text.outlineColor() == 0
                     ? polydium$glyphsLackOitPipeline(font.prepareText(text.string(), text.x(), text.y(), text.color(), text.dropShadow(), false, text.backgroundColor()), displayMode)
                     : polydium$glyphsLackOitPipeline(font.prepare8xTextOutline(text.string(), text.x(), text.y(), text.outlineColor()), Font.DisplayMode.NORMAL)
-                    || polydium$glyphsLackOitPipeline(font.prepareText(text.string(), text.x(), text.y(), text.color(), false, false, 0), Font.DisplayMode.POLYGON_OFFSET);
+                    || polydium$glyphsLackOitPipeline(font.prepareText(text.string(), text.x(), text.y(), text.color(), false, false, 0), Font.DisplayMode.POLYGON_OFFSET));
         };
     }
 
@@ -101,8 +102,7 @@ public class MixinOitlessRenderTypeFallback {
         text.visit(new Font.GlyphVisitor() {
             @Override
             public void acceptRenderable(TextRenderable renderable) {
-                RenderType renderType = renderable.renderType(displayMode);
-                if (((RenderSetupOitAccessor) (Object) ((RenderTypeSetupAccessor) renderType).polydium$state()).polydium$oitPipelineSet() == null)
+                if (polydium$lacksOitPipeline(renderable.renderType(displayMode)))
                     lacking[0] = true;
             }
         });
