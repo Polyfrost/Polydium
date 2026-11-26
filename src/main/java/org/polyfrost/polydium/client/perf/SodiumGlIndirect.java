@@ -29,11 +29,12 @@ public final class SodiumGlIndirect {
     private static GpuBuffer ring;
     private static long offset;
     private static final ReferenceArrayList<Batch> pending = new ReferenceArrayList<>();
-    private static long generation;
+    private static long generationCounter;
+    private static final long[] generation = new long[2];
     private static long scratch;
     private static long scratchSize;
-    private static long preparedStart = -1;
-    private static long preparedEnd;
+    private static final long[] preparedStart = {-1, -1};
+    private static final long[] preparedEnd = new long[2];
     private static int prepares;
     private static long preparedDraws;
     private static long uploadedDraws;
@@ -49,8 +50,12 @@ public final class SodiumGlIndirect {
         void polydium$prepared(GpuBufferSlice commands, long generation);
     }
 
+    private static int context() {
+        return IrisShaders.shadowPass() ? 1 : 0;
+    }
+
     public static long generation() {
-        return generation;
+        return generation[context()];
     }
 
     private static boolean persistent() {
@@ -66,9 +71,10 @@ public final class SodiumGlIndirect {
     }
 
     public static void beginPrepare() {
-        generation++;
+        int context = context();
+        generation[context] = ++generationCounter;
         pending.clear();
-        preparedStart = -1;
+        preparedStart[context] = -1;
         if (prepares < REPORT_AFTER && ++prepares == REPORT_AFTER) {
             LOGGER.info("Sodium GL indirect terrain: {} path, {} of {} draws prepared",
                     persistent() ? "device copy" : "buffer sub-data", preparedDraws, preparedDraws + uploadedDraws);
@@ -128,13 +134,14 @@ public final class SodiumGlIndirect {
         }
 
         GpuBufferSlice target = ringUpload(scratch, Math.toIntExact(total));
-        preparedStart = target.offset();
-        preparedEnd = preparedStart + total;
+        int context = context();
+        preparedStart[context] = target.offset();
+        preparedEnd[context] = target.offset() + total;
         written = 0;
         for (int i = 0; i < count; i++) {
             Batch batch = pending.get(i);
             int bytes = batch.polydium$commandBytes();
-            batch.polydium$prepared(target.slice(written, bytes), generation);
+            batch.polydium$prepared(target.slice(written, bytes), generation[context]);
             written += bytes;
         }
     }
@@ -142,6 +149,7 @@ public final class SodiumGlIndirect {
     private static void copyToDevice(int count) {
         var encoder = RenderSystem.getDevice().createCommandEncoder();
         var memory = encoder.transientMemory();
+        long prepared = generation[context()];
         int start = 0;
         while (start < count) {
             long total = pending.get(start).polydium$commandBytes();
@@ -160,7 +168,7 @@ public final class SodiumGlIndirect {
                     Batch batch = pending.get(i);
                     int bytes = batch.polydium$commandBytes();
                     MemoryUtil.memCopy(batch.polydium$commands(), dst + written, bytes);
-                    batch.polydium$prepared(target.slice(written, bytes), generation);
+                    batch.polydium$prepared(target.slice(written, bytes), prepared);
                     written += bytes;
                 }
                 source = staging.slice();
@@ -203,9 +211,11 @@ public final class SodiumGlIndirect {
             offset = 0;
         }
 
-        if (preparedStart >= 0 && offset < preparedEnd && offset + bytes > preparedStart) {
-            generation++;
-            preparedStart = -1;
+        for (int context = 0; context < 2; context++) {
+            if (preparedStart[context] >= 0 && offset < preparedEnd[context] && offset + bytes > preparedStart[context]) {
+                generation[context] = ++generationCounter;
+                preparedStart[context] = -1;
+            }
         }
 
         GlStateManager._glBindBuffer(GL40C.GL_DRAW_INDIRECT_BUFFER, ((GlBuffer) ring).handle());

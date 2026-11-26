@@ -47,7 +47,7 @@ public abstract class MixinGlIndirectTerrainPrepare {
     private void polydium$prepareIndirectCommands(CallbackInfo ci, @Local(argsOnly = true) ChunkRenderListIterable renderLists,
                                                   @Local(argsOnly = true) TerrainRenderPass renderPass) {
         SodiumGlIndirect.beginPrepare();
-        if (!PolydiumToggles.glIndirectTerrain || SodiumGlIndirect.irisTessellation || !SodiumGlIndirect.canPrepare()) {
+        if (!PolydiumToggles.glIndirectTerrain || !SodiumGlIndirect.canPrepare()) {
             return;
         }
 

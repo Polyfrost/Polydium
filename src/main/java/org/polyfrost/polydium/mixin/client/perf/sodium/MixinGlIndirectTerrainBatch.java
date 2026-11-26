@@ -95,15 +95,6 @@ public abstract class MixinGlIndirectTerrainBatch implements SodiumGlIndirect.Ba
         ci.cancel();
     }
 
-    //? if >= 26.3 {
-    @Inject(method = "prepare", at = @At("HEAD"))
-    private void polydium$queuePrepare(DrawContext context, CallbackInfo ci) {
-        if (PolydiumToggles.glIndirectTerrain && !SodiumGlIndirect.irisTessellation && SodiumGlIndirect.canPrepare()) {
-            SodiumGlIndirect.queue(this);
-        }
-    }
-    //?}
-
     @Inject(method = "delete", at = @At("TAIL"))
     private void polydium$freeCommands(CallbackInfo ci) {
         if (polydium$commands != 0) {
