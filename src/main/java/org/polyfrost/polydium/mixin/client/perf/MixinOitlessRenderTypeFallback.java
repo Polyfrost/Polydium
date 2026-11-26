@@ -6,8 +6,6 @@ import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.font.TextRenderable;
-import net.minecraft.client.gui.font.glyphs.BakedGlyph;
 import net.minecraft.client.gui.font.glyphs.BakedSheetGlyph;
 import net.minecraft.client.gui.font.glyphs.EffectGlyph;
 import net.minecraft.client.renderer.SubmitNodeCollection;
@@ -18,10 +16,11 @@ import net.minecraft.client.renderer.item.ItemStackRenderState.FoilType;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.resources.model.geometry.ItemQuads;
-import net.minecraft.network.chat.Style;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.FormattedCharSequence;
+import org.polyfrost.polydium.client.perf.OitlessGlyphScan;
 import org.polyfrost.polydium.client.perf.OitlessRenderTypes;
+import org.polyfrost.polydium.client.perf.OitlessTextCache;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -32,6 +31,9 @@ import org.spongepowered.asm.mixin.injection.At;
 public class MixinOitlessRenderTypeFallback {
     @Unique
     private static final OitlessRenderTypes<RenderType> POLYDIUM_OITLESS_TEXT = new OitlessRenderTypes<>(MixinOitlessRenderTypeFallback::polydium$lacksOitPipeline);
+
+    @Unique
+    private static final OitlessTextCache<FormattedCharSequence> POLYDIUM_OITLESS_STRINGS = new OitlessTextCache<>(4096);
 
     @Shadow
     @Final
@@ -96,47 +98,43 @@ public class MixinOitlessRenderTypeFallback {
     @Unique
     private static boolean polydium$textLacksOitPipeline(Font.DisplayMode displayMode, TextFeatureRenderer.Content content) {
         Font.Provider provider = ((FontProviderAccessor) Minecraft.getInstance().font).polydium$provider();
+        boolean cached = RenderSystem.isOnRenderThread();
         return switch (content) {
-            case TextFeatureRenderer.Content.StandaloneBackground ignored -> polydium$effectLacksOitPipeline(provider, displayMode);
+            case TextFeatureRenderer.Content.StandaloneBackground ignored -> polydium$effectLacksOitPipeline(provider, displayMode, cached);
             case TextFeatureRenderer.Content.Text text -> text.outlineColor() == 0
-                    ? polydium$glyphsLackOitPipeline(provider, text.string(), displayMode, displayMode)
-                    || ARGB.alpha(text.backgroundColor()) != 0 && polydium$effectLacksOitPipeline(provider, displayMode)
-                    : polydium$glyphsLackOitPipeline(provider, text.string(), Font.DisplayMode.NORMAL, Font.DisplayMode.POLYGON_OFFSET);
+                    ? polydium$cachedGlyphsLackOitPipeline(provider, text.string(), displayMode, displayMode, cached)
+                    || ARGB.alpha(text.backgroundColor()) != 0 && polydium$effectLacksOitPipeline(provider, displayMode, cached)
+                    : polydium$cachedGlyphsLackOitPipeline(provider, text.string(), Font.DisplayMode.NORMAL, Font.DisplayMode.POLYGON_OFFSET, cached);
         };
     }
 
     @Unique
-    private static boolean polydium$glyphsLackOitPipeline(Font.Provider provider, FormattedCharSequence string, Font.DisplayMode glyphMode, Font.DisplayMode textMode) {
-        return !string.accept((index, style, codePoint) -> {
-            if (style.isObfuscated())
-                return false;
-            BakedGlyph glyph = provider.glyphs(style.getFont()).getGlyph(codePoint);
-            if (polydium$glyphLacksOitPipeline(glyph, style, glyphMode) || glyphMode != textMode && polydium$glyphLacksOitPipeline(glyph, style, textMode))
-                return false;
-            return !(style.isStrikethrough() || style.isUnderlined())
-                    || !polydium$effectLacksOitPipeline(provider, textMode) && (glyphMode == textMode || !polydium$effectLacksOitPipeline(provider, glyphMode));
-        });
+    private static boolean polydium$cachedGlyphsLackOitPipeline(Font.Provider provider, FormattedCharSequence string, Font.DisplayMode glyphMode, Font.DisplayMode textMode, boolean cached) {
+        if (!cached)
+            return polydium$glyphsLackOitPipeline(provider, string, glyphMode, textMode, false);
+        int variant = glyphMode == textMode ? textMode.ordinal() : Font.DisplayMode.values().length;
+        return POLYDIUM_OITLESS_STRINGS.lacksOit(string, variant, text -> polydium$glyphsLackOitPipeline(provider, text, glyphMode, textMode, true));
     }
 
     @Unique
-    private static boolean polydium$glyphLacksOitPipeline(BakedGlyph glyph, Style style, Font.DisplayMode displayMode) {
-        if (glyph instanceof BakedSheetGlyph)
-            return polydium$cachedLacksOitPipeline(((BakedSheetGlyphAccessor) glyph).polydium$renderTypes().select(displayMode));
-        TextRenderable renderable = glyph.createGlyph(0.0F, 0.0F, -1, 0, style, 0.0F, 0.0F);
-        return renderable != null && polydium$cachedLacksOitPipeline(renderable.renderType(displayMode));
+    private static boolean polydium$glyphsLackOitPipeline(Font.Provider provider, FormattedCharSequence string, Font.DisplayMode glyphMode, Font.DisplayMode textMode, boolean cached) {
+        OitlessGlyphScan scan = new OitlessGlyphScan(provider, glyphMode, textMode, renderType -> polydium$lacksOitPipeline(renderType, cached));
+        if (!string.accept(scan))
+            return true;
+        return scan.hasEffects() && (polydium$effectLacksOitPipeline(provider, textMode, cached) || glyphMode != textMode && polydium$effectLacksOitPipeline(provider, glyphMode, cached));
     }
 
     @Unique
-    private static boolean polydium$effectLacksOitPipeline(Font.Provider provider, Font.DisplayMode displayMode) {
+    private static boolean polydium$effectLacksOitPipeline(Font.Provider provider, Font.DisplayMode displayMode, boolean cached) {
         EffectGlyph effect = provider.effect();
         if (effect instanceof BakedSheetGlyph)
-            return polydium$cachedLacksOitPipeline(((BakedSheetGlyphAccessor) effect).polydium$renderTypes().select(displayMode));
-        return polydium$cachedLacksOitPipeline(effect.createEffect(0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -1, 0, 0.0F).renderType(displayMode));
+            return polydium$lacksOitPipeline(((BakedSheetGlyphAccessor) effect).polydium$renderTypes().select(displayMode), cached);
+        return polydium$lacksOitPipeline(effect.createEffect(0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -1, 0, 0.0F).renderType(displayMode), cached);
     }
 
     @Unique
-    private static boolean polydium$cachedLacksOitPipeline(RenderType renderType) {
-        return RenderSystem.isOnRenderThread() ? POLYDIUM_OITLESS_TEXT.lacksOit(renderType) : polydium$lacksOitPipeline(renderType);
+    private static boolean polydium$lacksOitPipeline(RenderType renderType, boolean cached) {
+        return cached ? POLYDIUM_OITLESS_TEXT.lacksOit(renderType) : polydium$lacksOitPipeline(renderType);
     }
 
     @Unique
