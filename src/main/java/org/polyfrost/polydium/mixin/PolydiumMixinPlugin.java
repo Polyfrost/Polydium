@@ -502,7 +502,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".MixinReplayEntityTickets") && !Mods.loaded("flashback"))
             return false;
 
-        if (mixinClassName.endsWith(".MixinBobbySkyFog") && !Mods.loaded("bobby"))
+        if (mixinClassName.contains(".MixinBobbySkyFog") && !Mods.loaded("bobby"))
             return false;
 
         if ((mixinClassName.endsWith(".MixinEntityCullingBlockEntityBox") || mixinClassName.endsWith(".MixinBlockEntityCullBox") || mixinClassName.contains(".MixinEntityCullingPrefetch")) && !Mods.loaded("entityculling"))
