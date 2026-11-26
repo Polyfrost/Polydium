@@ -265,6 +265,26 @@ public final class EarlyVulkan implements LanguageAdapter {
         }
     }
 
+    private static Path vulkanWorkedFile() {
+        return FabricLoader.getInstance().getGameDir().resolve("polydium").resolve("vulkan-worked");
+    }
+
+    public static void markVulkanWorked() {
+        try {
+            Files.createDirectories(vulkanWorkedFile().getParent());
+            Files.writeString(vulkanWorkedFile(), "");
+        } catch (IOException ignored) {
+        }
+    }
+
+    public static boolean consumeVulkanWorked() {
+        try {
+            return Files.deleteIfExists(vulkanWorkedFile());
+        } catch (IOException ignored) {
+            return false;
+        }
+    }
+
     public static void markStartClean() {
         markVulkanStart(false);
         try {
@@ -293,8 +313,13 @@ public final class EarlyVulkan implements LanguageAdapter {
             } catch (IOException ignored) {
             }
             if (vulkan && startFailed && vulkanStartUnfinished()) {
-                markFailed("last game startup did not finish");
-                setGraphicsApi("default");
+                if (consumeVulkanWorked()) {
+                    LoggerFactory.getLogger("polydium/vulkan").warn("Last Vulkan startup did not finish: starting on OpenGL once, keeping Vulkan selected");
+                    markVulkanStart(false);
+                } else {
+                    markFailed("last game startup did not finish");
+                    setGraphicsApi("default");
+                }
             }
             vulkanAtStartup = vulkan && !unclean;
             if (vulkanAtStartup)
