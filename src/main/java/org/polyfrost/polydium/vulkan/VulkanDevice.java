@@ -461,25 +461,27 @@ public class VulkanDevice implements GpuDeviceBackend {
       int[] width = new int[1];
       int[] height = new int[1];
       GLFW.glfwGetFramebufferSize(this.window, width, height);
-      if (width[0] != 0 && height[0] != 0) {
-        SodiumExtraMac.reduceSwapchain(this.window, width, height);
-        GpuSurface.Configuration config = new GpuSurface.Configuration(
-          width[0], height[0], GpuSurface.PresentMode.getSupportedVsyncMode(this.surface.supportedPresentModes(), this.vsync)
-        );
+      if (width[0] == 0 || height[0] == 0) {
+        return;
+      }
 
-        try {
-          this.surface.configure(config);
-          this.surfaceIsInvalid = false;
-          this.surfaceNeedsReconfiguring = false;
-        } catch (SurfaceException e) {
-          LOGGER.warn("Couldn't configure surface to {}: {}", config, e);
-          this.surfaceIsInvalid = true;
-          this.surfaceNeedsReconfiguring = true;
-        }
+      SodiumExtraMac.reduceSwapchain(this.window, width, height);
+      GpuSurface.Configuration config = new GpuSurface.Configuration(
+        width[0], height[0], GpuSurface.PresentMode.getSupportedVsyncMode(this.surface.supportedPresentModes(), this.vsync)
+      );
+
+      try {
+        this.surface.configure(config);
+        this.surfaceIsInvalid = false;
+        this.surfaceNeedsReconfiguring = false;
+      } catch (SurfaceException e) {
+        LOGGER.warn("Couldn't configure surface to {}: {}", config, e);
+        this.surfaceIsInvalid = true;
+        this.surfaceNeedsReconfiguring = true;
       }
     }
 
-    if (this.surfaceIsInvalid) {
+    if (this.surfaceIsInvalid || iconified) {
       return;
     }
 

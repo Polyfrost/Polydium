@@ -2,6 +2,7 @@ package org.polyfrost.polydium.mixin.client.perf.vulkan.backport;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import net.minecraft.client.Minecraft;
 import org.polyfrost.polydium.client.PolydiumToggles;
 import org.polyfrost.polydium.client.perf.FramePath;
 import org.polyfrost.polydium.client.perf.PresentThread;
@@ -50,7 +51,7 @@ public abstract class MixinMinecraftPresentThreadBackport {
         if (!FramePath.nextFrameAcquiresEarly(PresentThread.canDeferAcquire(this.surface)))
             return;
 
-        if (this.surface.isAcquired() || this.surfaceNeedsReconfiguring || this.surface.isSuboptimal())
+        if (this.surface.isAcquired() || this.surfaceNeedsReconfiguring || this.surface.isSuboptimal() || Minecraft.getInstance().getWindow().isIconified())
             return;
 
         try {
