@@ -830,6 +830,8 @@
     //? if >= 1.21.10
     "client.perf.MixinBlockEntityCullBox",
     "client.perf.MixinBlockEntityLightCache",
+    //? if >= 26.2
+    "client.perf.MixinBobbySkyFog",
     //? if >= 1.21.10
     "client.perf.MixinEntityCullingBlockEntityBox",
     //? if >= 1.21.10
