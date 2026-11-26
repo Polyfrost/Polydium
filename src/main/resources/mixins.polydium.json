@@ -671,8 +671,6 @@
     "client.perf.vulkan.MixinMinecraftPresentThread",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanAcquireTimeout",
-    //? if >= 26.2
-    "client.perf.vulkan.VulkanSubmitWaitAccessor",
     //? if >= 1.21.11
     "client.perf.vulkan.MixinAutoVulkan",
     //? if >= 26.3
