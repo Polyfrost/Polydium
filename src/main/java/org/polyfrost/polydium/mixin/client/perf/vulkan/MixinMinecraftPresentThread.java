@@ -132,6 +132,10 @@ public abstract class MixinMinecraftPresentThread {
 
     @ModifyExpressionValue(method = "renderFrame", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;surfaceIsInvalid:Z", opcode = Opcodes.GETFIELD))
     private boolean polydium$skipDeferredAcquire(boolean invalid) {
+        //? if >= 26.3 {
+        if (this.window.isIconified() && !this.polydium$frameAcquiredEarly)
+            return true;
+        //?}
         return invalid || this.polydium$acquireDeferred;
     }
 
@@ -186,7 +190,10 @@ public abstract class MixinMinecraftPresentThread {
 
         if (this.windowSurface.isAcquired() || this.surfaceIsInvalid || this.windowSurfaceNeedsReconfiguring || this.windowSurface.isSuboptimal())
             return;
-        //? if < 26.3 {
+        //? if >= 26.3 {
+        if (this.window.isIconified())
+            return;
+        //?} else {
         /*if (this.window.isMinimized())
             return;
         *///?}
@@ -233,7 +240,7 @@ public abstract class MixinMinecraftPresentThread {
             }
         }
 
-        if (this.surfaceIsInvalid)
+        if (this.surfaceIsInvalid || this.window.isIconified())
             return;
         //?} else {
         /*if (this.windowSurfaceNeedsReconfiguring || this.windowSurface.isSuboptimal() && !this.surfaceIsInvalid) {
