@@ -3,9 +3,13 @@ package org.polyfrost.polydium.mixin.client.perf;
 //? if >= 26.3 {
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.font.TextRenderable;
+import net.minecraft.client.gui.font.glyphs.BakedGlyph;
+import net.minecraft.client.gui.font.glyphs.BakedSheetGlyph;
+import net.minecraft.client.gui.font.glyphs.EffectGlyph;
 import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.feature.TextFeatureRenderer;
 import net.minecraft.client.renderer.feature.phase.FeatureRenderPhase;
@@ -14,6 +18,10 @@ import net.minecraft.client.renderer.item.ItemStackRenderState.FoilType;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.resources.model.geometry.ItemQuads;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.FormattedCharSequence;
+import org.polyfrost.polydium.client.perf.OitlessRenderTypes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -22,6 +30,9 @@ import org.spongepowered.asm.mixin.injection.At;
 
 @Mixin(SubmitNodeCollection.class)
 public class MixinOitlessRenderTypeFallback {
+    @Unique
+    private static final OitlessRenderTypes<RenderType> POLYDIUM_OITLESS_TEXT = new OitlessRenderTypes<>(MixinOitlessRenderTypeFallback::polydium$lacksOitPipeline);
+
     @Shadow
     @Final
     public SimpleFeatureRenderPhase solid;
@@ -84,29 +95,48 @@ public class MixinOitlessRenderTypeFallback {
 
     @Unique
     private static boolean polydium$textLacksOitPipeline(Font.DisplayMode displayMode, TextFeatureRenderer.Content content) {
-        Font font = Minecraft.getInstance().font;
+        Font.Provider provider = ((FontProviderAccessor) Minecraft.getInstance().font).polydium$provider();
         return switch (content) {
-            case TextFeatureRenderer.Content.StandaloneBackground background ->
-                    polydium$lacksOitPipeline(font.prepareBackground(background.x0(), background.y0(), background.x1(), background.y1(), background.color()).renderType(displayMode));
-            case TextFeatureRenderer.Content.Text text -> !text.string().accept((index, style, codePoint) -> !style.isObfuscated())
-                    || (text.outlineColor() == 0
-                    ? polydium$glyphsLackOitPipeline(font.prepareText(text.string(), text.x(), text.y(), text.color(), text.dropShadow(), false, text.backgroundColor()), displayMode)
-                    : polydium$glyphsLackOitPipeline(font.prepare8xTextOutline(text.string(), text.x(), text.y(), text.outlineColor()), Font.DisplayMode.NORMAL)
-                    || polydium$glyphsLackOitPipeline(font.prepareText(text.string(), text.x(), text.y(), text.color(), false, false, 0), Font.DisplayMode.POLYGON_OFFSET));
+            case TextFeatureRenderer.Content.StandaloneBackground ignored -> polydium$effectLacksOitPipeline(provider, displayMode);
+            case TextFeatureRenderer.Content.Text text -> text.outlineColor() == 0
+                    ? polydium$glyphsLackOitPipeline(provider, text.string(), displayMode, displayMode)
+                    || ARGB.alpha(text.backgroundColor()) != 0 && polydium$effectLacksOitPipeline(provider, displayMode)
+                    : polydium$glyphsLackOitPipeline(provider, text.string(), Font.DisplayMode.NORMAL, Font.DisplayMode.POLYGON_OFFSET);
         };
     }
 
     @Unique
-    private static boolean polydium$glyphsLackOitPipeline(Font.PreparedText text, Font.DisplayMode displayMode) {
-        boolean[] lacking = new boolean[1];
-        text.visit(new Font.GlyphVisitor() {
-            @Override
-            public void acceptRenderable(TextRenderable renderable) {
-                if (polydium$lacksOitPipeline(renderable.renderType(displayMode)))
-                    lacking[0] = true;
-            }
+    private static boolean polydium$glyphsLackOitPipeline(Font.Provider provider, FormattedCharSequence string, Font.DisplayMode glyphMode, Font.DisplayMode textMode) {
+        return !string.accept((index, style, codePoint) -> {
+            if (style.isObfuscated())
+                return false;
+            BakedGlyph glyph = provider.glyphs(style.getFont()).getGlyph(codePoint);
+            if (polydium$glyphLacksOitPipeline(glyph, style, glyphMode) || glyphMode != textMode && polydium$glyphLacksOitPipeline(glyph, style, textMode))
+                return false;
+            return !(style.isStrikethrough() || style.isUnderlined())
+                    || !polydium$effectLacksOitPipeline(provider, textMode) && (glyphMode == textMode || !polydium$effectLacksOitPipeline(provider, glyphMode));
         });
-        return lacking[0];
+    }
+
+    @Unique
+    private static boolean polydium$glyphLacksOitPipeline(BakedGlyph glyph, Style style, Font.DisplayMode displayMode) {
+        if (glyph instanceof BakedSheetGlyph)
+            return polydium$cachedLacksOitPipeline(((BakedSheetGlyphAccessor) glyph).polydium$renderTypes().select(displayMode));
+        TextRenderable renderable = glyph.createGlyph(0.0F, 0.0F, -1, 0, style, 0.0F, 0.0F);
+        return renderable != null && polydium$cachedLacksOitPipeline(renderable.renderType(displayMode));
+    }
+
+    @Unique
+    private static boolean polydium$effectLacksOitPipeline(Font.Provider provider, Font.DisplayMode displayMode) {
+        EffectGlyph effect = provider.effect();
+        if (effect instanceof BakedSheetGlyph)
+            return polydium$cachedLacksOitPipeline(((BakedSheetGlyphAccessor) effect).polydium$renderTypes().select(displayMode));
+        return polydium$cachedLacksOitPipeline(effect.createEffect(0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -1, 0, 0.0F).renderType(displayMode));
+    }
+
+    @Unique
+    private static boolean polydium$cachedLacksOitPipeline(RenderType renderType) {
+        return RenderSystem.isOnRenderThread() ? POLYDIUM_OITLESS_TEXT.lacksOit(renderType) : polydium$lacksOitPipeline(renderType);
     }
 
     @Unique
