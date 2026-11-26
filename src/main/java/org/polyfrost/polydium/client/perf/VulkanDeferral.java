@@ -522,7 +522,7 @@ public final class VulkanDeferral {
             if (this.layouts.containsKey(texture) || info.loadOp() != VK10.VK_ATTACHMENT_LOAD_OP_CLEAR || texture.getDepthOrLayers() != 1 || !coversTexture(view, texture, area) || hasStencil(texture)) {
                 return;
             }
-            this.layouts.keySet().removeIf(VulkanDeferral::released);
+            this.layouts.keySet().removeIf(tracked -> tracked != this.clearColorTexture && tracked != this.clearDepthTexture && released(tracked));
             this.layouts.put(texture, layout);
             layoutBarrier(barriers.get(), texture, VK10.VK_IMAGE_LAYOUT_UNDEFINED, layout);
         }
