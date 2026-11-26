@@ -904,6 +904,8 @@
     "client.perf.tiertagger.MixinTierTaggerModeCache",
     //? if >= 1.21.8
     "client.perf.shieldstatus.MixinShieldStatusIdentityCheck",
+    //? if >= 1.21.11
+    "client.compat.mountopacity.MixinMountOpacityAlpha",
     "client.perf.immediatelyfast.MixinBatchableBufferSetPool",
     "client.perf.polytone.MixinPolytoneTypelessMenu",
     "client.perf.MixinLinkFsExists",
