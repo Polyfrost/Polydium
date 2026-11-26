@@ -1,7 +1,7 @@
 package org.polyfrost.polydium.mixin.client.perf.opengl;
 
-//? if >= 26.2 && < 26.3 {
-/*import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+//? if >= 26.2 {
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.renderpearl.backend.util.TransientBlockAllocator;
 import org.spongepowered.asm.mixin.Final;
@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(targets = "com.mojang.blaze3d.opengl.GlTransientMemory$PersistentMapping")
+@Mixin(targets = "com.mojang.renderpearl.backend.opengl.GlTransientMemory$PersistentMapping")
 public abstract class MixinGlTransientRotateOrder {
     @Shadow
     @Final
@@ -62,4 +62,4 @@ public abstract class MixinGlTransientRotateOrder {
         return rotation != null ? rotation : original.call(allocator);
     }
 }
-*///?}
+//?}

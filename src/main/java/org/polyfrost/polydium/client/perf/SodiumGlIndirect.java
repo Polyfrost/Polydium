@@ -10,11 +10,15 @@ import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import org.lwjgl.opengl.GL15C;
 import org.lwjgl.opengl.GL40C;
 import org.lwjgl.system.MemoryUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class SodiumGlIndirect {
     public static final int COMMAND_SIZE = 20;
     private static final long RING_SIZE = 4L << 20;
     private static final long PREPARED_GROUP_SIZE = 512L << 10;
+    private static final int REPORT_AFTER = 1000;
+    private static final Logger LOGGER = LoggerFactory.getLogger("polydium/perf");
 
     public static boolean batchDrawing;
 
@@ -26,6 +30,13 @@ public final class SodiumGlIndirect {
     private static long offset;
     private static final ReferenceArrayList<Batch> pending = new ReferenceArrayList<>();
     private static long generation;
+    private static long scratch;
+    private static long scratchSize;
+    private static long preparedStart = -1;
+    private static long preparedEnd;
+    private static int prepares;
+    private static long preparedDraws;
+    private static long uploadedDraws;
 
     private SodiumGlIndirect() {
     }
@@ -51,7 +62,27 @@ public final class SodiumGlIndirect {
     }
 
     public static boolean canPrepare() {
-        return supported() && persistent();
+        return supported();
+    }
+
+    public static void beginPrepare() {
+        generation++;
+        pending.clear();
+        preparedStart = -1;
+        if (prepares < REPORT_AFTER && ++prepares == REPORT_AFTER) {
+            LOGGER.info("Sodium GL indirect terrain: {} path, {} of {} draws prepared",
+                    persistent() ? "device copy" : "buffer sub-data", preparedDraws, preparedDraws + uploadedDraws);
+        }
+    }
+
+    public static void countDraw(boolean prepared) {
+        if (prepares < REPORT_AFTER) {
+            if (prepared) {
+                preparedDraws++;
+            } else {
+                uploadedDraws++;
+            }
+        }
     }
 
     public static void queue(Batch batch) {
@@ -66,15 +97,49 @@ public final class SodiumGlIndirect {
             return;
         }
 
-        generation++;
         try {
-            flushPrepared(count);
+            if (persistent()) {
+                copyToDevice(count);
+            } else {
+                uploadToRing(count);
+            }
         } finally {
             pending.clear();
         }
     }
 
-    private static void flushPrepared(int count) {
+    private static void uploadToRing(int count) {
+        long total = 0;
+        for (int i = 0; i < count; i++) {
+            total += pending.get(i).polydium$commandBytes();
+        }
+
+        if (total > scratchSize) {
+            scratch = MemoryUtil.nmemRealloc(scratch, total);
+            scratchSize = total;
+        }
+
+        long written = 0;
+        for (int i = 0; i < count; i++) {
+            Batch batch = pending.get(i);
+            int bytes = batch.polydium$commandBytes();
+            MemoryUtil.memCopy(batch.polydium$commands(), scratch + written, bytes);
+            written += bytes;
+        }
+
+        GpuBufferSlice target = ringUpload(scratch, Math.toIntExact(total));
+        preparedStart = target.offset();
+        preparedEnd = preparedStart + total;
+        written = 0;
+        for (int i = 0; i < count; i++) {
+            Batch batch = pending.get(i);
+            int bytes = batch.polydium$commandBytes();
+            batch.polydium$prepared(target.slice(written, bytes), generation);
+            written += bytes;
+        }
+    }
+
+    private static void copyToDevice(int count) {
         var encoder = RenderSystem.getDevice().createCommandEncoder();
         var memory = encoder.transientMemory();
         int start = 0;
@@ -120,6 +185,10 @@ public final class SodiumGlIndirect {
                     .uploadGpu(MemoryUtil.memByteBuffer(commands, bytes), 4, GpuBuffer.USAGE_INDIRECT_PARAMETERS);
         }
 
+        return ringUpload(commands, bytes);
+    }
+
+    private static GpuBufferSlice ringUpload(long commands, int bytes) {
         if (ring == null || ring.size() < bytes) {
             if (ring != null) {
                 ring.close();
@@ -132,6 +201,11 @@ public final class SodiumGlIndirect {
 
         if (offset + bytes > ring.size()) {
             offset = 0;
+        }
+
+        if (preparedStart >= 0 && offset < preparedEnd && offset + bytes > preparedStart) {
+            generation++;
+            preparedStart = -1;
         }
 
         GlStateManager._glBindBuffer(GL40C.GL_DRAW_INDIRECT_BUFFER, ((GlBuffer) ring).handle());

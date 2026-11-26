@@ -308,8 +308,8 @@
     "client.perf.sodium.MixinIndirectRingRotate",
     //? if >= 26.2
     "client.perf.sodium.MixinGlIndirectTerrainBatch",
-    //? if >= 26.2 && < 26.3
-    //"client.perf.sodium.MixinGlIndirectTerrainPrepare",
+    //? if >= 26.2
+    "client.perf.sodium.MixinGlIndirectTerrainPrepare",
     //? if >= 26.2
     "client.perf.sodium.MixinSodiumIntelGlStaging",
     //? if >= 26.2
@@ -734,8 +734,8 @@
     "client.perf.opengl.MixinGlTexBufferCache",
     //? if >= 26.2
     "client.perf.opengl.MixinGlFallbackCloseFree",
-    //? if >= 26.2 && < 26.3
-    //"client.perf.opengl.MixinGlTransientRotateOrder",
+    //? if >= 26.2
+    "client.perf.opengl.MixinGlTransientRotateOrder",
     //? if >= 26.3
     "client.perf.opengl.MixinGlColorReadBuffer",
     //? if >= 26.2 && < 26.3

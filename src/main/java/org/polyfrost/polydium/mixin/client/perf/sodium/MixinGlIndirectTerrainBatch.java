@@ -76,22 +76,33 @@ public abstract class MixinGlIndirectTerrainBatch implements SodiumGlIndirect.Ba
     @Inject(method = "draw", at = @At("HEAD"), cancellable = true)
     private void polydium$drawIndirect(DrawContext context, CallbackInfo ci) {
         SodiumGlIndirect.batchDrawing = true;
+        GpuBufferSlice prepared = polydium$prepared;
+        polydium$prepared = null;
         long commands = polydium$commands;
         if (commands == 0 || SodiumGlIndirect.irisTessellation || !PolydiumToggles.glIndirectTerrain) {
             return;
         }
 
         int count = ((MultiDrawBatch) (Object) this).size;
-        GpuBufferSlice prepared = polydium$prepared;
-        polydium$prepared = null;
-        if (prepared == null || polydium$preparedGeneration != SodiumGlIndirect.generation()
-                || prepared.length() != (long) count * COMMAND_SIZE || prepared.buffer().isClosed()) {
+        boolean usable = prepared != null && polydium$preparedGeneration == SodiumGlIndirect.generation()
+                && prepared.length() == (long) count * COMMAND_SIZE && !prepared.buffer().isClosed();
+        SodiumGlIndirect.countDraw(usable);
+        if (!usable) {
             prepared = SodiumGlIndirect.upload(commands, count * COMMAND_SIZE);
         }
 
         context.getPass().drawIndexedIndirect(prepared, count);
         ci.cancel();
     }
+
+    //? if >= 26.3 {
+    @Inject(method = "prepare", at = @At("HEAD"))
+    private void polydium$queuePrepare(DrawContext context, CallbackInfo ci) {
+        if (PolydiumToggles.glIndirectTerrain && !SodiumGlIndirect.irisTessellation && SodiumGlIndirect.canPrepare()) {
+            SodiumGlIndirect.queue(this);
+        }
+    }
+    //?}
 
     @Inject(method = "delete", at = @At("TAIL"))
     private void polydium$freeCommands(CallbackInfo ci) {
