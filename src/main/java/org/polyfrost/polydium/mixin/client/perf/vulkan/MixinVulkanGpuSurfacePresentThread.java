@@ -84,8 +84,8 @@ public abstract class MixinVulkanGpuSurfacePresentThread implements PresentThrea
     }
 
     @ModifyArg(method = "configure", at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/VkSwapchainCreateInfoKHR;minImageCount(I)Lorg/lwjgl/vulkan/VkSwapchainCreateInfoKHR;"))
-    private int polydium$spareImmediateImage(int imageCount, @Local(argsOnly = true) GpuSurface.Configuration config, @Local VkSurfaceCapabilitiesKHR capabilities) {
-        if (config.presentMode() != GpuSurface.PresentMode.IMMEDIATE)
+    private int polydium$spareUncappedImage(int imageCount, @Local(argsOnly = true) GpuSurface.Configuration config, @Local VkSurfaceCapabilitiesKHR capabilities) {
+        if (!PresentThread.isUncapped(config.presentMode()))
             return imageCount;
 
         int maxImageCount = capabilities.maxImageCount();
