@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.systems.RenderPassBackend;
 import com.mojang.blaze3d.textures.GpuTexture;
@@ -12,6 +13,7 @@ import org.joml.Vector4fc;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.lwjgl.vulkan.VkRect2D;
+import org.lwjgl.vulkan.VkRenderingInfo;
 import org.polyfrost.polydium.client.perf.VulkanDeferral;
 import org.polyfrost.polydium.vulkan.VulkanCommandEncoder;
 import org.polyfrost.polydium.vulkan.VulkanDevice;
@@ -57,7 +59,7 @@ public abstract class MixinVulkanDeferralBackport implements VulkanDeferral.Host
     private CheckpointExtension.CheckpointStorage checkpointStorage;
 
     @Unique
-    private final VulkanDeferral polydium$deferral = new VulkanDeferral(this, false);
+    private final VulkanDeferral polydium$deferral = new VulkanDeferral(this, true);
 
     @Shadow
     public abstract void clearDepthTextureUnsynced(MemoryStack stack, GpuTexture depthTexture, double clearDepth);
@@ -70,6 +72,19 @@ public abstract class MixinVulkanDeferralBackport implements VulkanDeferral.Host
     @Shadow
     private void memoryBarrier(MemoryStack stack) {
         throw new AssertionError();
+    }
+
+    @Shadow
+    public abstract VkCommandBuffer commandBuffer();
+
+    @Override
+    public VkCommandBuffer polydium$commandBuffer() {
+        return this.commandBuffer();
+    }
+
+    @Override
+    public void polydium$general(GpuTexture texture) {
+        this.polydium$deferral.toGeneral(texture, false);
     }
 
     @Shadow
@@ -152,7 +167,7 @@ public abstract class MixinVulkanDeferralBackport implements VulkanDeferral.Host
         this.polydium$deferral.deferDepthClear(depthTexture, clearDepth);
     }
 
-    @WrapOperation(method = "clearColorAndDepthTextures(Lcom/mojang/blaze3d/textures/GpuTexture;Lorg/joml/Vector4fc;Lcom/mojang/blaze3d/textures/GpuTexture;D)V", at = @At(value = "INVOKE", target = "Lorg/polyfrost/polydium/vulkan/VulkanCommandEncoder;clearColorTextureUnsynced(Lorg/lwjgl/system/MemoryStack;Lcom/mojang/blaze3d/textures/GpuTexture;Lorg/joml/Vector4fc;)V"))
+    @WrapOperation(method = {"clearColorTexture", "clearColorAndDepthTextures(Lcom/mojang/blaze3d/textures/GpuTexture;Lorg/joml/Vector4fc;Lcom/mojang/blaze3d/textures/GpuTexture;D)V"}, at = @At(value = "INVOKE", target = "Lorg/polyfrost/polydium/vulkan/VulkanCommandEncoder;clearColorTextureUnsynced(Lorg/lwjgl/system/MemoryStack;Lcom/mojang/blaze3d/textures/GpuTexture;Lorg/joml/Vector4fc;)V"))
     private void polydium$deferColorClear(VulkanCommandEncoder encoder, MemoryStack stack, GpuTexture colorTexture, Vector4fc clearColor, Operation<Void> original) {
         this.polydium$deferral.deferColorClear(colorTexture, clearColor);
     }
@@ -162,9 +177,28 @@ public abstract class MixinVulkanDeferralBackport implements VulkanDeferral.Host
         this.polydium$deferral.deferPairedDepthClear(depthTexture, clearDepth);
     }
 
-    @WrapWithCondition(method = {"clearDepthTexture", "clearColorAndDepthTextures(Lcom/mojang/blaze3d/textures/GpuTexture;Lorg/joml/Vector4fc;Lcom/mojang/blaze3d/textures/GpuTexture;D)V"}, at = @At(value = "INVOKE", target = "Lorg/polyfrost/polydium/vulkan/VulkanCommandEncoder;memoryBarrier(Lorg/lwjgl/system/MemoryStack;)V"))
+    @WrapWithCondition(method = {"clearColorTexture", "clearDepthTexture", "clearColorAndDepthTextures(Lcom/mojang/blaze3d/textures/GpuTexture;Lorg/joml/Vector4fc;Lcom/mojang/blaze3d/textures/GpuTexture;D)V"}, at = @At(value = "INVOKE", target = "Lorg/polyfrost/polydium/vulkan/VulkanCommandEncoder;memoryBarrier(Lorg/lwjgl/system/MemoryStack;)V"))
     private boolean polydium$deferClearBarrier(VulkanCommandEncoder encoder, MemoryStack stack) {
         return false;
+    }
+
+    @Inject(method = {"writeToTexture", "copyBufferToTexture", "copyTextureToBuffer"}, at = @At("HEAD"))
+    private void polydium$flushClearOfTexture(CallbackInfo ci, @Local(argsOnly = true) GpuTexture texture) {
+        this.polydium$deferral.touched(texture);
+        this.polydium$deferral.toGeneral(texture, false);
+    }
+
+    @Inject(method = "copyTextureToTexture", at = @At("HEAD"))
+    private void polydium$flushClearsOfCopy(CallbackInfo ci, @Local(argsOnly = true, ordinal = 0) GpuTexture source, @Local(argsOnly = true, ordinal = 1) GpuTexture destination) {
+        this.polydium$deferral.touched(source);
+        this.polydium$deferral.touched(destination);
+        this.polydium$deferral.toGeneral(source, false);
+        this.polydium$deferral.toGeneral(destination, false);
+    }
+
+    @Inject(method = {"clearColorTextureUnsynced", "clearDepthTextureUnsynced"}, at = @At("HEAD"))
+    private void polydium$generalForClear(CallbackInfo ci, @Local(argsOnly = true) GpuTexture texture) {
+        this.polydium$deferral.toGeneral(texture, texture.getDepthOrLayers() == 1);
     }
 
     @ModifyVariable(method = CREATE_RENDER_PASS, at = @At("HEAD"), argsOnly = true)
@@ -176,6 +210,14 @@ public abstract class MixinVulkanDeferralBackport implements VulkanDeferral.Host
     private RenderPassBackend polydium$continueSuspendedPass(RenderPassDescriptor descriptor, Operation<RenderPassBackend> original) {
         VulkanRenderPass pass = this.polydium$deferral.continueSuspendedPass(descriptor);
         return pass != null ? pass : original.call(descriptor);
+    }
+
+    @WrapOperation(method = CREATE_RENDER_PASS, at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/KHRDynamicRendering;vkCmdBeginRenderingKHR(Lorg/lwjgl/vulkan/VkCommandBuffer;Lorg/lwjgl/vulkan/VkRenderingInfo;)V"))
+    private void polydium$attachmentLayouts(VkCommandBuffer commandBuffer, VkRenderingInfo renderingInfo, Operation<Void> original, @Local(argsOnly = true) RenderPassDescriptor descriptor) {
+        if (this.polydium$dynamicRendering()) {
+            this.polydium$deferral.beginRendering(commandBuffer, renderingInfo, descriptor);
+        }
+        original.call(commandBuffer, renderingInfo);
     }
 
     @Inject(method = CREATE_RENDER_PASS, at = @At("RETURN"))
