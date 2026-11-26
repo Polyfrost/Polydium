@@ -125,6 +125,23 @@ class OcclusionEyeTest {
     }
 
     @Test
+    fun `a moved eye may see through an opening hidden behind a nearer post`() {
+        setUpView()
+
+        val rect = screenRect(-8f, -8f, -38f, 16f)
+        val centerX = (rect[0] + rect[2]) / 2
+
+        depth.fill(wallDepth(15f))
+        for (y in 0 until OcclusionDepth.HEIGHT)
+            for (x in centerX - 2..centerX + 2)
+                depth[y * OcclusionDepth.WIDTH + x] = wallDepth(3f)
+        buildPyramid.invoke(null)
+
+        assertTrue(occluded(0.0))
+        assertFalse(occluded(0.4))
+    }
+
+    @Test
     fun `a distant wall keeps hiding sections from a moved eye`() {
         setUpView()
 

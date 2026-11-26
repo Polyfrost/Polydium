@@ -106,6 +106,7 @@ public final class OcclusionCuller {
     private static float forwardLength;
     private static float shiftPixelsX;
     private static float shiftPixelsY;
+    private static float scannedFarthest;
     private static float reprojectShiftX, reprojectShiftY, reprojectShiftZ, reprojectShiftW;
     private static float reprojectInverseX, reprojectInverseY, reprojectInverseZ, reprojectInverseW;
     private static double sourceX;
@@ -939,7 +940,7 @@ public final class OcclusionCuller {
                 return false;
 
             if (found <= closest)
-                return true;
+                return !canDisocclude(closest, scannedFarthest);
 
             closest = found;
         }
@@ -964,18 +965,46 @@ public final class OcclusionCuller {
         float[] nearest = nearestBuilt ? NEAREST[level] : null;
         int levelWidth = LEVEL_WIDTHS[level];
         float closest = 0.0F;
+        float farthest = Float.POSITIVE_INFINITY;
 
         for (int y = pixelMinY >> level; y <= pixelMaxY >> level; y++) {
             for (int x = pixelMinX >> level; x <= pixelMaxX >> level; x++) {
-                if (depths[y * levelWidth + x] <= threshold)
+                float depth = depths[y * levelWidth + x];
+
+                if (depth <= threshold)
                     return Float.NEGATIVE_INFINITY;
+
+                farthest = Math.min(farthest, depth);
 
                 if (nearest != null)
                     closest = Math.max(closest, nearest[y * levelWidth + x]);
             }
         }
 
+        scannedFarthest = farthest;
+
         return closest;
+    }
+
+    private static boolean canDisocclude(float nearest, float farthest) {
+        double nearW = movedW(nearest);
+
+        if (!(nearW > NEAR))
+            return true;
+
+        double farW = movedW(farthest);
+        double gap = 1.0 / nearW - (farW > NEAR ? 1.0 / farW : 0.0);
+
+        return gap * eyeSlack * Math.max(shiftPixelsX, shiftPixelsY) > 1.0;
+    }
+
+    private static double movedW(float depth) {
+        float inverseW = (depth - depthOffset) * depthScale;
+
+        if (!(inverseW > 0.0F))
+            return Double.NaN;
+
+        return 1.0 / inverseW - forwardLength * eyeSlack;
     }
 
     private static float[] ndcColumns() {
