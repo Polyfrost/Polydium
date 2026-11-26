@@ -26,6 +26,7 @@ import org.polyfrost.polydium.vulkan.VulkanGpuBuffer;
 import org.polyfrost.polydium.vulkan.VulkanGpuTexture;
 import org.polyfrost.polydium.vulkan.VulkanGpuTextureView;
 import org.polyfrost.polydium.vulkan.VulkanRenderPass;
+import org.polyfrost.polydium.vulkan.VulkanSync;
 import org.polyfrost.polydium.vulkan.checkpoints.CheckpointExtension;
 import org.polyfrost.polydium.vulkan.compat.RenderArea;
 import org.polyfrost.polydium.vulkan.compat.RenderPassDescriptor;
@@ -511,7 +512,10 @@ public final class VulkanDeferral {
                 this.attach(barriers, depthInfo, depth.textureView(), area, VK10.VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
             }
             if (barriers.flip().hasRemaining()) {
+                //? if >= 26.2 {
                 KHRSynchronization2.vkCmdPipelineBarrier2KHR(commandBuffer, VkDependencyInfo.calloc(stack).sType$Default().pImageMemoryBarriers(barriers));
+                //?} else
+                /*VulkanSync.pipelineBarrier(commandBuffer, VkDependencyInfo.calloc(stack).sType$Default().pImageMemoryBarriers(barriers));*/
             }
         }
     }
@@ -542,7 +546,10 @@ public final class VulkanDeferral {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkImageMemoryBarrier2.Buffer barriers = VkImageMemoryBarrier2.calloc(1, stack);
             layoutBarrier(barriers.get(0), texture, oldLayout, newLayout);
+            //? if >= 26.2 {
             KHRSynchronization2.vkCmdPipelineBarrier2KHR(commandBuffer, VkDependencyInfo.calloc(stack).sType$Default().pImageMemoryBarriers(barriers));
+            //?} else
+            /*VulkanSync.pipelineBarrier(commandBuffer, VkDependencyInfo.calloc(stack).sType$Default().pImageMemoryBarriers(barriers));*/
         }
     }
 
