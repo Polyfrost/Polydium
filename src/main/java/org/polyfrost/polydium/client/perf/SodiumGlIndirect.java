@@ -6,6 +6,7 @@ import com.mojang.renderpearl.api.buffers.GpuBuffer;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
 import com.mojang.renderpearl.backend.opengl.GlBuffer;
 import com.mojang.renderpearl.backend.opengl.GlStateManager;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import org.lwjgl.opengl.GL15C;
 import org.lwjgl.opengl.GL40C;
 import org.lwjgl.system.MemoryUtil;
@@ -13,6 +14,7 @@ import org.lwjgl.system.MemoryUtil;
 public final class SodiumGlIndirect {
     public static final int COMMAND_SIZE = 20;
     private static final long RING_SIZE = 4L << 20;
+    private static final long PREPARED_GROUP_SIZE = 512L << 10;
 
     public static boolean batchDrawing;
 
@@ -22,8 +24,86 @@ public final class SodiumGlIndirect {
     private static int persistent = -1;
     private static GpuBuffer ring;
     private static long offset;
+    private static final ReferenceArrayList<Batch> pending = new ReferenceArrayList<>();
+    private static long generation;
 
     private SodiumGlIndirect() {
+    }
+
+    public interface Batch {
+        long polydium$commands();
+
+        int polydium$commandBytes();
+
+        void polydium$prepared(GpuBufferSlice commands, long generation);
+    }
+
+    public static long generation() {
+        return generation;
+    }
+
+    private static boolean persistent() {
+        if (persistent < 0) {
+            persistent = RenderSystem.getDevice().getDeviceInfo().features().persistentMapping() ? 1 : 0;
+        }
+
+        return persistent == 1;
+    }
+
+    public static boolean canPrepare() {
+        return supported() && persistent();
+    }
+
+    public static void queue(Batch batch) {
+        if (batch.polydium$commands() != 0) {
+            pending.add(batch);
+        }
+    }
+
+    public static void flushPrepared() {
+        int count = pending.size();
+        if (count == 0) {
+            return;
+        }
+
+        generation++;
+        try {
+            flushPrepared(count);
+        } finally {
+            pending.clear();
+        }
+    }
+
+    private static void flushPrepared(int count) {
+        var encoder = RenderSystem.getDevice().createCommandEncoder();
+        var memory = encoder.transientMemory();
+        int start = 0;
+        while (start < count) {
+            long total = pending.get(start).polydium$commandBytes();
+            int end = start + 1;
+            while (end < count && total + pending.get(end).polydium$commandBytes() <= PREPARED_GROUP_SIZE) {
+                total += pending.get(end).polydium$commandBytes();
+                end++;
+            }
+
+            GpuBufferSlice target = memory.allocateGpu(total, 4, GpuBuffer.USAGE_INDIRECT_PARAMETERS | GpuBuffer.USAGE_COPY_DST);
+            GpuBufferSlice source;
+            try (GpuBufferSlice.MappedView staging = memory.allocateStaging(total, 4, GpuBuffer.USAGE_COPY_SRC)) {
+                long dst = MemoryUtil.memAddress(staging.data());
+                long written = 0;
+                for (int i = start; i < end; i++) {
+                    Batch batch = pending.get(i);
+                    int bytes = batch.polydium$commandBytes();
+                    MemoryUtil.memCopy(batch.polydium$commands(), dst + written, bytes);
+                    batch.polydium$prepared(target.slice(written, bytes), generation);
+                    written += bytes;
+                }
+                source = staging.slice();
+            }
+
+            encoder.copyToBuffer(source, target);
+            start = end;
+        }
     }
 
     public static boolean supported() {
@@ -35,11 +115,7 @@ public final class SodiumGlIndirect {
     }
 
     public static GpuBufferSlice upload(long commands, int bytes) {
-        if (persistent < 0) {
-            persistent = RenderSystem.getDevice().getDeviceInfo().features().persistentMapping() ? 1 : 0;
-        }
-
-        if (persistent == 1) {
+        if (persistent()) {
             return RenderSystem.getDevice().createCommandEncoder().transientMemory()
                     .uploadGpu(MemoryUtil.memByteBuffer(commands, bytes), 4, GpuBuffer.USAGE_INDIRECT_PARAMETERS);
         }

@@ -1,9 +1,11 @@
 package org.polyfrost.polydium.mixin.client.perf.sodium;
 
 //? if >= 26.2 {
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
 import net.caffeinemc.mods.sodium.client.gpu.device.batch.MultiDrawBatch;
 import net.caffeinemc.mods.sodium.client.gpu.device.context.DrawContext;
 import org.lwjgl.system.MemoryUtil;
+import org.polyfrost.polydium.client.PolydiumToggles;
 import org.polyfrost.polydium.client.perf.SodiumGlIndirect;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -16,9 +18,31 @@ import static org.polyfrost.polydium.client.perf.SodiumGlIndirect.COMMAND_SIZE;
 
 @Pseudo
 @Mixin(targets = "net.caffeinemc.mods.sodium.client.gpu.device.batch.GLDrawBatch", remap = false)
-public abstract class MixinGlIndirectTerrainBatch {
+public abstract class MixinGlIndirectTerrainBatch implements SodiumGlIndirect.Batch {
     @Unique
     private long polydium$commands;
+
+    @Unique
+    private GpuBufferSlice polydium$prepared;
+
+    @Unique
+    private long polydium$preparedGeneration;
+
+    @Override
+    public long polydium$commands() {
+        return polydium$commands;
+    }
+
+    @Override
+    public int polydium$commandBytes() {
+        return ((MultiDrawBatch) (Object) this).size * COMMAND_SIZE;
+    }
+
+    @Override
+    public void polydium$prepared(GpuBufferSlice commands, long generation) {
+        polydium$prepared = commands;
+        polydium$preparedGeneration = generation;
+    }
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void polydium$allocCommands(int capacity, CallbackInfo ci) {
@@ -53,12 +77,19 @@ public abstract class MixinGlIndirectTerrainBatch {
     private void polydium$drawIndirect(DrawContext context, CallbackInfo ci) {
         SodiumGlIndirect.batchDrawing = true;
         long commands = polydium$commands;
-        if (commands == 0 || SodiumGlIndirect.irisTessellation) {
+        if (commands == 0 || SodiumGlIndirect.irisTessellation || !PolydiumToggles.glIndirectTerrain) {
             return;
         }
 
         int count = ((MultiDrawBatch) (Object) this).size;
-        context.getPass().drawIndexedIndirect(SodiumGlIndirect.upload(commands, count * COMMAND_SIZE), count);
+        GpuBufferSlice prepared = polydium$prepared;
+        polydium$prepared = null;
+        if (prepared == null || polydium$preparedGeneration != SodiumGlIndirect.generation()
+                || prepared.length() != (long) count * COMMAND_SIZE || prepared.buffer().isClosed()) {
+            prepared = SodiumGlIndirect.upload(commands, count * COMMAND_SIZE);
+        }
+
+        context.getPass().drawIndexedIndirect(prepared, count);
         ci.cancel();
     }
 
