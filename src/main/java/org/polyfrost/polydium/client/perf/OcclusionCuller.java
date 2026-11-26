@@ -49,6 +49,8 @@ public final class OcclusionCuller {
     private static final int CARVE_COLUMNS = (WIDTH + CARVE_TILE - 1) / CARVE_TILE;
     static final long MIN_INTERVAL = Integer.getInteger("polydium.occlusionCaptureMs", 100) * 1_000_000L;
     private static final double TEST_BUDGET = 0.5;
+    private static final double EYE_TOLERANCE = 0.5;
+    private static final int NEARBY_PASSES = 4;
     private static final double REPROJECT_LIMIT = 8.0;
     private static final float HIGH_YIELD = 0.15F;
     private static final float LOW_YIELD = 0.05F;
@@ -58,6 +60,7 @@ public final class OcclusionCuller {
     private static final long BACKOFF_CEILING = 500_000_000L;
     private static final boolean CAN_BACK_OFF = !PolydiumMixinPlugin.isDisabled("OcclusionBoundsSection") && !PolydiumMixinPlugin.isDisabled("OcclusionBoundsSprite") && !PolydiumMixinPlugin.isDisabled("OcclusionBoundsConsumer");
     private static final float[][] PYRAMID = createPyramid();
+    private static final float[][] NEAREST = createNearest();
     private static final int[] LEVEL_WIDTHS = levelWidths();
     private static final float[] MATRIX = new float[16];
     private static final float[] TESTED_DEPTH = new float[WIDTH * HEIGHT];
@@ -96,6 +99,13 @@ public final class OcclusionCuller {
     private static double testedX;
     private static double testedY;
     private static double testedZ;
+    private static double eyeSlack;
+    private static boolean nearestBuilt;
+    private static float depthOffset;
+    private static float depthScale;
+    private static float forwardLength;
+    private static float shiftPixelsX;
+    private static float shiftPixelsY;
     private static float reprojectShiftX, reprojectShiftY, reprojectShiftZ, reprojectShiftW;
     private static float reprojectInverseX, reprojectInverseY, reprojectInverseZ, reprojectInverseW;
     private static double sourceX;
@@ -211,14 +221,18 @@ public final class OcclusionCuller {
             excludeOccluders();
         }
 
-        if (isUnchanged(cameraX, cameraY, cameraZ))
+        if (isUnchanged(cameraX, cameraY, cameraZ)) {
+            coverEye(cameraX, cameraY, cameraZ);
             return;
+        }
 
         boolean rebuild = !isPyramidCurrent(cameraX, cameraY, cameraZ);
 
         if (rebuild) {
             remember(cameraX, cameraY, cameraZ);
             buildPyramid();
+        } else {
+            coverEye(cameraX, cameraY, cameraZ);
         }
 
         if (rebuild)
@@ -539,7 +553,7 @@ public final class OcclusionCuller {
     }
 
     private static boolean isUnchanged(double cameraX, double cameraY, double cameraZ) {
-        if (!culling || sectionsChanged || !isAtTested(cameraX, cameraY, cameraZ))
+        if (!culling || sectionsChanged || isBeyond(cameraX, cameraY, cameraZ, testedX, testedY, testedZ, EYE_TOLERANCE))
             return false;
 
         if (retestPending)
@@ -570,6 +584,8 @@ public final class OcclusionCuller {
         testedX = cameraX;
         testedY = cameraY;
         testedZ = cameraZ;
+        eyeSlack = 0.0;
+        nearestBuilt = false;
 
         System.arraycopy(OcclusionDepth.latestMatrix(), 0, TESTED_MATRIX, 0, TESTED_MATRIX.length);
         System.arraycopy(OcclusionDepth.latestDepth(), 0, TESTED_DEPTH, 0, TESTED_DEPTH.length);
@@ -577,11 +593,48 @@ public final class OcclusionCuller {
     }
 
     private static boolean isPyramidCurrent(double cameraX, double cameraY, double cameraZ) {
-        return culling && !retestPending && OcclusionDepth.latestVersion() == testedVersion && isAtTested(cameraX, cameraY, cameraZ);
+        return culling && !retestPending && OcclusionDepth.latestVersion() == testedVersion && !isBeyond(cameraX, cameraY, cameraZ, testedX, testedY, testedZ, EYE_TOLERANCE);
     }
 
-    private static boolean isAtTested(double cameraX, double cameraY, double cameraZ) {
-        return cameraX == testedX && cameraY == testedY && cameraZ == testedZ;
+    private static void coverEye(double cameraX, double cameraY, double cameraZ) {
+        double moveX = cameraX - testedX;
+        double moveY = cameraY - testedY;
+        double moveZ = cameraZ - testedZ;
+        double moved = Math.sqrt(moveX * moveX + moveY * moveY + moveZ * moveZ);
+
+        if (moved <= eyeSlack)
+            return;
+
+        eyeSlack = moved;
+        Arrays.fill(CORNER_SIZES, 0);
+
+        Iterator<RenderRegion> iterator = CULLED_REGIONS.iterator();
+
+        while (iterator.hasNext()) {
+            RenderRegion region = iterator.next();
+            RegionOcclusion occlusion = (RegionOcclusion) region;
+            long[] hidden = occlusion.polydium$getHiddenSections();
+            boolean shown = false;
+
+            for (int word = 0; word < MASK_WORDS; word++) {
+                for (long bits = hidden[word]; bits != 0L; bits &= bits - 1L) {
+                    int section = word << 6 | Long.numberOfTrailingZeros(bits);
+
+                    if (isOccluded(region, section, false))
+                        continue;
+
+                    hidden[word] &= ~(1L << section);
+                    hiddenCount--;
+                    shown = true;
+                }
+            }
+
+            if (shown)
+                occlusion.polydium$clearBatches();
+
+            if ((hidden[0] | hidden[1] | hidden[2] | hidden[3]) == 0L)
+                iterator.remove();
+        }
     }
 
     private static void retestUntested() {
@@ -745,7 +798,16 @@ public final class OcclusionCuller {
     }
 
     private static boolean isAabbOccluded(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
+        float slack = (float) eyeSlack;
         float[] matrix = TESTED_MATRIX;
+
+        minX -= slack;
+        minY -= slack;
+        minZ -= slack;
+        maxX += slack;
+        maxY += slack;
+        maxZ += slack;
+
         float nearest = Float.NEGATIVE_INFINITY;
         float left = Float.POSITIVE_INFINITY;
         float bottom = Float.POSITIVE_INFINITY;
@@ -790,7 +852,7 @@ public final class OcclusionCuller {
         CORNER_SIZES[slot] = sizes;
 
         for (int axis = 0; axis < 3; axis++) {
-            int size = SectionBounds.max(bounds, axis) - SectionBounds.min(bounds, axis);
+            float size = SectionBounds.max(bounds, axis) - SectionBounds.min(bounds, axis) + 2.0F * (float) eyeSlack;
             int count = 1 << axis;
 
             for (int corner = 0; corner < count; corner++) {
@@ -803,9 +865,11 @@ public final class OcclusionCuller {
     }
 
     private static boolean isBoxOccluded(float originX, float originY, float originZ, int bounds) {
-        originX += SectionBounds.min(bounds, 0);
-        originY += SectionBounds.min(bounds, 1);
-        originZ += SectionBounds.min(bounds, 2);
+        float slack = (float) eyeSlack;
+
+        originX += SectionBounds.min(bounds, 0) - slack;
+        originY += SectionBounds.min(bounds, 1) - slack;
+        originZ += SectionBounds.min(bounds, 2) - slack;
 
         int start = placeCorners(bounds);
         float[] matrix = TESTED_MATRIX;
@@ -840,8 +904,52 @@ public final class OcclusionCuller {
     }
 
     private static boolean isRectOccluded(float nearest, float left, float bottom, float right, float top) {
+        float threshold = nearest * (1.0F + DEPTH_RELATIVE) + DEPTH_ABSOLUTE;
+
+        if (eyeSlack == 0.0)
+            return scanRect(threshold, left, bottom, right, top) != Float.NEGATIVE_INFINITY;
+
+        if (!nearestBuilt)
+            buildNearest();
+
+        float closest = Float.NEGATIVE_INFINITY;
+
+        for (int pass = 0; pass < NEARBY_PASSES; pass++) {
+            float growX = 0.0F;
+            float growY = 0.0F;
+
+            if (pass > 0) {
+                float inverseW = (closest - depthOffset) * depthScale;
+
+                if (!(inverseW > 0.0F))
+                    return false;
+
+                double w = 1.0 / inverseW - forwardLength * eyeSlack;
+
+                if (w <= NEAR)
+                    return false;
+
+                growX = (float) (shiftPixelsX * eyeSlack / w);
+                growY = (float) (shiftPixelsY * eyeSlack / w);
+            }
+
+            float found = scanRect(threshold, left - growX, bottom - growY, right + growX, top + growY);
+
+            if (found == Float.NEGATIVE_INFINITY)
+                return false;
+
+            if (found <= closest)
+                return true;
+
+            closest = found;
+        }
+
+        return false;
+    }
+
+    private static float scanRect(float threshold, float left, float bottom, float right, float top) {
         if (left - SCREEN_MARGIN < 0.0F || bottom - SCREEN_MARGIN < 0.0F || right + SCREEN_MARGIN >= WIDTH || top + SCREEN_MARGIN >= HEIGHT)
-            return false;
+            return Float.NEGATIVE_INFINITY;
 
         int pixelMinX = Math.max((int) (left - SCREEN_MARGIN), 0);
         int pixelMinY = Math.max((int) (bottom - SCREEN_MARGIN), 0);
@@ -853,17 +961,21 @@ public final class OcclusionCuller {
             level++;
 
         float[] depths = PYRAMID[level];
+        float[] nearest = nearestBuilt ? NEAREST[level] : null;
         int levelWidth = LEVEL_WIDTHS[level];
-        float threshold = nearest * (1.0F + DEPTH_RELATIVE) + DEPTH_ABSOLUTE;
+        float closest = 0.0F;
 
         for (int y = pixelMinY >> level; y <= pixelMaxY >> level; y++) {
             for (int x = pixelMinX >> level; x <= pixelMaxX >> level; x++) {
                 if (depths[y * levelWidth + x] <= threshold)
-                    return false;
+                    return Float.NEGATIVE_INFINITY;
+
+                if (nearest != null)
+                    closest = Math.max(closest, nearest[y * levelWidth + x]);
             }
         }
 
-        return true;
+        return closest;
     }
 
     private static float[] ndcColumns() {
@@ -1019,6 +1131,44 @@ public final class OcclusionCuller {
         }
     }
 
+    private static void buildNearest() {
+        float[] matrix = TESTED_MATRIX;
+        float forwardSquared = matrix[3] * matrix[3] + matrix[7] * matrix[7] + matrix[11] * matrix[11];
+
+        forwardLength = (float) Math.sqrt(forwardSquared);
+        depthOffset = (matrix[2] * matrix[3] + matrix[6] * matrix[7] + matrix[10] * matrix[11]) / forwardSquared;
+        depthScale = matrix[14] > 0.0F ? 1.0F / matrix[14] : 0.0F;
+        shiftPixelsX = 0.5F * WIDTH * ((float) Math.sqrt(matrix[0] * matrix[0] + matrix[4] * matrix[4] + matrix[8] * matrix[8]) + forwardLength);
+        shiftPixelsY = 0.5F * HEIGHT * ((float) Math.sqrt(matrix[1] * matrix[1] + matrix[5] * matrix[5] + matrix[9] * matrix[9]) + forwardLength);
+
+        int width = WIDTH;
+        int height = HEIGHT;
+
+        for (int level = 1; level < NEAREST.length; level++) {
+            float[] source = NEAREST[level - 1];
+            float[] target = NEAREST[level];
+            int targetWidth = (width + 1) >> 1;
+            int targetHeight = (height + 1) >> 1;
+
+            for (int y = 0; y < targetHeight; y++) {
+                int sourceY0 = y << 1;
+                int sourceY1 = Math.min(sourceY0 + 1, height - 1);
+
+                for (int x = 0; x < targetWidth; x++) {
+                    int sourceX0 = x << 1;
+                    int sourceX1 = Math.min(sourceX0 + 1, width - 1);
+
+                    target[y * targetWidth + x] = Math.max(Math.max(source[sourceY0 * width + sourceX0], source[sourceY0 * width + sourceX1]), Math.max(source[sourceY1 * width + sourceX0], source[sourceY1 * width + sourceX1]));
+                }
+            }
+
+            width = targetWidth;
+            height = targetHeight;
+        }
+
+        nearestBuilt = true;
+    }
+
     private static Iterable<ChunkRenderList> iterable(ChunkRenderListIterable lists) {
         return () -> lists.iterator(false);
     }
@@ -1033,6 +1183,17 @@ public final class OcclusionCuller {
         }
 
         return widths;
+    }
+
+    private static float[][] createNearest() {
+        float[][] nearest = new float[PYRAMID.length][];
+
+        nearest[0] = PYRAMID[0];
+
+        for (int level = 1; level < nearest.length; level++)
+            nearest[level] = new float[PYRAMID[level].length];
+
+        return nearest;
     }
 
     private static float[][] createPyramid() {
