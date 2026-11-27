@@ -5,6 +5,7 @@ package org.polyfrost.polydium.client.perf;
 //? if >= 26.3
 import net.minecraft.client.Minecraft;
 import org.polyfrost.polydium.client.PolydiumToggles;
+import org.polyfrost.polydium.compat.Mods;
 import org.polyfrost.polydium.mixin.PolydiumMixinPlugin;
 import org.polyfrost.polydium.mixin.client.perf.sodium.MixinOcclusionListAccessor;
 import it.unimi.dsi.fastutil.HashCommon;
@@ -169,7 +170,8 @@ public final class OcclusionCuller {
     }
 
     private static boolean canCull() {
-        if (!PolydiumToggles.occlusionCulling || IrisShaders.packInUse())
+        // Vitrail holds the main render pass, so closing and reopening it for the depth capture breaks its feature draws
+        if (!PolydiumToggles.occlusionCulling || IrisShaders.packInUse() || Mods.VITRAIL)
             return false;
 
         //? if >= 26.3 {

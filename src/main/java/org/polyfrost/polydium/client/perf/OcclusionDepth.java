@@ -32,6 +32,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.util.Arrays;
 import java.util.Optional;
 import net.minecraft.resources.Identifier;
+import org.polyfrost.polydium.compat.Mods;
 
 public final class OcclusionDepth {
 
@@ -119,7 +120,7 @@ public final class OcclusionDepth {
     }
 
     public static boolean canCapture() {
-        return captureDue;
+        return captureDue && !Mods.VITRAIL;
     }
 
     public static void requestCapture() {
