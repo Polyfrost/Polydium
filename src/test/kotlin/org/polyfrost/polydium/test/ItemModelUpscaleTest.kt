@@ -20,7 +20,7 @@ class ItemModelUpscaleTest {
         isTransparent.invoke(null, this, 0, x, y, width, height) as Boolean
 
     private fun upscaledSprite(): SpriteContents {
-        val source = NativeImage(8, 8, false)
+        val source = NativeImage(8, 8, true)
         source.setPixel(7, 7, -1)
         val contents = SpriteContents(Identifier.withDefaultNamespace("test"), FrameSize(8, 8), source)
         val scaled = NativeImage(16, 16, false)
