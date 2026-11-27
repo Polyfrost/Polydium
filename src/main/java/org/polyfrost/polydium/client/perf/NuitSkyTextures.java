@@ -40,12 +40,15 @@ public final class NuitSkyTextures {
     private static final Logger LOGGER = LoggerFactory.getLogger("Polydium");
     private static final long EVICT_TICKS = 600;
     private static final long UPLOAD_BYTES_PER_TICK = 8L << 20;
+    private static final int MAX_IN_FLIGHT = 2;
 
     private static final Set<Identifier> MANAGED = new HashSet<>();
     private static final Object2LongOpenHashMap<Identifier> LAST_USED = new Object2LongOpenHashMap<>();
     private static final Map<Identifier, StreamedTexture> PENDING = new HashMap<>();
     private static final Queue<Decoded> DECODED = new ConcurrentLinkedQueue<>();
     private static final ArrayDeque<StreamedTexture> UPLOADING = new ArrayDeque<>();
+    private static final ArrayDeque<StreamedTexture> QUEUED = new ArrayDeque<>();
+    private static int decoding;
     private static long ticks;
 
     private record Decoded(StreamedTexture texture, TextureContents contents) {
@@ -74,6 +77,7 @@ public final class NuitSkyTextures {
         TextureManager textures = Minecraft.getInstance().getTextureManager();
         Decoded decoded;
         while ((decoded = DECODED.poll()) != null) {
+            decoding--;
             if (PENDING.get(decoded.texture.id) == decoded.texture) {
                 decoded.texture.begin(decoded.contents);
                 UPLOADING.add(decoded.texture);
@@ -97,13 +101,28 @@ public final class NuitSkyTextures {
             }
         }
 
+        StreamedTexture queued;
+        while (decoding + UPLOADING.size() < MAX_IN_FLIGHT && (queued = QUEUED.poll()) != null) {
+            if (PENDING.get(queued.id) != queued) {
+                continue;
+            }
+            if (now - LAST_USED.getLong(queued.id) > 1) {
+                drop(queued.id);
+            } else {
+                decode(queued);
+            }
+        }
+
         if (now % 20 == 0) {
             LAST_USED.object2LongEntrySet().removeIf(entry -> {
                 if (now - entry.getLongValue() < EVICT_TICKS) {
                     return false;
                 }
-                drop(entry.getKey());
-                textures.release(entry.getKey());
+                Identifier id = entry.getKey();
+                drop(id);
+                if (byPath().get(id) instanceof StreamedTexture) {
+                    textures.release(id);
+                }
                 return true;
             });
         }
@@ -113,6 +132,12 @@ public final class NuitSkyTextures {
         PENDING.values().forEach(StreamedTexture::close);
         PENDING.clear();
         UPLOADING.clear();
+        QUEUED.clear();
+        Decoded decoded;
+        while ((decoded = DECODED.poll()) != null) {
+            decoding--;
+            decoded.contents.close();
+        }
     }
 
     private static void drop(Identifier id) {
@@ -125,12 +150,17 @@ public final class NuitSkyTextures {
     private static void load(Identifier id) {
         StreamedTexture texture = new StreamedTexture(id);
         PENDING.put(id, texture);
+        QUEUED.add(texture);
+    }
+
+    private static void decode(StreamedTexture texture) {
+        decoding++;
         ResourceManager resources = Minecraft.getInstance().getResourceManager();
-        CompletableFuture.supplyAsync(() -> decode(texture, resources), Util.backgroundExecutor())
+        CompletableFuture.supplyAsync(() -> loadContents(texture, resources), Util.backgroundExecutor())
                 .thenAccept(contents -> DECODED.add(new Decoded(texture, contents)));
     }
 
-    private static TextureContents decode(StreamedTexture texture, ResourceManager resources) {
+    private static TextureContents loadContents(StreamedTexture texture, ResourceManager resources) {
         try {
             return texture.loadContents(resources);
         } catch (FileNotFoundException e) {
