@@ -127,8 +127,7 @@ public abstract class MixinCameraFluidCache {
             && this.polydium$fluidLeft.equals(this.left)) {
             return this.polydium$fluid;
         }
-        FogType fluid = this.polydium$findFluid();
-        this.polydium$fluidFrame = frame;
+        this.polydium$fluidFrame = -1L;
         this.polydium$fluidTick = tick;
         this.polydium$fluidInitialized = this.initialized;
         this.polydium$fluidLevel = this.level;
@@ -141,19 +140,14 @@ public abstract class MixinCameraFluidCache {
         this.polydium$fluidForwards.set(this.forwards);
         this.polydium$fluidUp.set(this.up);
         this.polydium$fluidLeft.set(this.left);
-        this.polydium$fluid = fluid;
-        return fluid;
-    }
 
-    @Unique
-    private FogType polydium$findFluid() {
         if (!this.initialized)
-            return FogType.NONE;
+            return this.polydium$cache(FogType.NONE, frame);
 
         FluidState cameraFluid = this.level.getFluidState(this.blockPosition);
 
         if (cameraFluid.is(FluidTags.WATER) && this.position.y < this.blockPosition.getY() + this.polydium$height(cameraFluid, this.blockPosition))
-            return FogType.WATER;
+            return this.polydium$cache(FogType.WATER, frame);
 
         CameraNearPlaneAccessor plane = (CameraNearPlaneAccessor) this.polydium$nearPlane();
         Vec3 forward = plane.polydium$forward();
@@ -203,7 +197,7 @@ public abstract class MixinCameraFluidCache {
 
             if (fluid.is(FluidTags.LAVA)) {
                 if (y <= this.polydium$height(fluid, checkPos) + checkPos.getY())
-                    return FogType.LAVA;
+                    return this.polydium$cache(FogType.LAVA, frame);
 
                 continue;
             }
@@ -212,10 +206,17 @@ public abstract class MixinCameraFluidCache {
                 block = this.level.getBlockState(checkPos);
 
             if (block.is(Blocks.POWDER_SNOW))
-                return FogType.POWDER_SNOW;
+                return this.polydium$cache(FogType.POWDER_SNOW, frame);
         }
 
-        return FogType.NONE;
+        return this.polydium$cache(FogType.NONE, frame);
+    }
+
+    @Unique
+    private FogType polydium$cache(FogType fluid, long frame) {
+        this.polydium$fluid = fluid;
+        this.polydium$fluidFrame = frame;
+        return fluid;
     }
 
     @Unique
