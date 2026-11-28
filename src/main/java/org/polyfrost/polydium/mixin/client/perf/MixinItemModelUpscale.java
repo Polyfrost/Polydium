@@ -3,6 +3,7 @@ package org.polyfrost.polydium.mixin.client.perf;
 //? if >= 1.21.11 {
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client./*? if >= 26.1 {*/resources.model.cuboid/*?} else {*//*renderer.block.model*//*?}*/.ItemModelGenerator;
 import net.minecraft.client.renderer.texture.SpriteContents;
 import org.polyfrost.polydium.client.perf.UpscaledSprite;
@@ -22,7 +23,9 @@ public abstract class MixinItemModelUpscale {
     }
 
     @WrapOperation(method = "isTransparent", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/texture/SpriteContents;isTransparent(III)Z"))
-    private static boolean polydium$unscaledTransparent(SpriteContents sprite, int frame, int x, int y, Operation<Boolean> original) {
+    private static boolean polydium$unscaledTransparent(SpriteContents sprite, int frame, int x, int y, Operation<Boolean> original, @Local(argsOnly = true, ordinal = 3) int width) {
+        if (width == sprite.width())
+            return original.call(sprite, frame, x, y);
         int factor = ((UpscaledSprite) sprite).polydium$upscale();
         return original.call(sprite, frame, x * factor, y * factor);
     }

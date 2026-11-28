@@ -14,6 +14,7 @@ import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.renderpearl.api.commands.RenderPass;
+import com.mojang.renderpearl.frontend.FrontendRenderPass;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
@@ -30,7 +31,11 @@ public abstract class MixinOcclusionDepthCapture {
     //? if >= 26.3 {
     @WrapOperation(method = "executeSolid", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher$PreparedFrame;executeSolid(Lcom/mojang/renderpearl/api/commands/RenderPass;)V"))
     private void polydium$captureOpaqueDepth(FeatureRenderDispatcher.PreparedFrame frame, RenderPass pass, Operation<Void> original) {
-        if (!OcclusionDepth.canCapture()) {
+        boolean foreign = !(pass instanceof FrontendRenderPass);
+
+        OcclusionDepth.mainPassForeign(foreign);
+
+        if (foreign || !OcclusionDepth.canCapture()) {
             original.call(frame, pass);
             return;
         }

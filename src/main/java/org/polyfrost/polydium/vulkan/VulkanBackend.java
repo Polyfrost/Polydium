@@ -1,6 +1,7 @@
 package org.polyfrost.polydium.vulkan;
 
 import org.polyfrost.polydium.client.perf.VmaPolicy;
+import org.polyfrost.polydium.client.perf.VulkanSync;
 import com.mojang.blaze3d.GLFWErrorCapture;
 import com.mojang.blaze3d.shaders.GpuDebugOptions;
 import com.mojang.blaze3d.shaders.ShaderSource;
@@ -201,18 +202,23 @@ public class VulkanBackend implements GpuBackend {
           deviceExtensions.add("VK_KHR_portability_subset");
         }
 
+        if (!FORCE_LEGACY && physicalDevice.hasDeviceExtension("VK_KHR_synchronization2")
+          && isFeatureSupported(physicalDevice.vkPhysicalDevice(), SYNC2_FEATURE)) {
+          deviceExtensions.add("VK_KHR_synchronization2");
+          enabledFeatures.add(SYNC2_FEATURE);
+        }
+
+        //? if >= 26.1 {
+        if (CHECKPOINTS && !deviceExtensions.contains("VK_KHR_synchronization2")) {
+          LOGGER.warn("Vulkan checkpoints need synchronization2, disabling them");
+        } else
+        //?}
         if (CHECKPOINTS && physicalDevice.hasDeviceExtension("VK_AMD_buffer_marker")) {
           deviceExtensions.add("VK_AMD_buffer_marker");
           checkpointExtension = new AmdCheckpointExtension();
         } else if (CHECKPOINTS && physicalDevice.hasDeviceExtension("VK_NV_device_diagnostic_checkpoints")) {
           deviceExtensions.add("VK_NV_device_diagnostic_checkpoints");
           checkpointExtension = new NvidiaCheckpointExtension();
-        }
-
-        if (!FORCE_LEGACY && physicalDevice.hasDeviceExtension("VK_KHR_synchronization2")
-          && isFeatureSupported(physicalDevice.vkPhysicalDevice(), SYNC2_FEATURE)) {
-          deviceExtensions.add("VK_KHR_synchronization2");
-          enabledFeatures.add(SYNC2_FEATURE);
         }
 
         if (physicalDevice.hasDeviceExtension("VK_EXT_multi_draw") && isFeatureSupported(physicalDevice.vkPhysicalDevice(), MULTI_DRAW_FEATURE)) {

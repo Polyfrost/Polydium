@@ -3,6 +3,7 @@ package org.polyfrost.polydium.vulkan;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.vulkan.VK12;
 import org.lwjgl.vulkan.VkCommandBuffer;
+import org.polyfrost.polydium.client.perf.VulkanSync;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuStamps;
 
 public final class VulkanProfilerStamps implements GpuStamps {
