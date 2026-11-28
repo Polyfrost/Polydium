@@ -62,10 +62,9 @@ public final class GuiItemBake {
     //?} else {
     /*public static boolean redraw(TrackingItemStackRenderState item, Object slot) {
         long stamp = stamp(item);
-        if (stamp == 0L || slot == null) {
+        if (stamp == 0L || !(slot instanceof Slot stamped)) {
             return false;
         }
-        Slot stamped = (Slot) slot;
         if (stamped.polydium$stamp() == stamp) {
             return false;
         }
@@ -74,15 +73,20 @@ public final class GuiItemBake {
     }
 
     public static Object stampNewSlot(Object slot, TrackingItemStackRenderState item) {
-        ((Slot) slot).polydium$setStamp(stamp(item));
+        if (slot instanceof Slot stamped) {
+            stamped.polydium$setStamp(stamp(item));
+        }
         return slot;
     }
     *///?}
 
     // 0 if Polydium doesn't cache this item
     private static long stamp(TrackingItemStackRenderState item) {
-        int reasons = ((Access) item).polydium$baked();
-        if (!preparing || reasons == 0 || item.isAnimated()) {
+        if (!preparing || !(item instanceof Access access)) {
+            return 0L;
+        }
+        int reasons = access.polydium$baked();
+        if (reasons == 0 || item.isAnimated()) {
             return 0L;
         }
         long time = ((reasons & SPRITE) != 0 ? textureTick : 0L) + ((reasons & FOIL) != 0 ? glintStep : 0L);
