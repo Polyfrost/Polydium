@@ -8,6 +8,7 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import net.fabricmc.fabric.api.client.renderer.v1.mesh.Mesh;
 import net.minecraft.client.Minecraft;
@@ -29,68 +30,51 @@ import net.minecraft.client.resources.model.SimpleModelWrapper;
 import net.minecraft.client.resources.model.geometry.QuadCollection;
 import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Matrix4f;
 import org.polyfrost.polydium.mixin.client.perf.BlockStateModelWrapperAccessor;
 
 public final class FrameModels {
     private static final int VARIANTS = 4;
 
-    private static final BlockModelRenderState[] STATES = new BlockModelRenderState[VARIANTS];
-    private static final Submission[] SUBMISSIONS = new Submission[VARIANTS];
-    private static final boolean[] PREPARED = new boolean[VARIANTS];
+    private final PreparedState[] states = new PreparedState[VARIANTS];
+    private final boolean[] prepared = new boolean[VARIANTS];
 
-    private static BlockModelSet modelSet;
+    public interface Owner {
+        FrameModels polydium$frameModels();
 
-    private FrameModels() {
+        Map<BlockState, BlockModelRenderState> polydium$displayModels();
     }
 
     public static BlockModelRenderState prepared(BlockModelResolver resolver, boolean glowing, boolean map) {
-        BlockModelSet current = Minecraft.getInstance().getModelManager().getBlockModelSet();
+        BlockModelSet modelSet = Minecraft.getInstance().getModelManager().getBlockModelSet();
+        return ((Owner) modelSet).polydium$frameModels().prepare(resolver, modelSet, glowing, map);
+    }
 
-        if (current != modelSet) {
-            modelSet = current;
-            Arrays.fill(STATES, null);
-            Arrays.fill(SUBMISSIONS, null);
-            Arrays.fill(PREPARED, false);
-        }
-
+    private PreparedState prepare(BlockModelResolver resolver, BlockModelSet modelSet, boolean glowing, boolean map) {
         int variant = (glowing ? 2 : 0) | (map ? 1 : 0);
-
-        if (!PREPARED[variant]) {
-            STATES[variant] = prepare(resolver, current, glowing, map);
-            SUBMISSIONS[variant] = STATES[variant] == null ? null : Submission.capture(STATES[variant]);
-            PREPARED[variant] = true;
+        if (!this.prepared[variant]) {
+            if (isPlain(modelSet.get(BlockStateDefinitions.getItemFrameFakeState(glowing, map)))) {
+                PreparedState state = new PreparedState();
+                resolver.updateForItemFrame(state, glowing, map);
+                state.submission = Submission.capture(state);
+                this.states[variant] = state;
+            }
+            this.prepared[variant] = true;
         }
-
-        return STATES[variant];
+        return this.states[variant];
     }
 
     public static boolean isPrepared(BlockModelRenderState state) {
-        for (BlockModelRenderState prepared : STATES) {
-            if (prepared == state) {
-                return true;
-            }
-        }
-        return false;
+        return state instanceof PreparedState;
     }
 
     public static Submission submission(BlockModelRenderState state) {
-        for (int variant = 0; variant < VARIANTS; variant++) {
-            if (STATES[variant] == state) {
-                return SUBMISSIONS[variant];
-            }
-        }
-        return null;
+        return state instanceof PreparedState preparedState ? preparedState.submission : null;
     }
 
-    private static BlockModelRenderState prepare(BlockModelResolver resolver, BlockModelSet modelSet, boolean glowing, boolean map) {
-        if (!isPlain(modelSet.get(BlockStateDefinitions.getItemFrameFakeState(glowing, map)))) {
-            return null;
-        }
-
-        BlockModelRenderState state = new BlockModelRenderState();
-        resolver.updateForItemFrame(state, glowing, map);
-        return state;
+    private static final class PreparedState extends BlockModelRenderState {
+        private Submission submission;
     }
 
     private static boolean isPlain(BlockModel model) {
