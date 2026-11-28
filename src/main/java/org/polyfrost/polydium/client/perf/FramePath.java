@@ -5,6 +5,7 @@ public final class FramePath {
 
     private static final int WINDOW_FRAMES = 128;
     private static final int PROBE_WINDOWS = 16;
+    private static final int MAX_PROBE_WINDOWS = PROBE_WINDOWS << 3;
     private static final double BLOCKED_LIMIT = 0.20;
 
     private static boolean worker;
@@ -19,6 +20,7 @@ public final class FramePath {
     private static long inlineFrameNanos;
     private static int workerAge = Integer.MAX_VALUE / 2;
     private static int inlineAge = Integer.MAX_VALUE / 2;
+    private static int probeWindows = PROBE_WINDOWS;
 
     private FramePath() {
     }
@@ -81,13 +83,16 @@ public final class FramePath {
         if (worker) {
             workerFrameNanos = average;
             workerAge = 0;
-            worker = inlineAge <= PROBE_WINDOWS
-                ? average < inlineFrameNanos
-                : windowAcquireNanos + windowWaitNanos <= windowFrameNanos * BLOCKED_LIMIT;
+            if (inlineAge <= PROBE_WINDOWS) {
+                worker = average < inlineFrameNanos;
+                probeWindows = worker ? PROBE_WINDOWS : Math.min(probeWindows * 2, MAX_PROBE_WINDOWS);
+            } else {
+                worker = windowAcquireNanos + windowWaitNanos <= windowFrameNanos * BLOCKED_LIMIT;
+            }
         } else {
             inlineFrameNanos = average;
             inlineAge = 0;
-            worker = workerAge > PROBE_WINDOWS || workerFrameNanos < average;
+            worker = workerAge > probeWindows || workerFrameNanos < average;
         }
 
         resetWindow();
@@ -102,6 +107,7 @@ public final class FramePath {
         lastSubmit = now;
         workerAge = Integer.MAX_VALUE / 2;
         inlineAge = Integer.MAX_VALUE / 2;
+        probeWindows = PROBE_WINDOWS;
         resetWindow();
     }
 

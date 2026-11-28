@@ -44,6 +44,12 @@ class FramePathTest {
     }
 
     @Test
+    fun `retries a much slower worker less often over time`() {
+        val workerFrames = run(128 * 200, 30_000_000L, 5_000_000L, 0.0)
+        assertTrue(workerFrames <= 128 * 5, "worker frames $workerFrames")
+    }
+
+    @Test
     fun `keeps an unblocked worker without probing inline`() {
         val workerFrames = run(128 * 200, 330_000L, 450_000L, 0.0)
         assertTrue(workerFrames >= 128 * 198, "worker frames $workerFrames")
