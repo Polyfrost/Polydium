@@ -4,6 +4,7 @@ import org.polyfrost.polydium.vulkan.compat.GpuDeviceLossException;
 import com.mojang.blaze3d.systems.BackendCreationException;
 import org.polyfrost.polydium.vulkan.checkpoints.CheckpointExtension;
 import java.util.List;
+import org.polyfrost.polydium.client.perf.PresentThread;
 import net.minecraft.client.Minecraft;
 import java.util.Set;
 import org.joml.Vector4fc;
@@ -89,9 +90,16 @@ public class VulkanUtils {
       String error = resultToString(result) + ": " + message;
       if (result == -4) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft != null) minecraft.stop();
-        List<CheckpointExtension.QueueCheckpoints> checkpoints = device.checkpointExtension().retrieveCheckpoints(true);
-        throw new GpuDeviceLossException(error + "\n" + formatCheckpoints(checkpoints));
+        if (minecraft != null && !PresentThread.isWorker()) minecraft.stop();
+        GpuDeviceLossException loss;
+        try {
+          List<CheckpointExtension.QueueCheckpoints> checkpoints = device.checkpointExtension().retrieveCheckpoints(true);
+          loss = new GpuDeviceLossException(error + "\n" + formatCheckpoints(checkpoints));
+        } catch (RuntimeException exception) {
+          loss = new GpuDeviceLossException(error);
+          loss.addSuppressed(exception);
+        }
+        throw loss;
       } else {
         throw new IllegalStateException(error);
       }

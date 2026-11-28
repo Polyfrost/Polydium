@@ -6,7 +6,9 @@ import com.mojang.renderpearl.api.device.GpuSurface;
 import com.mojang.renderpearl.backend.vulkan.VulkanQueue;
 //?} else {
 /*import org.polyfrost.polydium.vulkan.VulkanQueue;
+import org.polyfrost.polydium.vulkan.compat.GpuDeviceLossException;
 import org.polyfrost.polydium.vulkan.compat.GpuSurface;
+import net.minecraft.client.Minecraft;
 *///?}
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.KHRSwapchain;
@@ -129,6 +131,10 @@ public final class PresentThread {
             LockSupport.unpark(thread);
     }
 
+    public static boolean isWorker() {
+        return Thread.currentThread() == worker;
+    }
+
     public static boolean isCapturing() {
         return capturing;
     }
@@ -170,6 +176,15 @@ public final class PresentThread {
             return;
 
         failure = null;
+
+        //? if < 26.2 {
+        /*if (thrown instanceof GpuDeviceLossException) {
+            Minecraft minecraft = Minecraft.getInstance();
+
+            if (minecraft != null)
+                minecraft.stop();
+        }
+        *///?}
 
         if (thrown instanceof RuntimeException runtime)
             throw runtime;
