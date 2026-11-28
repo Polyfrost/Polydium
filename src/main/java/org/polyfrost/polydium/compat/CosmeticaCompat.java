@@ -22,7 +22,7 @@ public final class CosmeticaCompat {
     }
 
     private static MethodHandle preparedIcon() {
-        if (!Mods.loaded("cosmetica")) {
+        if (!Mods.loaded("cosmetica-core")) {
             return null;
         }
         try {
