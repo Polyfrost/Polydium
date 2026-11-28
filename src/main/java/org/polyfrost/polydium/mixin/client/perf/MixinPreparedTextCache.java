@@ -12,6 +12,7 @@ import net.minecraft.util.FormattedCharSink;
 import net.minecraft.util.StringDecomposer;
 import org.polyfrost.polydium.client.perf.FontGeneration;
 import org.polyfrost.polydium.client.perf.PreparedTextCache;
+import org.polyfrost.polydium.compat.CosmeticaCompat;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
@@ -45,7 +46,7 @@ public abstract class MixinPreparedTextCache implements PreparedTextCache.Access
     *///?}
         PreparedTextCache<Font.PreparedText> cache = this.polydium$preparedTextCache;
         PreparedTextCache.Key key = null;
-        if (cache != null && RenderSystem.isOnRenderThread()) {
+        if (cache != null && RenderSystem.isOnRenderThread() && !CosmeticaCompat.iconPending()) {
             cache.begin(FontGeneration.get());
             int flags = (shadow ? POLYDIUM_SHADOW : 0) | (includeEmpty ? POLYDIUM_INCLUDE_EMPTY : 0);
             Font.PreparedText seen = cache.seen(text, x, y, color, background, flags);
@@ -72,7 +73,7 @@ public abstract class MixinPreparedTextCache implements PreparedTextCache.Access
     private Font.PreparedText polydium$cachedString(String text, float x, float y, int color, boolean shadow, int background, Operation<Font.PreparedText> original) {
         PreparedTextCache<Font.PreparedText> cache = this.polydium$preparedTextCache;
         PreparedTextCache.Key key = null;
-        if (cache != null && text != null && RenderSystem.isOnRenderThread() && !Language.getInstance().isDefaultRightToLeft()) {
+        if (cache != null && text != null && RenderSystem.isOnRenderThread() && !Language.getInstance().isDefaultRightToLeft() && !CosmeticaCompat.iconPending()) {
             cache.begin(FontGeneration.get());
             if (StringDecomposer.iterateFormatted(text, Style.EMPTY, this.polydium$preparedTextCapture)) {
                 Font.PreparedText cached = cache.get(x, y, color, background, (shadow ? POLYDIUM_SHADOW : 0) | POLYDIUM_STRING);
@@ -94,7 +95,7 @@ public abstract class MixinPreparedTextCache implements PreparedTextCache.Access
     private Font.PreparedText polydium$cachedOutline(FormattedCharSequence text, float x, float y, int outlineColor, Operation<Font.PreparedText> original) {
         PreparedTextCache<Font.PreparedText> cache = this.polydium$preparedTextCache;
         PreparedTextCache.Key key = null;
-        if (cache != null && RenderSystem.isOnRenderThread()) {
+        if (cache != null && RenderSystem.isOnRenderThread() && !CosmeticaCompat.iconPending()) {
             cache.begin(FontGeneration.get());
             Font.PreparedText seen = cache.seen(text, x, y, outlineColor, 0, POLYDIUM_OUTLINE);
             if (seen != null) {
