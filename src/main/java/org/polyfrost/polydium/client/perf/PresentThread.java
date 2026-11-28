@@ -15,15 +15,12 @@ import org.lwjgl.vulkan.VkQueue;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.ThreadMXBean;
 import java.util.Optional;
 import java.util.concurrent.locks.LockSupport;
 
 public final class PresentThread {
 
     private static final int SPINS = 1024;
-    private static final ThreadMXBean THREADS = ManagementFactory.getThreadMXBean();
     private static final Runnable PRESENT_JOB = PresentThread::presentHandedOff;
 
     private static volatile Thread worker;
@@ -112,11 +109,8 @@ public final class PresentThread {
         handedFrame = GpuProfileFlag.ENABLED ? GpuProfiler.presentHandedOff() : -1L;
 
         if (!FramePath.frameUsesWorker()) {
-            long wallStart = System.nanoTime();
-            long cpuStart = THREADS.getCurrentThreadCpuTime();
             submission.close();
             present.run();
-            FramePath.recordGpuWait(Math.max(0L, System.nanoTime() - wallStart - (THREADS.getCurrentThreadCpuTime() - cpuStart)));
             return;
         }
 

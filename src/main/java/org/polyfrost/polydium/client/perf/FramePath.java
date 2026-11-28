@@ -4,7 +4,8 @@ package org.polyfrost.polydium.client.perf;
 public final class FramePath {
 
     private static final int WINDOW_FRAMES = 128;
-    private static final double WAIT_LIMIT = 0.10;
+    private static final int PROBE_WINDOWS = 16;
+    private static final int MAX_PROBE_WINDOWS = PROBE_WINDOWS << 3;
     private static final double BLOCKED_LIMIT = 0.20;
 
     private static boolean worker;
@@ -15,6 +16,11 @@ public final class FramePath {
     private static long windowWaitNanos;
     private static long windowAcquireNanos;
     private static int windowFrames;
+    private static long workerFrameNanos;
+    private static long inlineFrameNanos;
+    private static int workerAge = Integer.MAX_VALUE / 2;
+    private static int inlineAge = Integer.MAX_VALUE / 2;
+    private static int probeWindows = PROBE_WINDOWS;
 
     private FramePath() {
     }
@@ -43,8 +49,10 @@ public final class FramePath {
     }
 
     public static void frameSubmitted() {
-        long now = System.nanoTime();
+        frameSubmitted(System.nanoTime());
+    }
 
+    static void frameSubmitted(long now) {
         if (lastSubmit == 0L) {
             lastSubmit = now;
 
@@ -56,8 +64,7 @@ public final class FramePath {
         lastSubmit = now;
 
         if (!frameEligible) {
-            worker = false;
-            resetWindow();
+            reset(now);
 
             return;
         }
@@ -68,17 +75,39 @@ public final class FramePath {
         if (windowFrames < WINDOW_FRAMES)
             return;
 
-        if (worker)
-            worker = windowAcquireNanos + windowWaitNanos <= windowFrameNanos * BLOCKED_LIMIT;
-        else
-            worker = windowWaitNanos < windowFrameNanos * WAIT_LIMIT;
+        long average = windowFrameNanos / windowFrames;
+
+        workerAge++;
+        inlineAge++;
+
+        if (worker) {
+            workerFrameNanos = average;
+            workerAge = 0;
+            if (inlineAge <= PROBE_WINDOWS) {
+                worker = average < inlineFrameNanos;
+                probeWindows = worker ? PROBE_WINDOWS : Math.min(probeWindows * 2, MAX_PROBE_WINDOWS);
+            } else {
+                worker = windowAcquireNanos + windowWaitNanos <= windowFrameNanos * BLOCKED_LIMIT;
+            }
+        } else {
+            inlineFrameNanos = average;
+            inlineAge = 0;
+            worker = workerAge > probeWindows || workerFrameNanos < average;
+        }
 
         resetWindow();
     }
 
     public static void reset() {
+        reset(0L);
+    }
+
+    private static void reset(long now) {
         worker = false;
-        lastSubmit = 0L;
+        lastSubmit = now;
+        workerAge = Integer.MAX_VALUE / 2;
+        inlineAge = Integer.MAX_VALUE / 2;
+        probeWindows = PROBE_WINDOWS;
         resetWindow();
     }
 
