@@ -773,6 +773,12 @@
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLegacyPipeline",
     //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacyRenderPass",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacySubmission",
+    //? if >= 26.2
+    "client.perf.vulkan.MixinVulkanLegacySurface",
+    //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLazyTransient",
     //? if >= 26.2
     "client.perf.vulkan.MixinVulkanLazyTransientSubmission",
@@ -806,7 +812,7 @@
     "client.perf.MixinGlRecycleSubmitIndex",
     //? if >= 26.2
     "client.perf.MixinGlSubmitWaitMeter",
-    //? if >= 26.2
+    //? if >= 1.21.8
     "client.perf.opengl.MixinGlCreateBufferErrorSync",
     //? if >= 26.3
     "client.perf.sodium.MixinOcclusionCull",

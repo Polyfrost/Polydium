@@ -7,6 +7,7 @@ import com.mojang.renderpearl.backend.vulkan.VulkanDevice;
 //? if >= 26.3
 import com.mojang.renderpearl.backend.vulkan.init.FeatureSet;
 import org.polyfrost.polydium.client.perf.VulkanLegacyRendering;
+import org.polyfrost.polydium.client.perf.VulkanSync;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -50,10 +51,12 @@ public abstract class MixinVulkanLegacyDevice implements VulkanLegacyRendering.D
     *///?}
         this.polydium$dynamicRendering = extensions.contains("VK_KHR_dynamic_rendering");
         this.polydium$pushDescriptors = extensions.contains("VK_KHR_push_descriptor");
+        VulkanSync.sync2 = extensions.contains("VK_KHR_synchronization2");
         LogUtils.getLogger().info(
-            "Vulkan using {} and {}",
+            "Vulkan using {}, {} and {}",
             this.polydium$dynamicRendering ? "dynamic rendering" : "render passes",
-            this.polydium$pushDescriptors ? "push descriptors" : "descriptor sets"
+            this.polydium$pushDescriptors ? "push descriptors" : "descriptor sets",
+            VulkanSync.sync2 ? "synchronization2" : "legacy barriers"
         );
     }
 

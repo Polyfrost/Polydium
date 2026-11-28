@@ -2,6 +2,7 @@ package org.polyfrost.polydium.vulkan;
 
 import java.util.function.Supplier;
 import org.polyfrost.polydium.client.PolydiumToggles;
+import org.polyfrost.polydium.client.perf.VulkanSync;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
 import java.util.OptionalInt;
@@ -127,6 +128,10 @@ public class VulkanCommandEncoder implements CommandEncoderBackend, Destroyable 
 
   @Override
   public void destroy() {
+    if ((this.currentCommandBuffer != null || this.currentInitCommandBuffer != null) && this.currentRenderPass == null) {
+      LoggerFactory.getLogger("polydium/vulkan").warn("Ending open Vulkan command buffer before device shutdown");
+      this.endCommandBuffer();
+    }
     this.releaseUnusedAttachment();
     this.transientMemory.endSubmit();
     this.submissionBuilder.close();

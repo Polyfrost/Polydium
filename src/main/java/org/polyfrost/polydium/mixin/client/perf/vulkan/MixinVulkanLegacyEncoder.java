@@ -11,8 +11,10 @@ import com.mojang.renderpearl.backend.vulkan.VulkanDevice;
 import com.mojang.renderpearl.backend.vulkan.VulkanRenderPass;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.vulkan.VkCommandBuffer;
+import org.lwjgl.vulkan.VkDependencyInfo;
 import org.lwjgl.vulkan.VkRenderingInfo;
 import org.polyfrost.polydium.client.perf.VulkanLegacyRendering;
+import org.polyfrost.polydium.client.perf.VulkanSync;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
 import org.slf4j.Logger;
@@ -111,6 +113,31 @@ public abstract class MixinVulkanLegacyEncoder implements VulkanLegacyRendering.
     private void polydium$destroyDescriptorPools(CallbackInfo ci) {
         if (this.polydium$descriptorPools != null) {
             this.polydium$descriptorPools.destroy();
+        }
+    }
+
+    @WrapOperation(
+        method = "memoryBarrier(Lorg/lwjgl/vulkan/VkCommandBuffer;Lorg/lwjgl/system/MemoryStack;)V",
+        at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/KHRSynchronization2;vkCmdPipelineBarrier2KHR(Lorg/lwjgl/vulkan/VkCommandBuffer;Lorg/lwjgl/vulkan/VkDependencyInfo;)V")
+    )
+    private static void polydium$legacyBarrier(VkCommandBuffer commandBuffer, VkDependencyInfo info, Operation<Void> original) {
+        if (VulkanSync.sync2) {
+            original.call(commandBuffer, info);
+        } else {
+            VulkanSync.pipelineBarrier(commandBuffer, info);
+        }
+    }
+
+    @WrapOperation(
+        method = {"writeTimestamp", "getTimestampNow"},
+        at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/KHRSynchronization2;vkCmdWriteTimestamp2KHR(Lorg/lwjgl/vulkan/VkCommandBuffer;JJI)V"),
+        require = 2
+    )
+    private void polydium$legacyTimestamp(VkCommandBuffer commandBuffer, long stage, long queryPool, int query, Operation<Void> original) {
+        if (VulkanSync.sync2) {
+            original.call(commandBuffer, stage, queryPool, query);
+        } else {
+            VulkanSync.writeTimestamp(commandBuffer, stage, queryPool, query);
         }
     }
 }

@@ -30,14 +30,19 @@ public abstract class MixinVulkanLegacyFeatures {
     @Final
     public static VulkanPNextStruct DYNAMIC_RENDERING_FEATURES_STRUCT;
 
+    @Shadow
+    @Final
+    public static VulkanPNextStruct SYNC2_FEATURES_STRUCT;
+
     @Inject(method = "<clinit>", at = @At("TAIL"))
     private static void polydium$relaxRequired(CallbackInfo ci) {
         FeatureSet required = REQUIRED_FEATURESET;
         Set<String> extensions = new HashSet<>(required.extensions());
         extensions.remove("VK_KHR_dynamic_rendering");
         extensions.remove("VK_KHR_push_descriptor");
+        extensions.remove("VK_KHR_synchronization2");
         Set<VulkanFeature> features = new HashSet<>(required.features());
-        features.removeIf(feature -> feature.name().equals("dynamicRendering"));
+        features.removeIf(feature -> feature.name().equals("dynamicRendering") || feature.name().equals("synchronization2"));
         REQUIRED_FEATURESET = new FeatureSet(required.name(), extensions, features, required.condition());
     }
 
@@ -50,6 +55,9 @@ public abstract class MixinVulkanLegacyFeatures {
             "KHR Dynamic Rendering", Set.of("VK_KHR_dynamic_rendering"), Set.of(new VulkanFeature(DYNAMIC_RENDERING_FEATURES_STRUCT, "dynamicRendering"))
         ));
         cir.getReturnValue().add(new FeatureSet("KHR Push Descriptor", Set.of("VK_KHR_push_descriptor"), Set.of()));
+        cir.getReturnValue().add(new FeatureSet(
+            "KHR Synchronization2", Set.of("VK_KHR_synchronization2"), Set.of(new VulkanFeature(SYNC2_FEATURES_STRUCT, "synchronization2"))
+        ));
     }
 }
 //?} else if >= 26.2 {
@@ -90,6 +98,9 @@ public abstract class MixinVulkanLegacyFeatures {
     @Unique
     private static VulkanFeature polydium$dynamicRenderingFeature;
 
+    @Unique
+    private static VulkanFeature polydium$sync2Feature;
+
     @Shadow
     private static boolean isFeatureSupported(VkPhysicalDevice vkPhysicalDevice, VulkanFeature feature) {
         throw new AssertionError();
@@ -100,11 +111,14 @@ public abstract class MixinVulkanLegacyFeatures {
         Set<String> extensions = new HashSet<>(REQUIRED_DEVICE_EXTENSIONS);
         extensions.remove("VK_KHR_dynamic_rendering");
         extensions.remove("VK_KHR_push_descriptor");
+        extensions.remove("VK_KHR_synchronization2");
         REQUIRED_DEVICE_EXTENSIONS = Set.copyOf(extensions);
         Set<VulkanFeature> features = new HashSet<>();
         for (VulkanFeature feature : REQUIRED_DEVICE_FEATURES) {
             if (feature.name().equals("dynamicRendering")) {
                 polydium$dynamicRenderingFeature = feature;
+            } else if (feature.name().equals("synchronization2")) {
+                polydium$sync2Feature = feature;
             } else {
                 features.add(feature);
             }
@@ -124,6 +138,10 @@ public abstract class MixinVulkanLegacyFeatures {
             }
             if (physicalDevice.hasDeviceExtension("VK_KHR_push_descriptor")) {
                 extensions.add("VK_KHR_push_descriptor");
+            }
+            if (physicalDevice.hasDeviceExtension("VK_KHR_synchronization2") && isFeatureSupported(physicalDevice.vkPhysicalDevice(), polydium$sync2Feature)) {
+                extensions.add("VK_KHR_synchronization2");
+                features.add(polydium$sync2Feature);
             }
         }
         return original.call(extensions, physicalDevice, features);
