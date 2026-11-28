@@ -570,6 +570,8 @@
     //? if >= 1.21.10
     "client.perf.nuit.MixinNuitRenderBackend",
     "client.perf.nuit.MixinNuitSkyDisc",
+    "client.perf.nuit.MixinNuitSkyboxTextures",
+    "client.perf.nuit.MixinNuitTextureDraw",
     //? if >= 1.21.10
     "client.perf.voxy.MixinVoxyShaderLoader",
     //? if >= 1.21.10

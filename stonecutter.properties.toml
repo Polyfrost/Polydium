@@ -83,6 +83,7 @@ deps.sodium = "mc1.21.11-0.8.15-beta.1-fabric"
 mod.sodium_min = "0.8.12-beta.1"
 deps.iris = "1.10.8+1.21.11-fabric"
 deps.skyboxify = "kANba6Nw"
+deps.nuit = "eZSrQJjm"
 
 ["26.1"]
 deps.xaerominimap = "kWf58HtH"
@@ -95,6 +96,7 @@ deps.sodium = "mc26.1.2-0.9.2-fabric"
 mod.sodium_min = "0.8.7"
 deps.iris = "1.11.4+26.1-fabric"
 deps.skyboxify = "3bBTLzlD"
+deps.nuit = "sPU0AXvc"
 
 ["26.2"]
 deps.xaerominimap = "VlMbRW2O"
@@ -106,6 +108,7 @@ deps.sodium = "mc26.2-0.9.2-fabric"
 mod.sodium_min = "0.9.0"
 deps.iris = "1.11.4+26.2-fabric"
 deps.skyboxify = "XPGqw2i5"
+deps.nuit = "fmjx2lut"
 
 ["26.3"]
 deps.xaerominimap = "MfxfgXaO"
@@ -118,3 +121,4 @@ deps.sodium = "mc26.3-0.9.3-beta.1-fabric"
 mod.sodium_min = "0.9.2"
 deps.iris = "1.11.7+26.3-fabric"
 deps.skyboxify = "LSewIGOo"
+deps.nuit = "tSrAp0gK"

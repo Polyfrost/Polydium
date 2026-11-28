@@ -31,6 +31,7 @@ val renderpearlRenames = mapOf(
     "renderpearl.api.pipeline.RenderPipeline" to "blaze3d.pipeline.RenderPipeline",
     "renderpearl.api.pipeline.ShaderSource" to "blaze3d.shaders.ShaderSource",
     "renderpearl.api.pipeline.ShaderType" to "blaze3d.shaders.ShaderType",
+    "renderpearl.api.textures.AddressMode" to "blaze3d.textures.AddressMode",
     "renderpearl.api.textures.FilterMode" to "blaze3d.textures.FilterMode",
     "renderpearl.api.textures.GpuSampler" to "blaze3d.textures.GpuSampler",
     "renderpearl.api.textures.GpuTexture" to "blaze3d.textures.GpuTexture",

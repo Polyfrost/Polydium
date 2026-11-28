@@ -35,6 +35,7 @@ fun optionalProperty(name: String): String? = findProperty(name)?.toString()?.ta
 
 stonecutter constants {
     put("skyboxify", optionalProperty("deps.skyboxify") != null)
+    put("nuit", optionalProperty("deps.nuit") != null)
     put("xaerominimap", optionalProperty("deps.xaerominimap") != null)
     put("xaeroworldmap", optionalProperty("deps.xaeroworldmap") != null)
 }
@@ -175,6 +176,9 @@ dependencies {
     }
     optionalProperty("deps.skyboxify")?.let {
         modCompileOnly("maven.modrinth:skyboxify:$it") { isTransitive = false }
+    }
+    optionalProperty("deps.nuit")?.let {
+        modCompileOnly("maven.modrinth:nuit:$it") { isTransitive = false }
     }
     optionalProperty("deps.xaerominimap")?.let {
         modCompileOnly("maven.modrinth:xaeros-minimap:$it") { isTransitive = false }
