@@ -70,6 +70,10 @@ public final class RawGl {
     private RawGl() {
     }
 
+    public static String vendor() {
+        return vendor;
+    }
+
     public static void install(String vendor, String renderer, String version, int maxTextureSize) {
         RawGl.vendor = vendor;
         RawGl.renderer = renderer;

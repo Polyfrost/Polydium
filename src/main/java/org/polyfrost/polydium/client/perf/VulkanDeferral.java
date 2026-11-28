@@ -53,13 +53,14 @@ import org.lwjgl.vulkan.VkRenderingInfo;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.function.Supplier;
 
 public final class VulkanDeferral {
     private final Host host;
-    private final boolean holdClears;
+    private static int nvidia;
     private final PendingRanges pendingRanges = new PendingRanges();
     private int deferDepth;
     private GpuTexture clearColorTexture;
@@ -111,16 +112,15 @@ public final class VulkanDeferral {
         }
     }
 
-    public VulkanDeferral(Host host, boolean holdClears) {
+    public VulkanDeferral(Host host) {
         this.host = host;
-        this.holdClears = holdClears;
         this.layouts.defaultReturnValue(VK10.VK_IMAGE_LAYOUT_GENERAL);
     }
 
     public void flushBeforeCommand() {
         this.endSuspendedPass();
         if (this.deferDepth == 0) {
-            if (!this.holdClears) {
+            if (!persistLayouts()) {
                 this.flushClears();
             }
             this.flushBarrier();
@@ -142,7 +142,7 @@ public final class VulkanDeferral {
     public void deferDepthClear(GpuTexture depthTexture, double clearDepth) {
         if (GpuProfileFlag.ENABLED)
             GpuProfiler.discard();
-        if (this.holdClears) {
+        if (persistLayouts()) {
             if (this.clearDepthTexture != depthTexture) {
                 this.flush(false, true);
             }
@@ -156,7 +156,7 @@ public final class VulkanDeferral {
     public void deferColorClear(GpuTexture colorTexture, Vector4fc clearColor) {
         if (GpuProfileFlag.ENABLED)
             GpuProfiler.discard();
-        if (!this.holdClears) {
+        if (!persistLayouts()) {
             this.flushClears();
         } else if (this.clearColorTexture != colorTexture) {
             this.flush(true, false);
@@ -168,7 +168,7 @@ public final class VulkanDeferral {
     public void deferPairedDepthClear(GpuTexture depthTexture, double clearDepth) {
         if (GpuProfileFlag.ENABLED)
             GpuProfiler.discard();
-        if (this.holdClears && this.clearDepthTexture != depthTexture) {
+        if (persistLayouts() && this.clearDepthTexture != depthTexture) {
             this.flush(false, true);
         }
         this.clearDepthTexture = depthTexture;
@@ -202,7 +202,7 @@ public final class VulkanDeferral {
             }
             this.clearDepthTexture = null;
         }
-        if (!this.holdClears) {
+        if (!persistLayouts()) {
             this.flushClears();
         } else {
             this.flush(attaches(descriptor, this.clearColorTexture), attaches(descriptor, this.clearDepthTexture));
@@ -369,10 +369,10 @@ public final class VulkanDeferral {
         if (this.suspendedPass == null || this.barrierPending) {
             return false;
         }
-        if (this.clearColorTexture != null && (!this.holdClears || attaches(descriptor, this.clearColorTexture))) {
+        if (this.clearColorTexture != null && (!persistLayouts() || attaches(descriptor, this.clearColorTexture))) {
             return false;
         }
-        boolean depthClearElsewhere = this.clearDepthTexture == null || this.holdClears && !attaches(descriptor, this.clearDepthTexture);
+        boolean depthClearElsewhere = this.clearDepthTexture == null || persistLayouts() && !attaches(descriptor, this.clearDepthTexture);
         if (!area(descriptor).equals(area(previous)) || descriptor.colorAttachments().size() != previous.colorAttachments().size()) {
             return false;
         }
@@ -442,7 +442,7 @@ public final class VulkanDeferral {
             transition(commandBuffer, sampled, current, VK10.VK_IMAGE_LAYOUT_GENERAL);
             this.layouts.removeInt(sampled);
         }
-        if (pinGeneral) {
+        if (pinGeneral && persistLayouts()) {
             this.layouts.put(sampled, VK10.VK_IMAGE_LAYOUT_GENERAL);
         }
         this.flushClears();
@@ -493,7 +493,22 @@ public final class VulkanDeferral {
         *///?}
     }
 
+    // Attachment-optimal layouts and held clears stay off NVIDIA, which keeps every image in GENERAL.
+    private static boolean persistLayouts() {
+        if (nvidia == 0) {
+            String vendor = RawGl.vendor();
+            if (vendor == null) {
+                return false;
+            }
+            nvidia = vendor.toLowerCase(Locale.ROOT).contains("nvidia") ? 1 : -1;
+        }
+        return nvidia < 0;
+    }
+
     public void beginRendering(VkCommandBuffer commandBuffer, VkRenderingInfo renderingInfo, RenderPassDescriptor descriptor) {
+        if (!persistLayouts()) {
+            return;
+        }
         List<RenderPassDescriptor.Attachment<Optional<Vector4fc>>> colors = descriptor.colorAttachments();
         RenderPassDescriptor.Attachment<OptionalDouble> depth = descriptor.depthAttachment();
         RenderArea area = area(descriptor);
