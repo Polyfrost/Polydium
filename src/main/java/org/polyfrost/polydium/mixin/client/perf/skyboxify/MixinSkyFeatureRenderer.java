@@ -21,7 +21,7 @@ import java.util.Map;
 //?}
 
 @Pseudo
-@Mixin(targets = "btw.lowercase.skyboxify.skybox.renderer.SkyFeatureRenderer", remap = false)
+@Mixin(targets = {"btw.lowercase.skyboxify.skybox.renderer.SkyFeatureRenderer", "btw.lowercase.skyboxify.skybox.renderer.SkyExtractor"}, remap = false)
 public class MixinSkyFeatureRenderer {
     //? if skyboxify && >= 26.3 {
     @Unique
@@ -46,6 +46,15 @@ public class MixinSkyFeatureRenderer {
     private void polydium$farPipeline(RenderPass pass, CompiledRenderPipeline pipeline, Operation<Void> original) {
         RenderPipeline source = SkyFarPlane.isDrawing() ? this.polydium$sources.get(pipeline) : null;
         original.call(pass, source == null ? pipeline : RenderSystem.getCompiledPipeline(SkyFarPlane.far(source)));
+    }
+
+    @WrapOperation(
+            method = "endFrame",
+            at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;getCompiledPipeline(Lcom/mojang/renderpearl/api/pipeline/RenderPipeline;)Lcom/mojang/renderpearl/api/pipeline/CompiledRenderPipeline;"),
+            require = 0
+    )
+    private CompiledRenderPipeline polydium$farCompiledPipeline(RenderPipeline pipeline, Operation<CompiledRenderPipeline> original) {
+        return original.call(SkyFarPlane.isDrawing() ? SkyFarPlane.far(pipeline) : pipeline);
     }
     //?} else if skyboxify && >= 1.21.10 {
     /*@WrapOperation(

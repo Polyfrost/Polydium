@@ -82,6 +82,7 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
 
     private static volatile ClassNode skyboxifyRenderer;
     private static boolean skyboxifyFarSky;
+    private static final List<String> SKYBOXIFY_PIPELINE_HOOKS = List.of("polydium$rememberSource", "polydium$farCompiledPipeline");
     private static final String[] FAR_SKY_MIXINS = {".cirrus.MixinCirrusVertexBuffer", ".cirrus.MixinCirrusSkyRenderer", ".nuit.MixinNuitRenderBackend", ".nuit.MixinNuitSkyDisc", ".dh.MixinDhBlazeMetaRenderer", ".dh.MixinDhGlMetaRenderer", ".dh.MixinDhGlShader"};
     private static final List<ClassNode> FAR_SKY_TARGETS = new CopyOnWriteArrayList<>();
     private static final Map<String, Boolean> FAR_SKY_HOOKED = new ConcurrentHashMap<>();
@@ -162,15 +163,16 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         ClassNode target = skyboxifyRenderer;
         if (target != null) {
             skyboxifyRenderer = null;
-            Set<String> handlers = new HashSet<>(), called = new HashSet<>();
+            Set<String> handlers = new HashSet<>(), pipelineHooks = new HashSet<>(), called = new HashSet<>();
             for (MethodNode method : target.methods) {
                 if (method.name.contains("polydium$"))
-                    handlers.add(method.name);
+                    (SKYBOXIFY_PIPELINE_HOOKS.stream().anyMatch(method.name::endsWith) ? pipelineHooks : handlers).add(method.name);
                 for (AbstractInsnNode insn : method.instructions)
                     if (insn instanceof MethodInsnNode call && call.owner.equals(target.name))
                         called.add(call.name);
             }
-            skyboxifyFarSky = !handlers.isEmpty() && called.containsAll(handlers);
+            skyboxifyFarSky = !handlers.isEmpty() && called.containsAll(handlers)
+                    && (pipelineHooks.isEmpty() || pipelineHooks.stream().anyMatch(called::contains));
         }
         return skyboxifyFarSky;
     }
