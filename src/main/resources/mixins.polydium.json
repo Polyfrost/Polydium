@@ -518,6 +518,10 @@
     "client.perf.RenderTypeSetupAccessor",
     //? if >= 26.3
     "client.perf.RenderSetupOitAccessor",
+    //? if >= 26.3
+    "client.perf.FontProviderAccessor",
+    //? if >= 26.3
+    "client.perf.BakedSheetGlyphAccessor",
     //? if >= 26.2
     "client.perf.MixinBatchPipelineSort",
     //? if >= 1.21.11
