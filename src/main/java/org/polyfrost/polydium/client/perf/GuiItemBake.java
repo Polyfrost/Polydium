@@ -1,21 +1,19 @@
 package org.polyfrost.polydium.client.perf;
 
 //? if >= 1.21.8 {
-import it.unimi.dsi.fastutil.longs.LongArrayList;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
-
-import java.util.ArrayList;
+//? if >= 26.1
+import net.minecraft.client.gui.render.DynamicAtlasAllocator;
 
 public final class GuiItemBake {
     public static final int SPRITE = 1;
+    /** Foil baked into the slot, redrawn every {@link #GLINT_INTERVAL} ms. */
     public static final int FOIL = 2;
     public static final int GLINT_INTERVAL = Integer.getInteger("polydium.guiGlintInterval", 0);
 
     public static long textureTick;
 
-    private static final Stamps STAMPS = new Stamps();
     private static boolean preparing;
     private static long glintStep;
 
@@ -28,6 +26,12 @@ public final class GuiItemBake {
         int polydium$baked();
     }
 
+    public interface Slot {
+        long polydium$stamp();
+
+        void polydium$setStamp(long stamp);
+    }
+
     public static void begin() {
         preparing = true;
         glintStep = GLINT_INTERVAL > 0 ? System.currentTimeMillis() / GLINT_INTERVAL : 0L;
@@ -35,60 +39,54 @@ public final class GuiItemBake {
 
     public static void end() {
         preparing = false;
-        STAMPS.commit();
     }
 
-    public static boolean animated(ItemStackRenderState state, int reasons) {
-        if (!preparing || state.isOversizedInGui() || !(state instanceof TrackingItemStackRenderState item)) {
-            return true;
-        }
-        //? if >= 26.1 {
-        return false;
-        //?} else {
-        /*return STAMPS.due(item.getModelIdentity(), stamp(reasons));
-        *///?}
+    public static boolean animated(ItemStackRenderState state) {
+        return !preparing || state.isOversizedInGui() || !(state instanceof TrackingItemStackRenderState);
     }
 
     //? if >= 26.1 {
-    public static boolean refresh(TrackingItemStackRenderState item) {
+    public static DynamicAtlasAllocator.SlotState refresh(DynamicAtlasAllocator.SlotState state, DynamicAtlasAllocator.Slot slot, TrackingItemStackRenderState item) {
+        long stamp = stamp(item);
+        if (stamp == 0L) {
+            return state;
+        }
+        Slot stamped = (Slot) slot;
+        boolean ready = state == DynamicAtlasAllocator.SlotState.READY;
+        if (ready && stamped.polydium$stamp() == stamp) {
+            return state;
+        }
+        stamped.polydium$setStamp(stamp);
+        return ready ? DynamicAtlasAllocator.SlotState.STALE : state;
+    }
+    //?} else {
+    /*public static boolean redraw(TrackingItemStackRenderState item, Object slot) {
+        long stamp = stamp(item);
+        if (stamp == 0L || slot == null) {
+            return false;
+        }
+        Slot stamped = (Slot) slot;
+        if (stamped.polydium$stamp() == stamp) {
+            return false;
+        }
+        stamped.polydium$setStamp(stamp);
+        return true;
+    }
+
+    public static Object stampNewSlot(Object slot, TrackingItemStackRenderState item) {
+        ((Slot) slot).polydium$setStamp(stamp(item));
+        return slot;
+    }
+    *///?}
+
+    // 0 if Polydium doesn't cache this item
+    private static long stamp(TrackingItemStackRenderState item) {
         int reasons = ((Access) item).polydium$baked();
-        return preparing && reasons != 0 && !item.isAnimated() && STAMPS.due(item.getModelIdentity(), stamp(reasons));
-    }
-    //?}
-
-    private static long stamp(int reasons) {
-        return ((reasons & SPRITE) != 0 ? textureTick : 0L) * 1_000_003L + ((reasons & FOIL) != 0 ? glintStep : 0L);
-    }
-
-    public static final class Stamps {
-        private static final int LIMIT = 4096;
-        private final Object2LongOpenHashMap<Object> drawn = new Object2LongOpenHashMap<>();
-        private final ArrayList<Object> dueKeys = new ArrayList<>();
-        private final LongArrayList dueStamps = new LongArrayList();
-
-        public Stamps() {
-            this.drawn.defaultReturnValue(Long.MIN_VALUE);
+        if (!preparing || reasons == 0 || item.isAnimated()) {
+            return 0L;
         }
-
-        public boolean due(Object key, long stamp) {
-            if (this.drawn.getLong(key) == stamp) {
-                return false;
-            }
-            this.dueKeys.add(key);
-            this.dueStamps.add(stamp);
-            return true;
-        }
-
-        public void commit() {
-            if (this.drawn.size() > LIMIT) {
-                this.drawn.clear();
-            }
-            for (int i = 0; i < this.dueKeys.size(); i++) {
-                this.drawn.put(this.dueKeys.get(i), this.dueStamps.getLong(i));
-            }
-            this.dueKeys.clear();
-            this.dueStamps.clear();
-        }
+        long time = ((reasons & SPRITE) != 0 ? textureTick : 0L) + ((reasons & FOIL) != 0 ? glintStep : 0L);
+        return time << 3 | reasons;
     }
 }
 //?}

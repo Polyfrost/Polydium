@@ -865,6 +865,8 @@
     "client.perf.MixinGuiItemBakeState",
     //? if >= 1.21.8
     "client.perf.MixinGuiItemBakeTick",
+    //? if >= 1.21.8
+    "client.perf.MixinGuiItemBakeSlot",
     //? if >= 26.1
     "client.perf.MixinGuiItemBakeAtlas",
     //? if >= 1.21.8 && < 26.1

@@ -32,7 +32,7 @@ public class MixinGuiItemBakeState implements GuiItemBake.Access {
 
     @ModifyReturnValue(method = "isAnimated", at = @At("RETURN"))
     private boolean polydium$bakedAnimated(boolean original) {
-        return original || this.polydium$baked != 0 && GuiItemBake.animated((ItemStackRenderState) (Object) this, this.polydium$baked);
+        return original || this.polydium$baked != 0 && GuiItemBake.animated((ItemStackRenderState) (Object) this);
     }
 }
 //?}
