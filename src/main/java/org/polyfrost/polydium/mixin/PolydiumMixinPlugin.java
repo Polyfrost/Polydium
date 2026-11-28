@@ -442,6 +442,9 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.contains(".perf.polytone.") && !Mods.loaded("polytone"))
             return false;
 
+        if (mixinClassName.contains(".compat.mountopacity.") && (!Mods.loaded("mountopacity") || Mods.loadedBefore("mountopacity", "1.1.0")))
+            return false;
+
         if (mixinClassName.contains(".perf.ixeris.") && !Mods.loaded("ixeris"))
             return false;
 
