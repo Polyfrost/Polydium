@@ -309,6 +309,10 @@
     //? if >= 26.2
     "client.perf.sodium.MixinGlIndirectTerrainBatch",
     //? if >= 26.2
+    "client.perf.sodium.MixinGlIndirectTerrainPrepare",
+    //? if >= 26.3
+    "client.perf.sodium.MixinGlIndirectTerrainQueue",
+    //? if >= 26.2
     "client.perf.sodium.MixinSodiumIntelGlStaging",
     //? if >= 26.2
     "client.perf.sodium.MixinGlRenderPassIrisTessellation",
