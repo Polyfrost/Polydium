@@ -83,7 +83,7 @@ public class PolydiumToggles {
     @Switch(title = "Nearest Plane Quad Order", description = "With Sodium, draws each terrain face direction's quads nearest plane first so the GPU shades fewer hidden faces. Applies to sections built after the change.")
     public static boolean nearestPlaneQuadOrder = true;
     //? if >= 26.2
-    @Switch(title = "Indirect Terrain Draws", description = "With Sodium on OpenGL, has the GPU read terrain draw commands from a buffer instead of passing each one through the driver. Turn off if terrain is slower on your GPU.")
+    @Switch(title = "Indirect Terrain Draws", description = "With Sodium on OpenGL, has the GPU read terrain draw commands from a buffer instead of passing each one through the driver.")
     public static boolean glIndirectTerrain = true;
     //? if >= 26.2
     @Switch(title = "Background Vertex Copy", description = "On Vulkan, copies the world's entity, text, item and particle vertices into GPU memory on a separate thread while terrain is prepared.")
