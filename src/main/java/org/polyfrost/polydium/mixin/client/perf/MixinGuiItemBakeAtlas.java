@@ -13,8 +13,9 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(GuiItemAtlas.class)
 public class MixinGuiItemBakeAtlas {
     @ModifyExpressionValue(method = "getOrUpdate", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/DynamicAtlasAllocator$Slot;state()Lnet/minecraft/client/gui/render/DynamicAtlasAllocator$SlotState;"))
-    private DynamicAtlasAllocator.SlotState polydium$refreshBaked(DynamicAtlasAllocator.SlotState state, @Local(argsOnly = true) TrackingItemStackRenderState item) {
-        return GuiItemBake.refresh(item) && state == DynamicAtlasAllocator.SlotState.READY ? DynamicAtlasAllocator.SlotState.STALE : state;
+    private DynamicAtlasAllocator.SlotState polydium$refreshBaked(DynamicAtlasAllocator.SlotState state, @Local(argsOnly = true) TrackingItemStackRenderState item,
+                                                                  @Local(name = "slot") DynamicAtlasAllocator.Slot slot) {
+        return GuiItemBake.refresh(state, slot, item);
     }
 }
 //?}

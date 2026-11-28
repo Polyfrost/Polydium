@@ -407,6 +407,16 @@ public class PolydiumMixinPlugin implements IMixinConfigPlugin {
         if (mixinClassName.endsWith(".MixinParticleExtractDefer") && isDisabled(mixinClassName + "Submit"))
             return false;
 
+        // Baked items need the slot stamp to know when to redraw
+        if (mixinClassName.contains(".MixinGuiItemBake") && isDisabled("org.polyfrost.polydium.mixin.client.perf.MixinGuiItemBakeSlot"))
+            return false;
+
+        //? if < 26.1 {
+        /*// Below 26.1 the atlas reuse mixin is the only thing that redraws baked items
+        if (mixinClassName.contains(".MixinGuiItemBake") && isDisabled("org.polyfrost.polydium.mixin.client.perf.MixinGuiItemAtlasReuse"))
+            return false;
+        *///?}
+
         if (standsDown(mixinClassName))
             return false;
 
