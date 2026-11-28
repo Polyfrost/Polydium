@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.CommandEncoderBackend;
 import org.polyfrost.polydium.vulkan.compat.GpuSurface;
 import org.polyfrost.polydium.vulkan.compat.GpuSurfaceBackend;
 import org.polyfrost.polydium.vulkan.compat.SurfaceException;
+import org.polyfrost.polydium.client.perf.VulkanDeferral;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
 import org.polyfrost.polydium.client.perf.VulkanSync;
@@ -405,6 +406,9 @@ public class VulkanGpuSurface implements GpuSurfaceBackend {
 
   @Override
   public void blitFromTexture(final CommandEncoderBackend commandEncoder, final GpuTextureView textureView) {
+    if (commandEncoder instanceof VulkanDeferral.Host host) {
+      host.polydium$general(textureView.texture());
+    }
     if (this.swapchainOutOfDate) {
       throw new IllegalStateException("Attempt to use out of date swapchain");
     } else {

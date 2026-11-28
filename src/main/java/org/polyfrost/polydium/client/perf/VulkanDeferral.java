@@ -11,6 +11,7 @@ import com.mojang.renderpearl.backend.vulkan.VulkanCommandEncoder;
 import com.mojang.renderpearl.backend.vulkan.VulkanDebug;
 import com.mojang.renderpearl.backend.vulkan.VulkanDevice;
 import com.mojang.renderpearl.backend.vulkan.VulkanGpuBuffer;
+import com.mojang.renderpearl.backend.vulkan.VulkanGpuTexture;
 import com.mojang.renderpearl.backend.vulkan.VulkanGpuTextureView;
 import com.mojang.renderpearl.backend.vulkan.VulkanRenderPass;
 import com.mojang.renderpearl.backend.vulkan.checkpoints.CheckpointExtension;
@@ -22,21 +23,29 @@ import org.polyfrost.polydium.vulkan.VulkanCommandEncoder;
 import org.polyfrost.polydium.vulkan.VulkanDebug;
 import org.polyfrost.polydium.vulkan.VulkanDevice;
 import org.polyfrost.polydium.vulkan.VulkanGpuBuffer;
+import org.polyfrost.polydium.vulkan.VulkanGpuTexture;
 import org.polyfrost.polydium.vulkan.VulkanGpuTextureView;
 import org.polyfrost.polydium.vulkan.VulkanRenderPass;
 import org.polyfrost.polydium.vulkan.checkpoints.CheckpointExtension;
 import org.polyfrost.polydium.vulkan.compat.RenderArea;
 import org.polyfrost.polydium.vulkan.compat.RenderPassDescriptor;
 *///?}
+import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
+import org.joml.Vector4f;
 import org.joml.Vector4fc;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfileFlag;
 import org.polyfrost.polydium.client.perf.gpuprofile.GpuProfiler;
+//? if >= 26.2
+import org.polyfrost.polydium.mixin.client.perf.vulkan.MixinVulkanTextureViewsAccessor;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.KHRDynamicRendering;
+import org.lwjgl.vulkan.KHRSynchronization2;
 import org.lwjgl.vulkan.VK10;
 import org.lwjgl.vulkan.VkClearAttachment;
 import org.lwjgl.vulkan.VkClearRect;
 import org.lwjgl.vulkan.VkCommandBuffer;
+import org.lwjgl.vulkan.VkDependencyInfo;
+import org.lwjgl.vulkan.VkImageMemoryBarrier2;
 import org.lwjgl.vulkan.VkRect2D;
 import org.lwjgl.vulkan.VkRenderingAttachmentInfo;
 import org.lwjgl.vulkan.VkRenderingInfo;
@@ -44,12 +53,14 @@ import org.lwjgl.vulkan.VkRenderingInfo;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.function.Supplier;
 
 public final class VulkanDeferral {
     private final Host host;
+    private static int nvidia;
     private final PendingRanges pendingRanges = new PendingRanges();
     private int deferDepth;
     private GpuTexture clearColorTexture;
@@ -68,6 +79,7 @@ public final class VulkanDeferral {
     private RenderPassDescriptor openDescriptor;
     private boolean openPassContinued;
     private boolean openPassSampledAttachment;
+    private final Reference2IntOpenHashMap<GpuTexture> layouts = new Reference2IntOpenHashMap<>();
 
     public interface Host {
         VkCommandBuffer polydium$currentCommandBuffer();
@@ -91,17 +103,33 @@ public final class VulkanDeferral {
         boolean polydium$dynamicRendering();
 
         void polydium$beginLegacyRenderPass(MemoryStack stack, RenderPassDescriptor descriptor, VkRect2D renderArea);
+
+        default VkCommandBuffer polydium$commandBuffer() {
+            return this.polydium$currentCommandBuffer();
+        }
+
+        default void polydium$general(GpuTexture texture) {
+        }
     }
 
     public VulkanDeferral(Host host) {
         this.host = host;
+        this.layouts.defaultReturnValue(VK10.VK_IMAGE_LAYOUT_GENERAL);
     }
 
     public void flushBeforeCommand() {
         this.endSuspendedPass();
         if (this.deferDepth == 0) {
-            this.flushClears();
+            if (!persistLayouts()) {
+                this.flushClears();
+            }
             this.flushBarrier();
+        }
+    }
+
+    public void touched(GpuTexture texture) {
+        if (texture != null && (texture == this.clearColorTexture || texture == this.clearDepthTexture)) {
+            this.flushClears();
         }
     }
 
@@ -114,7 +142,11 @@ public final class VulkanDeferral {
     public void deferDepthClear(GpuTexture depthTexture, double clearDepth) {
         if (GpuProfileFlag.ENABLED)
             GpuProfiler.discard();
-        if (this.clearColorTexture != null || this.clearDepthTexture != null) {
+        if (persistLayouts()) {
+            if (this.clearDepthTexture != depthTexture) {
+                this.flush(false, true);
+            }
+        } else if (this.clearColorTexture != null || this.clearDepthTexture != null) {
             this.flushClears();
         }
         this.clearDepthTexture = depthTexture;
@@ -124,14 +156,21 @@ public final class VulkanDeferral {
     public void deferColorClear(GpuTexture colorTexture, Vector4fc clearColor) {
         if (GpuProfileFlag.ENABLED)
             GpuProfiler.discard();
-        this.flushClears();
+        if (!persistLayouts()) {
+            this.flushClears();
+        } else if (this.clearColorTexture != colorTexture) {
+            this.flush(true, false);
+        }
         this.clearColorTexture = colorTexture;
-        this.clearColor = clearColor;
+        this.clearColor = new Vector4f(clearColor);
     }
 
     public void deferPairedDepthClear(GpuTexture depthTexture, double clearDepth) {
         if (GpuProfileFlag.ENABLED)
             GpuProfiler.discard();
+        if (persistLayouts() && this.clearDepthTexture != depthTexture) {
+            this.flush(false, true);
+        }
         this.clearDepthTexture = depthTexture;
         this.clearDepth = clearDepth;
     }
@@ -163,7 +202,11 @@ public final class VulkanDeferral {
             }
             this.clearDepthTexture = null;
         }
-        this.flushClears();
+        if (!persistLayouts()) {
+            this.flushClears();
+        } else {
+            this.flush(attaches(descriptor, this.clearColorTexture), attaches(descriptor, this.clearDepthTexture));
+        }
         return replaced(descriptor, colors, depth, area);
     }
 
@@ -191,7 +234,7 @@ public final class VulkanDeferral {
         }
 
         OptionalDouble depthClear = descriptor.depthAttachment() == null ? OptionalDouble.empty() : descriptor.depthAttachment().clearValue();
-        if (this.clearDepthTexture != null) {
+        if (this.clearDepthTexture != null && descriptor.depthAttachment() != null && descriptor.depthAttachment().textureView().texture() == this.clearDepthTexture) {
             if (depthClear.isEmpty()) {
                 depthClear = OptionalDouble.of(this.clearDepth);
             }
@@ -218,7 +261,7 @@ public final class VulkanDeferral {
             GpuProfiler.passContinued();
         }
         if (depthClear.isPresent()) {
-            clearDepthInPass(commandBuffer, area(descriptor), (float) depthClear.getAsDouble());
+            clearDepthInPass(commandBuffer, area(descriptor), (float) depthClear.getAsDouble(), descriptor.depthAttachment().textureView().texture());
         }
         return pass;
     }
@@ -259,13 +302,19 @@ public final class VulkanDeferral {
 
     public void sampled(GpuTextureView view) {
         RenderPassDescriptor descriptor = this.openDescriptor;
-        if (descriptor == null || !attaches(descriptor, view.texture())) {
+        if (descriptor == null) {
             return;
         }
-        this.openPassSampledAttachment = true;
-        if (this.openPassContinued) {
+        GpuTexture texture = view.texture();
+        boolean pendingClear = texture == this.clearColorTexture || texture == this.clearDepthTexture;
+        boolean attached = attaches(descriptor, texture);
+        boolean general = this.layouts.getInt(texture) == VK10.VK_IMAGE_LAYOUT_GENERAL;
+        if (attached && !pendingClear) {
+            this.openPassSampledAttachment = true;
+        }
+        if (pendingClear || !general || attached && this.openPassContinued) {
             this.openPassContinued = false;
-            this.restartPass(descriptor);
+            this.restartPass(descriptor, texture, attached && !pendingClear);
         }
     }
 
@@ -320,9 +369,10 @@ public final class VulkanDeferral {
         if (this.suspendedPass == null || this.barrierPending) {
             return false;
         }
-        if (this.clearColorTexture != null) {
+        if (this.clearColorTexture != null && (!persistLayouts() || attaches(descriptor, this.clearColorTexture))) {
             return false;
         }
+        boolean depthClearElsewhere = this.clearDepthTexture == null || persistLayouts() && !attaches(descriptor, this.clearDepthTexture);
         if (!area(descriptor).equals(area(previous)) || descriptor.colorAttachments().size() != previous.colorAttachments().size()) {
             return false;
         }
@@ -342,15 +392,15 @@ public final class VulkanDeferral {
         RenderPassDescriptor.Attachment<OptionalDouble> depth = descriptor.depthAttachment();
         RenderPassDescriptor.Attachment<OptionalDouble> previousDepth = previous.depthAttachment();
         if (depth == null || previousDepth == null) {
-            return depth == previousDepth && this.clearDepthTexture == null;
+            return depth == previousDepth && depthClearElsewhere;
         }
         if (depth.textureView() != previousDepth.textureView()) {
             return false;
         }
-        return this.clearDepthTexture == null || coversTexture(depth.textureView(), this.clearDepthTexture, area(descriptor));
+        return depthClearElsewhere || coversTexture(depth.textureView(), this.clearDepthTexture, area(descriptor));
     }
 
-    private static void clearDepthInPass(VkCommandBuffer commandBuffer, RenderArea area, float depth) {
+    private static void clearDepthInPass(VkCommandBuffer commandBuffer, RenderArea area, float depth, GpuTexture texture) {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VkClearRect.Buffer rects = VkClearRect.calloc(1, stack);
             rects.baseArrayLayer(0);
@@ -361,14 +411,14 @@ public final class VulkanDeferral {
             attachments.aspectMask(VK10.VK_IMAGE_ASPECT_DEPTH_BIT);
             attachments.clearValue().depthStencil().depth(depth);
             if (GpuProfileFlag.ENABLED)
-                GpuProfiler.beginFlush(commandBuffer, GpuProfiler.OP_CLEAR);
+                GpuProfiler.beginFlush(commandBuffer, clearLabel(null, texture));
             VK10.vkCmdClearAttachments(commandBuffer, attachments, rects);
             if (GpuProfileFlag.ENABLED)
                 GpuProfiler.endFlush(commandBuffer);
         }
     }
 
-    private void restartPass(RenderPassDescriptor descriptor) {
+    private void restartPass(RenderPassDescriptor descriptor, GpuTexture sampled, boolean pinGeneral) {
         if (RenderPassStats.ENABLED) {
             RenderPassStats.split(this.host.polydium$currentRenderPass().getLabel());
         }
@@ -378,22 +428,38 @@ public final class VulkanDeferral {
         if (depth != null) {
             depth = new RenderPassDescriptor.Attachment<>(depth.textureView(), OptionalDouble.empty());
         }
-        RenderPassDescriptor loaded = replaced(descriptor, descriptor.colorAttachments(), depth, area);
+        List<RenderPassDescriptor.Attachment<Optional<Vector4fc>>> colors = new ArrayList<>(descriptor.colorAttachments());
+        for (int index = 0; index < colors.size(); index++) {
+            RenderPassDescriptor.Attachment<Optional<Vector4fc>> color = colors.get(index);
+            if (color != null && color.clearValue().isPresent()) {
+                colors.set(index, new RenderPassDescriptor.Attachment<>(color.textureView(), Optional.empty()));
+            }
+        }
+        RenderPassDescriptor loaded = replaced(descriptor, colors, depth, area);
         this.endRendering(commandBuffer);
+        int current = this.layouts.getInt(sampled);
+        if (current != VK10.VK_IMAGE_LAYOUT_GENERAL) {
+            transition(commandBuffer, sampled, current, VK10.VK_IMAGE_LAYOUT_GENERAL);
+            this.layouts.removeInt(sampled);
+        }
+        if (pinGeneral && persistLayouts()) {
+            this.layouts.put(sampled, VK10.VK_IMAGE_LAYOUT_GENERAL);
+        }
+        this.flushClears();
         try (MemoryStack stack = MemoryStack.stackPush()) {
             VulkanCommandEncoder.memoryBarrier(commandBuffer, stack);
             VkRect2D renderArea = VkRect2D.calloc(stack);
             renderArea.offset().set(area.x(), area.y());
             renderArea.extent().set(area.width(), area.height());
             if (this.host.polydium$dynamicRendering()) {
-                beginLoadedRendering(stack, commandBuffer, loaded, renderArea);
+                this.beginLoadedRendering(stack, commandBuffer, loaded, renderArea);
             } else {
                 this.host.polydium$beginLegacyRenderPass(stack, loaded, renderArea);
             }
         }
     }
 
-    private static void beginLoadedRendering(MemoryStack stack, VkCommandBuffer commandBuffer, RenderPassDescriptor descriptor, VkRect2D renderArea) {
+    private void beginLoadedRendering(MemoryStack stack, VkCommandBuffer commandBuffer, RenderPassDescriptor descriptor, VkRect2D renderArea) {
         List<RenderPassDescriptor.Attachment<Optional<Vector4fc>>> colors = descriptor.colorAttachments();
         VkRenderingAttachmentInfo.Buffer colorInfos = VkRenderingAttachmentInfo.calloc(colors.size(), stack);
         for (int index = 0; index < colors.size(); index++) {
@@ -402,19 +468,19 @@ public final class VulkanDeferral {
             if (color == null) {
                 info.imageLayout(VK10.VK_IMAGE_LAYOUT_UNDEFINED).loadOp(VK10.VK_ATTACHMENT_LOAD_OP_DONT_CARE).storeOp(VK10.VK_ATTACHMENT_STORE_OP_DONT_CARE);
             } else {
-                loadAttachment(info, color.textureView());
+                this.loadAttachment(info, color.textureView());
             }
         }
         VkRenderingInfo renderingInfo = VkRenderingInfo.calloc(stack).sType$Default().renderArea(renderArea).layerCount(1).viewMask(0).pColorAttachments(colorInfos);
         if (descriptor.depthAttachment() != null) {
-            renderingInfo.pDepthAttachment(loadAttachment(VkRenderingAttachmentInfo.calloc(stack).sType$Default(), descriptor.depthAttachment().textureView()));
+            renderingInfo.pDepthAttachment(this.loadAttachment(VkRenderingAttachmentInfo.calloc(stack).sType$Default(), descriptor.depthAttachment().textureView()));
         }
         KHRDynamicRendering.vkCmdBeginRenderingKHR(commandBuffer, renderingInfo);
     }
 
-    private static VkRenderingAttachmentInfo loadAttachment(VkRenderingAttachmentInfo info, GpuTextureView view) {
+    private VkRenderingAttachmentInfo loadAttachment(VkRenderingAttachmentInfo info, GpuTextureView view) {
         return info.imageView(((VulkanGpuTextureView) view).vkImageView())
-            .imageLayout(VK10.VK_IMAGE_LAYOUT_GENERAL)
+            .imageLayout(this.layouts.getInt(view.texture()))
             .loadOp(VK10.VK_ATTACHMENT_LOAD_OP_LOAD)
             .storeOp(VK10.VK_ATTACHMENT_STORE_OP_STORE);
     }
@@ -424,6 +490,118 @@ public final class VulkanDeferral {
         VulkanLegacyRendering.endRendering(this.host.polydium$device(), commandBuffer);
         //?} else {
         /*VulkanCommandEncoder.endRendering(this.host.polydium$device(), commandBuffer);
+        *///?}
+    }
+
+    // Attachment-optimal layouts and held clears stay off NVIDIA, which keeps every image in GENERAL.
+    private static boolean persistLayouts() {
+        if (nvidia == 0) {
+            String vendor = RawGl.vendor();
+            if (vendor == null) {
+                return false;
+            }
+            nvidia = vendor.toLowerCase(Locale.ROOT).contains("nvidia") ? 1 : -1;
+        }
+        return nvidia < 0;
+    }
+
+    public void beginRendering(VkCommandBuffer commandBuffer, VkRenderingInfo renderingInfo, RenderPassDescriptor descriptor) {
+        if (!persistLayouts()) {
+            return;
+        }
+        List<RenderPassDescriptor.Attachment<Optional<Vector4fc>>> colors = descriptor.colorAttachments();
+        RenderPassDescriptor.Attachment<OptionalDouble> depth = descriptor.depthAttachment();
+        RenderArea area = area(descriptor);
+        VkRenderingAttachmentInfo.Buffer colorInfos = renderingInfo.pColorAttachments();
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            VkImageMemoryBarrier2.Buffer barriers = VkImageMemoryBarrier2.calloc(colors.size() + 1, stack);
+            for (int index = 0; index < colors.size() && colorInfos != null; index++) {
+                RenderPassDescriptor.Attachment<Optional<Vector4fc>> color = colors.get(index);
+                if (color != null) {
+                    this.attach(barriers, colorInfos.get(index), color.textureView(), area, VK10.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                }
+            }
+            VkRenderingAttachmentInfo depthInfo = renderingInfo.pDepthAttachment();
+            if (depth != null && depthInfo != null) {
+                this.attach(barriers, depthInfo, depth.textureView(), area, VK10.VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+            }
+            if (barriers.flip().hasRemaining()) {
+                VulkanSync.pipelineBarrier(commandBuffer, VkDependencyInfo.calloc(stack).sType$Default().pImageMemoryBarriers(barriers));
+            }
+        }
+    }
+
+    private void attach(VkImageMemoryBarrier2.Buffer barriers, VkRenderingAttachmentInfo info, GpuTextureView view, RenderArea area, int layout) {
+        GpuTexture texture = view.texture();
+        if (this.layouts.getInt(texture) == VK10.VK_IMAGE_LAYOUT_GENERAL) {
+            if (this.layouts.containsKey(texture) || info.loadOp() != VK10.VK_ATTACHMENT_LOAD_OP_CLEAR || texture.getDepthOrLayers() != 1 || !coversTexture(view, texture, area) || hasStencil(texture)) {
+                return;
+            }
+            this.layouts.keySet().removeIf(tracked -> tracked != this.clearColorTexture && tracked != this.clearDepthTexture && released(tracked));
+            this.layouts.put(texture, layout);
+            layoutBarrier(barriers.get(), texture, VK10.VK_IMAGE_LAYOUT_UNDEFINED, layout);
+        }
+        info.imageLayout(layout);
+    }
+
+    public void toGeneral(GpuTexture texture, boolean discard) {
+        int current = this.layouts.getInt(texture);
+        if (current == VK10.VK_IMAGE_LAYOUT_GENERAL) {
+            return;
+        }
+        this.layouts.removeInt(texture);
+        transition(this.host.polydium$commandBuffer(), texture, discard && !hasStencil(texture) ? VK10.VK_IMAGE_LAYOUT_UNDEFINED : current, VK10.VK_IMAGE_LAYOUT_GENERAL);
+    }
+
+    private static void transition(VkCommandBuffer commandBuffer, GpuTexture texture, int oldLayout, int newLayout) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            VkImageMemoryBarrier2.Buffer barriers = VkImageMemoryBarrier2.calloc(1, stack);
+            layoutBarrier(barriers.get(0), texture, oldLayout, newLayout);
+            VulkanSync.pipelineBarrier(commandBuffer, VkDependencyInfo.calloc(stack).sType$Default().pImageMemoryBarriers(barriers));
+        }
+    }
+
+    private static void layoutBarrier(VkImageMemoryBarrier2 barrier, GpuTexture texture, int oldLayout, int newLayout) {
+        int aspect = texture.getFormat().hasColorAspect()
+            ? VK10.VK_IMAGE_ASPECT_COLOR_BIT
+            : VK10.VK_IMAGE_ASPECT_DEPTH_BIT | (hasStencil(texture) ? VK10.VK_IMAGE_ASPECT_STENCIL_BIT : 0);
+        barrier.sType$Default()
+            .srcStageMask(KHRSynchronization2.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR)
+            .srcAccessMask(KHRSynchronization2.VK_ACCESS_2_MEMORY_READ_BIT_KHR | KHRSynchronization2.VK_ACCESS_2_MEMORY_WRITE_BIT_KHR)
+            .dstStageMask(KHRSynchronization2.VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR)
+            .dstAccessMask(KHRSynchronization2.VK_ACCESS_2_MEMORY_READ_BIT_KHR | KHRSynchronization2.VK_ACCESS_2_MEMORY_WRITE_BIT_KHR)
+            .oldLayout(oldLayout)
+            .newLayout(newLayout)
+            .srcQueueFamilyIndex(VK10.VK_QUEUE_FAMILY_IGNORED)
+            .dstQueueFamilyIndex(VK10.VK_QUEUE_FAMILY_IGNORED)
+            .image(((VulkanGpuTexture) texture).vkImage());
+        barrier.subresourceRange().aspectMask(aspect).baseMipLevel(0).levelCount(texture.getMipLevels()).baseArrayLayer(0).layerCount(texture.getDepthOrLayers());
+    }
+
+    private static boolean released(GpuTexture texture) {
+        //? if >= 26.2 {
+        return texture.isClosed() && ((MixinVulkanTextureViewsAccessor) texture).polydium$views() == 0;
+        //?} else {
+        /*return texture.isClosed() && ((VulkanGpuTexture) texture).views() == 0;
+        *///?}
+    }
+
+    private static int clearLabel(GpuTexture color, GpuTexture depth) {
+        if (!GpuProfiler.recording) {
+            return GpuProfiler.OP_CLEAR;
+        }
+        String name = color == null ? "" : " " + color.getLabel();
+        if (depth != null) {
+            name += " " + depth.getLabel() + (color == null ? "" : " (depth)");
+        }
+        return GpuProfiler.label("clear" + name);
+    }
+
+    private static boolean hasStencil(GpuTexture texture) {
+        //? if >= 26.2 {
+        return texture.getFormat().hasStencilAspect();
+        //?} else {
+        /*return false;
         *///?}
     }
 
@@ -447,17 +625,25 @@ public final class VulkanDeferral {
     }
 
     private void flushClears() {
-        this.endSuspendedPass();
-        GpuTexture color = this.clearColorTexture;
-        GpuTexture depth = this.clearDepthTexture;
+        this.flush(true, true);
+    }
+
+    private void flush(boolean colorSlot, boolean depthSlot) {
+        GpuTexture color = colorSlot ? this.clearColorTexture : null;
+        GpuTexture depth = depthSlot ? this.clearDepthTexture : null;
         if (color == null && depth == null) {
             return;
         }
-        this.clearColorTexture = null;
-        this.clearDepthTexture = null;
+        this.endSuspendedPass();
+        if (color != null) {
+            this.clearColorTexture = null;
+        }
+        if (depth != null) {
+            this.clearDepthTexture = null;
+        }
         VkCommandBuffer commandBuffer = this.host.polydium$currentCommandBuffer();
         if (GpuProfileFlag.ENABLED)
-            GpuProfiler.beginFlush(commandBuffer, GpuProfiler.OP_CLEAR);
+            GpuProfiler.beginFlush(commandBuffer, clearLabel(color, depth));
         try (MemoryStack stack = MemoryStack.stackPush()) {
             if (color != null) {
                 this.host.polydium$clearColorUnsynced(stack, color, this.clearColor);
@@ -526,6 +712,9 @@ public final class VulkanDeferral {
     }
 
     private static boolean attaches(RenderPassDescriptor descriptor, GpuTexture texture) {
+        if (texture == null) {
+            return false;
+        }
         for (RenderPassDescriptor.Attachment<Optional<Vector4fc>> color : descriptor.colorAttachments()) {
             if (color != null && color.textureView().texture() == texture) {
                 return true;
