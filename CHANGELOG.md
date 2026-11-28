@@ -1,3 +1,16 @@
-## Unreleased changes
+## 1.4.24
 - Fixed animated item textures freezing in the hotbar and inventory when another mod also draws item icons, such as VanillaHUD with PolyCompose
 - Fixed a permanent freeze on OpenGL when the world is rendered several times in one frame, such as when leaving a server with Smooth Loading Screen
+- Fixed Mount Opacity making spectator-visible entities opaque
+- Fixed upscaled sprite transparency with Sodium item models
+- Fixed Bobby sky fog using stale data
+- Fixed compatibility with mods that read the camera fluid, and with mods that own the main render pass
+- Fixed Vulkan crashing on shutdown, and on drivers without synchronization2
+- Vulkan no longer acquires swapchain images while minimized
+- Vulkan stays selected after one unfinished start once it has worked before
+- Pre-26.3 resource packs now only drop their core shaders instead of the whole pack
+- Better Vulkan FPS on AMD by keeping render targets in attachment layouts
+- Better Vulkan FPS on Windows by picking the present path from measured frame times
+- Faster Vulkan mailbox present, GL indirect terrain and GL buffer creation
+- Skips Iris reloads when no shader pack is involved
+- Ported more Vulkan and OpenGL fixes to older versions
