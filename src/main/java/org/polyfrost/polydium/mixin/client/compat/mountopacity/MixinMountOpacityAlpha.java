@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.At;
 @Pseudo
 @Mixin(targets = "dev.microcontrollers.mountopacity.hook.EntityHook", remap = false)
 public abstract class MixinMountOpacityAlpha {
-    @WrapOperation(method = "setOpacity(I)I", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/ARGB;colorFromFloat(FFFF)I", remap = true), remap = false)
+    @WrapOperation(method = "setOpacity(I)I", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/ARGB;colorFromFloat(FFFF)I", remap = true), remap = false, require = 0)
     private static int polydium$multiplyAlpha(float alpha, float red, float green, float blue, Operation<Integer> original, @Local(argsOnly = true) int color) {
         //? if >= 1.21.11 {
         return ARGB.multiplyAlpha(color, alpha);
